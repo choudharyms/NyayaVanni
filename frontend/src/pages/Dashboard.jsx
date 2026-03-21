@@ -37,7 +37,13 @@ export default function Dashboard() {
         setAnalysis(data.analysis);
       } catch (err) {
         console.error(err);
-        setError("Analysis failed. Please try uploading the document again.");
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        let msg = "Analysis failed. Please try uploading the document again.";
+        
+        if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+          msg = "Configuration Error: API URL is set to localhost in production. Please set VITE_API_URL in Vercel.";
+        }
+        setError(msg);
       } finally {
         setLoading(false);
       }
@@ -74,9 +80,15 @@ export default function Dashboard() {
       setChatHistory([...newHistory, { role: 'assistant', message: data.response }]);
     } catch (err) {
       console.error(err);
-      // Fallback
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      let msg = "This is a fallback response. The backend might not be running correctly.";
+      
+      if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+        msg = "Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.";
+      }
+
       setTimeout(() => {
-        setChatHistory([...newHistory, { role: 'assistant', message: "This is a fallback response. The backend might not be running correctly." }]);
+        setChatHistory([...newHistory, { role: 'assistant', message: msg }]);
         setChatLoading(false);
       }, 1000);
     } finally {

@@ -39,8 +39,15 @@ export default function GeneralChat() {
       setChatHistory([...newHistory, { role: 'assistant', message: data.response }]);
     } catch (err) {
       console.error(err);
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      let errorMessage = "I'm having trouble connecting to the server. Please try again later.";
+      
+      if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+        errorMessage = "Configuration Error: The app is trying to connect to a local server (localhost) while deployed. Please set the VITE_API_URL environment variable in your Vercel dashboard.";
+      }
+
       setTimeout(() => {
-        setChatHistory([...newHistory, { role: 'assistant', message: "I'm having trouble connecting to the server. Please try again later." }]);
+        setChatHistory([...newHistory, { role: 'assistant', message: errorMessage }]);
         setChatLoading(false);
       }, 1000);
     } finally {
