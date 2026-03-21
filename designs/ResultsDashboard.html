@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+
+<html class="light" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>NyayaVanni - Document Analysis Dashboard</title>
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;700;800&amp;family=Inter:wght@400;500;600&amp;display=swap" rel="stylesheet"/>
+<!-- Icons -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+      tailwind.config = {
+        darkMode: "class",
+        theme: {
+          extend: {
+            colors: {
+              "on-tertiary-fixed-variant": "#005236",
+              "primary-fixed": "#dbe1ff",
+              "primary-container": "#2563eb",
+              "on-error-container": "#93000a",
+              "on-primary-fixed": "#00174b",
+              "inverse-surface": "#27313f",
+              "surface-container-low": "#eff4ff",
+              "secondary": "#9b4500",
+              "inverse-primary": "#b4c5ff",
+              "on-background": "#121c2a",
+              "primary": "#004ac6",
+              "error-container": "#ffdad6",
+              "on-tertiary-container": "#bdffdb",
+              "on-secondary-container": "#682c00",
+              "tertiary": "#006242",
+              "surface-dim": "#d0dbed",
+              "surface-tint": "#0053db",
+              "surface-bright": "#f8f9ff",
+              "outline-variant": "#c3c6d7",
+              "background": "#f8f9ff",
+              "surface-variant": "#d9e3f6",
+              "on-error": "#ffffff",
+              "inverse-on-surface": "#eaf1ff",
+              "on-secondary": "#ffffff",
+              "on-primary-container": "#eeefff",
+              "error": "#ba1a1a",
+              "on-primary-fixed-variant": "#003ea8",
+              "on-tertiary": "#ffffff",
+              "tertiary-container": "#007d55",
+              "primary-fixed-dim": "#b4c5ff",
+              "surface-container-high": "#dee9fc",
+              "outline": "#737686",
+              "secondary-fixed-dim": "#ffb68e",
+              "on-surface-variant": "#434655",
+              "tertiary-fixed": "#6ffbbe",
+              "on-tertiary-fixed": "#002113",
+              "on-surface": "#121c2a",
+              "surface-container-lowest": "#ffffff",
+              "surface-container-highest": "#d9e3f6",
+              "on-secondary-fixed": "#331200",
+              "on-primary": "#ffffff",
+              "tertiary-fixed-dim": "#4edea3",
+              "surface": "#f8f9ff",
+              "secondary-fixed": "#ffdbca",
+              "secondary-container": "#fd8a42",
+              "on-secondary-fixed-variant": "#763300",
+              "surface-container": "#e6eeff"
+            },
+            fontFamily: {
+              "headline": ["Manrope"],
+              "body": ["Inter"],
+              "label": ["Inter"]
+            },
+            borderRadius: {"DEFAULT": "0.125rem", "lg": "0.25rem", "xl": "0.5rem", "full": "0.75rem"},
+          },
+        },
+      }
+    </script>
+<style>
+        .material-symbols-outlined {
+            font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
+            vertical-align: middle;
+        }
+        .glass-panel {
+            background: rgba(255, 255, 255, 0.7);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+        }
+    </style>
+</head>
+<body class="bg-surface font-body text-on-surface">
+<!-- Sidebar Navigation -->
+<aside class="h-screen w-64 fixed left-0 top-0 hidden lg:flex flex-col bg-surface-container-low p-4 space-y-2 z-40">
+<div class="flex items-center gap-3 px-2 py-4 mb-4">
+<div class="w-10 h-10 bg-primary-container rounded-full flex items-center justify-center text-on-primary-container font-headline font-extrabold text-xl">N</div>
+<div>
+<h1 class="font-headline font-extrabold text-blue-800 tracking-tighter leading-tight">NyayaVanni</h1>
+<p class="text-[10px] uppercase tracking-widest text-outline">The Digital Jurist</p>
+</div>
+</div>
+<nav class="flex-1 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:bg-white/50 rounded-lg transition-transform duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">dashboard</span>
+<span class="font-medium text-sm">Dashboard</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 bg-surface-container-lowest text-primary rounded-lg shadow-sm font-bold transition-transform duration-200" href="#">
+<span class="material-symbols-outlined" style="font-variation-settings: 'FILL' 1;">description</span>
+<span class="font-medium text-sm">Analysis</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:bg-white/50 rounded-lg transition-transform duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">analytics</span>
+<span class="font-medium text-sm">History</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-600 hover:bg-white/50 rounded-lg transition-transform duration-200 hover:translate-x-1" href="#">
+<span class="material-symbols-outlined">smart_toy</span>
+<span class="font-medium text-sm">AI Assistant</span>
+</a>
+</nav>
+<div class="pt-4 border-t border-outline-variant/20 space-y-1">
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">settings</span>
+<span class="text-xs font-medium">Settings</span>
+</a>
+<a class="flex items-center gap-3 px-3 py-2.5 text-slate-500 hover:text-primary transition-colors" href="#">
+<span class="material-symbols-outlined text-xl">help</span>
+<span class="text-xs font-medium">Help Center</span>
+</a>
+</div>
+</aside>
+<!-- Main Content Area -->
+<main class="lg:ml-64 min-h-screen flex flex-col">
+<!-- Top Navigation Bar -->
+<header class="sticky top-0 z-30 bg-surface/80 backdrop-blur-md">
+<div class="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
+<div class="flex items-center gap-4">
+<button class="lg:hidden p-2 text-on-surface">
+<span class="material-symbols-outlined">menu</span>
+</button>
+<h2 class="font-headline text-xl font-bold tracking-tight text-slate-900">Analysis Results</h2>
+</div>
+<div class="flex items-center gap-4">
+<span class="text-xs font-medium text-outline px-3 py-1 bg-surface-container rounded-full">Language: EN/हिन्दी</span>
+<div class="w-10 h-10 rounded-full bg-surface-variant overflow-hidden">
+<img class="w-full h-full object-cover" data-alt="User profile portrait" src="https://lh3.googleusercontent.com/aida-public/AB6AXuC6oWhs0E4zIeorbMphvNnY8TCwvvsXF2lCmQHVzuN5a1YGsLl57S0__yimIMdR_V6absMc90YEy0IcU0XUG-9zucdsPaq1H7IHh-CwM3jttvRMyowd2DyJLtBY--OFTF-ld5VQiFwUOXVui8sDyf52wdIfvApksZNyQHSdexFFyXyR4uijLJHI_S7gKXI-Z_3tIsIoi4ITnCebPhGnemVNFUWuid5ZTU1wEu4zqEStqxDX4Qb1GGczhBps7cZstH6gxVHaLnWuhwo"/>
+</div>
+</div>
+</div>
+<div class="bg-outline-variant/20 h-px w-full"></div>
+</header>
+<div class="flex-1 p-6 lg:p-10 max-w-7xl mx-auto w-full">
+<!-- Document Header -->
+<section class="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-6">
+<div class="space-y-2">
+<div class="flex items-center gap-2 text-primary">
+<span class="material-symbols-outlined">description</span>
+<span class="text-sm font-bold tracking-widest uppercase">Document Verified</span>
+</div>
+<h3 class="font-headline text-4xl font-extrabold text-on-background leading-tight tracking-tight">Rental_Agreement.pdf</h3>
+<p class="text-on-surface-variant flex items-center gap-2">
+<span class="material-symbols-outlined text-sm">calendar_today</span>
+                        Uploaded on October 24, 2024 • 2.4 MB
+                    </p>
+</div>
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-5 py-2.5 bg-surface-container-lowest text-primary rounded-xl border border-outline-variant/15 hover:bg-surface-container-high transition-all font-medium text-sm">
+<span class="material-symbols-outlined">share</span>
+                        Share
+                    </button>
+<button class="flex items-center gap-2 px-6 py-2.5 bg-gradient-to-r from-primary to-primary-container text-on-primary rounded-xl shadow-lg shadow-primary/10 hover:opacity-90 transition-all font-bold text-sm">
+<span class="material-symbols-outlined">download</span>
+                        Download Original
+                    </button>
+</div>
+</section>
+<!-- Grid Layout -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+<!-- Left Column: Summary & Analysis -->
+<div class="lg:col-span-8 space-y-8">
+<!-- Plain Language Summary -->
+<div class="bg-surface-container-lowest rounded-full p-8 relative overflow-hidden">
+<div class="absolute top-0 left-0 w-1.5 h-full bg-tertiary"></div>
+<div class="flex items-center gap-3 mb-6">
+<span class="material-symbols-outlined text-tertiary text-3xl">receipt_long</span>
+<h4 class="font-headline text-2xl font-bold">Plain language summary</h4>
+</div>
+<div class="space-y-4 text-on-surface-variant leading-relaxed">
+<p>This is a standard residential lease agreement for a duration of 11 months. It establishes that you are the tenant and the other party is the owner of the property located in Bangalore. The document outlines your right to occupy the premises in exchange for a monthly payment called 'rent'.</p>
+<p>Importantly, it confirms your security deposit amount and the conditions under which it will be returned. The agreement also specifies who is responsible for utility bills and minor repairs. In simple terms, it's a "live-and-pay" contract that protects both you and the landlord from sudden changes in terms.</p>
+</div>
+</div>
+<!-- Legal References Section -->
+<section class="space-y-6">
+<div class="flex items-center justify-between">
+<h4 class="font-headline text-xl font-bold">Legal References &amp; Framework</h4>
+<span class="text-xs font-medium text-outline">3 Statutes Cited</span>
+</div>
+<div class="space-y-3">
+<!-- Accordion Item 1 -->
+<div class="bg-surface-container-low rounded-xl p-5 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="w-10 h-10 flex items-center justify-center bg-white rounded-lg shadow-sm text-xl">⚖️</span>
+<div>
+<p class="font-bold text-on-surface">Indian Contract Act - Sec 10</p>
+<p class="text-xs text-on-surface-variant">Legal Capacity &amp; Free Consent</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:text-primary transition-colors">expand_more</span>
+</div>
+<div class="mt-4 pt-4 border-t border-outline-variant/10 text-sm text-on-surface-variant leading-relaxed">
+                                    This section ensures that all parties entering the agreement are of legal age, sound mind, and are signing without being forced. NyayaVanni has verified that the language used reflects mutual consent.
+                                </div>
+</div>
+<!-- Accordion Item 2 -->
+<div class="bg-surface-container-low rounded-xl p-5 hover:bg-surface-container-high transition-colors cursor-pointer group">
+<div class="flex justify-between items-center">
+<div class="flex items-center gap-4">
+<span class="w-10 h-10 flex items-center justify-center bg-white rounded-lg shadow-sm text-xl">🏠</span>
+<div>
+<p class="font-bold text-on-surface">Transfer of Property Act - Sec 105</p>
+<p class="text-xs text-on-surface-variant">Definition of Lease</p>
+</div>
+</div>
+<span class="material-symbols-outlined text-outline">expand_more</span>
+</div>
+</div>
+</div>
+</section>
+</div>
+<!-- Right Column: Sidebar Stats & Actions -->
+<div class="lg:col-span-4 space-y-8">
+<!-- Risk Indicator Card -->
+<div class="bg-secondary-fixed rounded-full p-6 relative overflow-hidden">
+<div class="flex items-start justify-between mb-4">
+<div class="flex items-center gap-2 px-3 py-1 bg-white/40 rounded-full">
+<span class="material-symbols-outlined text-secondary text-sm" style="font-variation-settings: 'FILL' 1;">warning</span>
+<span class="text-xs font-bold text-secondary uppercase tracking-tight">Review Recommended</span>
+</div>
+<span class="text-2xl font-black text-secondary/30">!</span>
+</div>
+<h4 class="font-headline text-lg font-bold text-on-secondary-fixed mb-4">Potential Concerns</h4>
+<ul class="space-y-3">
+<li class="flex gap-3 text-sm text-on-secondary-fixed-variant">
+<span class="material-symbols-outlined text-secondary shrink-0">info</span>
+<span>Clause 4.2: The lock-in period is unusually long (6 months) for an 11-month lease.</span>
+</li>
+<li class="flex gap-3 text-sm text-on-secondary-fixed-variant">
+<span class="material-symbols-outlined text-secondary shrink-0">info</span>
+<span>Missing Clause: No specific mention of "Force Majeure" regarding pandemic lockdowns.</span>
+</li>
+</ul>
+</div>
+<!-- Key Details Card -->
+<div class="bg-surface-container-lowest rounded-full p-6 shadow-sm border border-outline-variant/10">
+<div class="flex items-center justify-between mb-6">
+<h4 class="font-headline font-bold">Key Details</h4>
+<span class="px-2 py-1 bg-tertiary-container text-on-tertiary-container text-[10px] font-bold rounded uppercase">Rental Agreement</span>
+</div>
+<div class="space-y-6">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-outline font-bold mb-3">Parties Involved</p>
+<div class="flex items-center gap-3 mb-3">
+<div class="w-8 h-8 rounded-full bg-primary-fixed flex items-center justify-center text-on-primary-fixed text-xs font-bold">JD</div>
+<span class="text-sm font-medium">Jayesh Deshmukh (Lessor)</span>
+</div>
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-full bg-secondary-fixed flex items-center justify-center text-on-secondary-fixed text-xs font-bold">SK</div>
+<span class="text-sm font-medium">Suresh Kumar (Lessee)</span>
+</div>
+</div>
+<div class="grid grid-cols-2 gap-4 pt-4 border-t border-outline-variant/10">
+<div>
+<p class="text-[10px] uppercase tracking-widest text-outline font-bold mb-1">Agreement Date</p>
+<p class="text-sm font-bold">Oct 20, 2024</p>
+</div>
+<div>
+<p class="text-[10px] uppercase tracking-widest text-outline font-bold mb-1">Expiry Date</p>
+<p class="text-sm font-bold">Sep 19, 2025</p>
+</div>
+</div>
+</div>
+</div>
+<!-- Suggested Actions -->
+<div class="space-y-3">
+<h4 class="font-headline text-sm font-bold text-outline px-1">Suggested Actions</h4>
+<button class="w-full flex items-center justify-between p-4 bg-white hover:bg-primary/5 rounded-xl border border-outline-variant/15 transition-all group">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">gavel</span>
+<span class="font-bold text-sm">Consult Lawyer</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 bg-white hover:bg-primary/5 rounded-xl border border-outline-variant/15 transition-all group">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-primary">edit_note</span>
+<span class="font-bold text-sm">Prepare Reply</span>
+</div>
+<span class="material-symbols-outlined text-outline group-hover:translate-x-1 transition-transform">chevron_right</span>
+</button>
+<button class="w-full flex items-center justify-between p-4 bg-white hover:bg-tertiary/5 rounded-xl border border-outline-variant/15 transition-all group">
+<div class="flex items-center gap-4">
+<span class="material-symbols-outlined text-tertiary">task_alt</span>
+<span class="font-bold text-sm">Mark as Reviewed</span>
+</div>
+<span class="material-symbols-outlined text-outline">check</span>
+</button>
+</div>
+</div>
+</div>
+</div>
+<!-- AI Chat Panel (Fixed Bottom) -->
+<div class="sticky bottom-0 w-full p-4 lg:p-6 z-40 pointer-events-none">
+<div class="max-w-4xl mx-auto w-full pointer-events-auto">
+<div class="glass-panel border border-white rounded-full shadow-2xl p-2 pl-6 flex items-center gap-4 ring-4 ring-primary/5">
+<div class="flex items-center gap-3 shrink-0">
+<span class="material-symbols-outlined text-primary" style="font-variation-settings: 'FILL' 1;">smart_toy</span>
+<span class="text-sm font-bold text-on-surface/80 hidden md:block">AI Assistant</span>
+</div>
+<div class="h-6 w-px bg-outline-variant/30 hidden md:block"></div>
+<input class="flex-1 bg-transparent border-none focus:ring-0 text-sm py-2" placeholder="Questions about this document? Ask anything..." type="text"/>
+<button class="w-10 h-10 bg-primary text-on-primary rounded-full flex items-center justify-center hover:scale-105 active:scale-95 transition-all">
+<span class="material-symbols-outlined">arrow_upward</span>
+</button>
+</div>
+</div>
+</div>
+<!-- Footer -->
+<footer class="w-full py-12 px-6 border-t border-slate-100 dark:border-slate-800 bg-surface">
+<div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-6">
+<p class="font-body text-xs text-slate-500">© 2024 NyayaVanni - Secure Legal Intelligence</p>
+<div class="flex flex-wrap justify-center gap-6">
+<a class="font-body text-xs text-slate-500 hover:text-blue-700 transition-colors" href="#">Bank-level encryption</a>
+<a class="font-body text-xs text-slate-500 hover:text-blue-700 transition-colors" href="#">Terms of Service</a>
+<a class="font-body text-xs text-slate-500 hover:text-blue-700 transition-colors" href="#">Privacy Policy</a>
+<a class="font-body text-xs text-slate-500 hover:text-blue-700 transition-colors" href="#">Accessibility</a>
+</div>
+</div>
+</footer>
+</main>
+</body></html>

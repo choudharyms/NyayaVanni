@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+google-generativeai
+faiss-cpu
+numpy
+PyMuPDF  # for standard PDF text extraction
+pytesseract
+Pillow
+python-multipart
+python-jose
+passlib
+pydantic
+pydantic-settings
+python-dotenv
