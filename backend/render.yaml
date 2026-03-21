@@ -1,0 +1,14 @@
+services:
+  - type: web
+    name: nyayavanni-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker --bind 0.0.0.0:$PORT
+    region: singapore # Change to your preferred region
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.10.x
+      - key: GEMINI_API_KEY
+        sync: false # Set this in the Render dashboard
+      - key: PORT
+        value: 8000
