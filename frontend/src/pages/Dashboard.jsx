@@ -289,7 +289,7 @@ export default function Dashboard() {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-nyaya-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
                 </div>
-                <div className={`p-4 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-500 text-white rounded-tr-sm' : 'bg-white border rounded-tl-sm text-slate-700 shadow-sm'}`}>
+                <div className={`p-4 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-900 text-white rounded-tr-sm shadow-md' : 'bg-white border rounded-tl-sm text-slate-700 shadow-sm'}`}>
                   {msg.message}
                 </div>
               </div>

@@ -100,7 +100,7 @@ export default function GeneralChat() {
                 <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-nyaya-500 text-white shadow-md shadow-nyaya-500/20' : 'bg-slate-200 text-slate-600 shadow-sm'}`}>
                   {msg.role === 'user' ? <User className="w-4 h-4 sm:w-5 sm:h-5" /> : <Bot className="w-5 h-5 sm:w-6 sm:h-6" />}
                 </div>
-                <div className={`p-4 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-500 text-white rounded-tr-sm shadow-sm' : 'bg-white border hover:shadow-md transition-shadow rounded-tl-sm text-slate-700 shadow-sm'}`}>
+                <div className={`p-4 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-900 text-white rounded-tr-sm shadow-md' : 'bg-white border hover:shadow-md transition-shadow rounded-tl-sm text-slate-700 shadow-sm'}`}>
                   {msg.message}
                 </div>
               </div>
