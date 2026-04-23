@@ -1,5 +1,5 @@
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
-from services.storage_service import upload_to_local, save_document_record
+from services.storage_service import upload_to_local, save_document_record, get_document_record
 from services.ocr_service import extract_document
 from services.rag_service import retrieve_relevant_laws
 from services.gemini_service import analyze_document_with_gemini, generate_chat_response
@@ -31,15 +31,25 @@ async def analyze_document(document_id: str, language: str = "en", file: UploadF
     Ideally, we read s3_key from DynamoDB and fetch from S3.
     """
     try:
-        # Simplify MVP: if file is not provided, we should download it from S3.
-        # But for quick testing, we can let the frontend send it.
+        # Simplify MVP: if file is not provided, we download it from local storage via SQLite metadata.
         if not file:
-            raise HTTPException(status_code=400, detail="File required for MVP analysis phase")
-        
-        contents = await file.read()
+            record = get_document_record(document_id)
+            if not record or not record.get("local_path"):
+                raise HTTPException(status_code=404, detail="Document not found or file missing")
+            
+            try:
+                with open(record["local_path"], "rb") as f:
+                    contents = f.read()
+            except IOError:
+                raise HTTPException(status_code=500, detail="Failed to read document from storage")
+            
+            filename = record["filename"]
+        else:
+            contents = await file.read()
+            filename = file.filename
         
         # 1. OCR Extraction
-        text = extract_document(contents, file.filename)
+        text = extract_document(contents, filename)
         
         # 2. RAG Retrieval
         relevant_laws = retrieve_relevant_laws(text, k=3)

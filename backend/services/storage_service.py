@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 import sqlite3
+from typing import Optional
 from datetime import datetime
 
 logger = logging.getLogger(__name__)
@@ -61,3 +62,19 @@ def save_document_record(user_id: str, doc_id: str, filename: str, local_path: s
         conn.close()
     except Exception as e:
         logger.error(f"SQLite save failed: {e}")
+
+def get_document_record(doc_id: str) -> Optional[dict]:
+    """Retrieve document metadata from SQLite"""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM documents WHERE document_id = ?", (doc_id,))
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        logger.error(f"SQLite retrieve failed: {e}")
+        return None
