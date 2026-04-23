@@ -20,12 +20,12 @@ chat_config = {
 }
 
 model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-3.1-flash-lite-preview",
     generation_config=generation_config
 )
 
 chat_model = genai.GenerativeModel(
-    model_name="gemini-2.5-flash",
+    model_name="gemini-3.1-flash-lite-preview",
     generation_config=chat_config
 )
 
