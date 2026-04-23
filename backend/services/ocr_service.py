@@ -17,8 +17,15 @@ def extract_text_from_pdf(pdf_bytes: bytes) -> str:
     # If the PDF is scanned (image-based), PyMuPDF won't extract the text directly
     # We fallback to OCR if length is suspiciously short
     if len(text.strip()) < 50:
-        return extract_text_with_ocr_from_pdf(pdf_bytes)
-        
+        try:
+            return extract_text_with_ocr_from_pdf(pdf_bytes)
+        except Exception as e:
+            import logging
+            logging.error(f"OCR Fallback skipped: {e}")
+            if getattr(e, "__class__", None) and "TesseractNotFoundError" in e.__class__.__name__:
+                return text.strip() + "\n\n[Warning: The document may be scanned or an image, but OCR is missing.]"
+            return text.strip() + "\n\n[Warning: OCR fallback failed.]"
+            
     return text.strip()
 
 def extract_text_with_ocr_from_pdf(pdf_bytes: bytes) -> str:
@@ -35,8 +42,13 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes) -> str:
 
 def extract_text_from_image(image_bytes: bytes) -> str:
     """Use PyTesseract to extract text from an image"""
-    img = Image.open(io.BytesIO(image_bytes))
-    return pytesseract.image_to_string(img)
+    try:
+        img = Image.open(io.BytesIO(image_bytes))
+        return pytesseract.image_to_string(img)
+    except Exception as e:
+        if getattr(e, "__class__", None) and "TesseractNotFoundError" in e.__class__.__name__:
+            return "[Error: OCR software is not installed. System cannot read image text.]"
+        raise
 
 def extract_document(file_bytes: bytes, filename: str) -> str:
     """Main router for text extraction based on file extension"""

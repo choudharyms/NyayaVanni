@@ -1,0 +1,54 @@
+EXCEPTION RAISED:
+Traceback (most recent call last):
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\test_api.py", line 17, in test
+    analysis_result = analyze_document_with_gemini(text, relevant_laws, "en")
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\services\gemini_service.py", line 90, in analyze_document_with_gemini
+    raise e
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\services\gemini_service.py", line 73, in analyze_document_with_gemini
+    response = model.generate_content(prompt)
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\generativeai\generative_models.py", line 317, in generate_content
+    self._client = client.get_default_generative_client()
+                   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\generativeai\client.py", line 360, in get_default_generative_client
+    return _client_manager.get_default_client("generative")
+           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\generativeai\client.py", line 289, in get_default_client
+    client = self.make_client(name)
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\generativeai\client.py", line 249, in make_client
+    raise e
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\generativeai\client.py", line 241, in make_client
+    client = cls(**self.client_config)
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\ai\generativelanguage_v1beta\services\generative_service\client.py", line 667, in __init__
+    self._transport = transport_init(
+                      ~~~~~~~~~~~~~~^
+        credentials=credentials,
+        ^^^^^^^^^^^^^^^^^^^^^^^^
+    ...<7 lines>...
+        api_audience=self._client_options.api_audience,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\ai\generativelanguage_v1beta\services\generative_service\transports\grpc.py", line 235, in __init__
+    super().__init__(
+    ~~~~~~~~~~~~~~~~^
+        host=host,
+        ^^^^^^^^^^
+    ...<6 lines>...
+        api_audience=api_audience,
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\ai\generativelanguage_v1beta\services\generative_service\transports\base.py", line 100, in __init__
+    credentials, _ = google.auth.default(
+                     ~~~~~~~~~~~~~~~~~~~^
+        **scopes_kwargs, quota_project_id=quota_project_id
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    )
+    ^
+  File "C:\Users\madhusudan\Documents\AMNIT\NyayaVanni\backend\venv\Lib\site-packages\google\auth\_default.py", line 752, in default
+    raise exceptions.DefaultCredentialsError(_CLOUD_SDK_MISSING_CREDENTIALS)
+google.auth.exceptions.DefaultCredentialsError: 
+  No API_KEY or ADC found. Please either:
+    - Set the `GOOGLE_API_KEY` environment variable.
+    - Manually pass the key with `genai.configure(api_key=my_api_key)`.
+    - Or set up Application Default Credentials, see https://ai.google.dev/gemini-api/docs/oauth for more information.

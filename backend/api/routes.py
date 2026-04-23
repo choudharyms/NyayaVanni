@@ -64,8 +64,15 @@ async def analyze_document(document_id: str, language: str = "en", file: UploadF
             "extracted_text": text[:500] + "..." # Snippet
         }
     except Exception as e:
-        logger.error(f"Analysis failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        trace = traceback.format_exc()
+        logger.error(f"Analysis failed: {e}\n{trace}")
+        
+        detail_msg = str(e)
+        if "429" in str(e) or "Quota exceeded" in str(e):
+            raise HTTPException(status_code=429, detail="AI Quota limit reached. Please wait a minute and try again.")
+            
+        raise HTTPException(status_code=500, detail="An internal processing error occurred.")
 
 
 @api_router.post("/chat/{document_id}", response_model=ChatResponse)

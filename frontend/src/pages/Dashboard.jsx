@@ -32,13 +32,18 @@ export default function Dashboard() {
           body: formData
         });
         
-        if (!response.ok) throw new Error("Analysis request failed");
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          throw new Error(errData.detail || "Analysis request failed");
+        }
         const data = await response.json();
         setAnalysis(data.analysis);
       } catch (err) {
         console.error(err);
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        let msg = "Analysis failed. Please try uploading the document again.";
+        let msg = err.message !== "Failed to fetch" && err.message !== "Analysis request failed" 
+                   ? err.message 
+                   : "Analysis failed. Please try uploading the document again.";
         
         if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
           msg = "Configuration Error: API URL is set to localhost in production. Please set VITE_API_URL in Vercel.";
