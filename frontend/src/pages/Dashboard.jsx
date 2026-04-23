@@ -18,6 +18,11 @@ export default function Dashboard() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const messagesEndRef = React.useRef(null);
+
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [chatHistory]);
 
   useEffect(() => {
     // Initial fetch for analysis
@@ -284,7 +289,7 @@ export default function Dashboard() {
                 <div className={`w-8 h-8 rounded-full flex items-center justify-center shrink-0 ${msg.role === 'user' ? 'bg-nyaya-500 text-white' : 'bg-slate-200 text-slate-600'}`}>
                   {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
                 </div>
-                <div className={`p-4 rounded-2xl max-w-[80%] text-sm ${msg.role === 'user' ? 'bg-nyaya-500 text-white rounded-tr-sm' : 'bg-white border rounded-tl-sm text-slate-700 shadow-sm'}`}>
+                <div className={`p-4 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-500 text-white rounded-tr-sm' : 'bg-white border rounded-tl-sm text-slate-700 shadow-sm'}`}>
                   {msg.message}
                 </div>
               </div>
@@ -301,6 +306,7 @@ export default function Dashboard() {
                 </div>
               </div>
             )}
+            <div ref={messagesEndRef} />
           </div>
 
           <form onSubmit={handleChat} className="p-4 bg-white border-t flex gap-2">

@@ -112,7 +112,11 @@ def generate_chat_response(document_analysis: dict, chat_history: list, user_mes
     {user_message}
 
     Provide a helpful, accurate answer in simple, jargon-free language.
-    If legal consultation is needed, recommend it clearly. Keep it conversational.
+    If legal consultation is needed, recommend it clearly.
+    IMPORTANT FORMATTING RULES:
+    1. Organize your answer clearly using bullet points.
+    2. Make the response highly readable by breaking down complex sentences.
+    3. Be conversational but structure your advice in an easy, point-based readable output.
     {lang_instruction}
     """
     try:
