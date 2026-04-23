@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Dashboard() {
@@ -290,7 +291,11 @@ export default function Dashboard() {
                   {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
                 </div>
                 <div className={`p-4 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-900 text-white rounded-tr-sm shadow-md' : 'bg-white border rounded-tl-sm text-slate-700 shadow-sm'}`}>
-                  {msg.message}
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none prose-li:my-0.5 prose-ul:my-1 prose-p:my-1 prose-strong:text-slate-900">
+                      <ReactMarkdown>{msg.message}</ReactMarkdown>
+                    </div>
+                  ) : msg.message}
                 </div>
               </div>
             ))}

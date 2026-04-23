@@ -1,4 +1,19 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --color-nyaya-50: #f0fdfa;
+  --color-nyaya-100: #ccfbf1;
+  --color-nyaya-200: #99f6e4;
+  --color-nyaya-300: #5eead4;
+  --color-nyaya-400: #2dd4bf;
+  --color-nyaya-500: #14b8a6;
+  --color-nyaya-600: #0d9488;
+  --color-nyaya-700: #0f766e;
+  --color-nyaya-800: #115e59;
+  --color-nyaya-900: #134e4a;
+  --font-sans: 'Inter', 'Roboto', sans-serif;
+}
 
 @layer base {
   body {

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Bot, User, Send, ArrowLeft, Scale } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function GeneralChat() {
@@ -101,7 +102,11 @@ export default function GeneralChat() {
                   {msg.role === 'user' ? <User className="w-4 h-4 sm:w-5 sm:h-5" /> : <Bot className="w-5 h-5 sm:w-6 sm:h-6" />}
                 </div>
                 <div className={`p-4 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${msg.role === 'user' ? 'bg-nyaya-900 text-white rounded-tr-sm shadow-md' : 'bg-white border hover:shadow-md transition-shadow rounded-tl-sm text-slate-700 shadow-sm'}`}>
-                  {msg.message}
+                  {msg.role === 'assistant' ? (
+                    <div className="prose prose-sm max-w-none prose-li:my-0.5 prose-ul:my-1 prose-p:my-1 prose-strong:text-slate-900">
+                      <ReactMarkdown>{msg.message}</ReactMarkdown>
+                    </div>
+                  ) : msg.message}
                 </div>
               </div>
             ))}
