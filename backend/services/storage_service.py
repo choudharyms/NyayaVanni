@@ -2,6 +2,7 @@ import os
 import uuid
 import logging
 import sqlite3
+import json
 from typing import Optional
 from datetime import datetime
 
@@ -26,6 +27,18 @@ def init_db():
             local_path TEXT,
             status TEXT,
             uploaded_at TEXT
+        )
+    ''')
+    # Cache table: stores analysis results per document+language so that
+    # subsequent requests for the same document skip OCR/FAISS/Gemini entirely.
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS document_analysis_cache (
+            document_id TEXT,
+            language TEXT,
+            extracted_text TEXT,
+            analysis_result TEXT,
+            created_at TEXT,
+            PRIMARY KEY (document_id, language)
         )
     ''')
     conn.commit()
@@ -77,4 +90,52 @@ def get_document_record(doc_id: str) -> Optional[dict]:
         return None
     except Exception as e:
         logger.error(f"SQLite retrieve failed: {e}")
+        return None
+
+
+def save_cached_analysis(doc_id: str, language: str, extracted_text: str, analysis_result: dict):
+    """Persist the Gemini analysis JSON and extracted text to SQLite for a given document+language.
+    
+    On subsequent requests for the same document_id + language pair, the cached
+    result is returned immediately, skipping OCR, FAISS retrieval, and Gemini API calls.
+    """
+    timestamp = datetime.utcnow().isoformat()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO document_analysis_cache
+                (document_id, language, extracted_text, analysis_result, created_at)
+            VALUES (?, ?, ?, ?, ?)
+            """,
+            (doc_id, language, extracted_text, json.dumps(analysis_result), timestamp)
+        )
+        conn.commit()
+        conn.close()
+        logger.info(f"Analysis cached for document {doc_id} [{language}]")
+    except Exception as e:
+        # Non-fatal: if caching fails the response is still returned to the user.
+        logger.error(f"SQLite analysis cache save failed: {e}")
+
+
+def get_cached_analysis(doc_id: str, language: str) -> Optional[dict]:
+    """Return cached analysis dict for a document+language pair, or None if not cached yet."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT extracted_text, analysis_result FROM document_analysis_cache WHERE document_id = ? AND language = ?",
+            (doc_id, language)
+        )
+        row = cursor.fetchone()
+        conn.close()
+        if row:
+            return {
+                "extracted_text": row[0],
+                "analysis": json.loads(row[1])
+            }
+        return None
+    except Exception as e:
+        logger.error(f"SQLite analysis cache retrieve failed: {e}")
         return None

@@ -1,5 +1,8 @@
-from fastapi import APIRouter, File, UploadFile, HTTPException, Request
-from services.storage_service import upload_to_local, save_document_record, get_document_record
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
+from services.storage_service import (
+    upload_to_local, save_document_record, get_document_record,
+    save_cached_analysis, get_cached_analysis
+)
 from services.ocr_service import extract_document
 from services.rag_service import retrieve_relevant_laws
 from services.gemini_service import analyze_document_with_gemini, generate_chat_response
@@ -167,6 +170,17 @@ async def analyze_document(document_id: str, language: str = "en", file: UploadF
     Ideally, we read s3_key from DynamoDB and fetch from S3.
     """
     try:
+        # ── Cache-first ──────────────────────────────────────────────────────────
+        cached = get_cached_analysis(document_id, language)
+        if cached:
+            logger.info(f"Cache HIT for document {document_id} [{language}]")
+            return {
+                "documentId": document_id,
+                "analysis": cached["analysis"],
+                "extracted_text": cached["extracted_text"][:500] + "...",
+                "cached": True
+            }
+        # ── Cache MISS: run the full pipeline ────────────────────────────────────
         # Simplify MVP: if file is not provided, we download it from local storage via SQLite metadata.
         if not file:
             record = get_document_record(document_id)
@@ -193,11 +207,14 @@ async def analyze_document(document_id: str, language: str = "en", file: UploadF
         # 3. Gemini Analysis
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
         
-        # TODO: Update DynamoDB with analysis_result
+        # 4. Persist to cache so repeat requests are served instantly
+        save_cached_analysis(document_id, language, text, analysis_result)
+
         return {
             "documentId": document_id,
             "analysis": analysis_result,
-            "extracted_text": text[:500] + "..." # Snippet
+            "extracted_text": text[:500] + "...",
+            "cached": False
         }
     except Exception as e:
         import traceback

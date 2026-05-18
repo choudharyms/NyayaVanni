@@ -50,9 +50,9 @@ export const LanguageProvider = ({ children }) => {
       "dashboard.consult.btn": "Find a Lawyer",
       "chat.placeholder": "Ask a legal question...",
       "lawyers.title": "Find the Right Legal Expert",
-      "lawyers.subtitle": "Connect with top-rated lawyers across India for specialized legal consultation tailored to your specific needs.",
+      "lawyers.disclaimer": "This is an informational directory. BCI rules prohibit lawyer advertisements.",
       "lawyers.search": "Search by name, location, or specialty...",
-      "lawyers.book": "Book Consultancy"
+      "lawyers.book": "Request Consultation"
     },
     hi: {
       "nav.hire": "वकील नियुक्त करें",
@@ -85,7 +85,7 @@ export const LanguageProvider = ({ children }) => {
       "dashboard.consult.btn": "वकील खोजें",
       "chat.placeholder": "कानूनी प्रश्न पूछें...",
       "lawyers.title": "सही कानूनी विशेषज्ञ खोजें",
-      "lawyers.subtitle": "अपनी विशिष्ट आवश्यकताओं के अनुरूप विशेष कानूनी परामर्श के लिए पूरे भारत में शीर्ष रेटेड वकीलों से जुड़ें।",
+      "lawyers.disclaimer": "यह एक सूचनात्मक निर्देशिका है। बीसीआई नियम वकील विज्ञापनों को प्रतिबंधित करते हैं।",
       "lawyers.search": "नाम, स्थान या विशेषज्ञता से खोजें...",
       "lawyers.book": "परामर्श बुक करें"
     }

@@ -14,7 +14,7 @@ const LanguageToggle = () => {
   return (
     <button 
       onClick={toggleLanguage}
-      className="fixed bottom-6 right-6 z-50 bg-nyaya-900 text-white p-3 rounded-full shadow-xl hover:bg-nyaya-800 transition-all flex items-center justify-center gap-2 font-bold ring-2 ring-white/20"
+      className="bg-slate-900 text-white p-3 rounded-full shadow-xl hover:bg-slate-800 transition-all flex items-center justify-center gap-2 font-bold ring-2 ring-white/10"
       title="Toggle Language"
     >
       <Globe className="w-5 h-5" />
@@ -27,7 +27,8 @@ function App() {
   return (
     <LanguageProvider>
       <Router>
-        <div className="min-h-screen font-sans bg-slate-50 text-slate-900 selection:bg-nyaya-500 selection:text-white relative">
+        {/* Permanently Dark Root Layout Wrapper */}
+        <div className="min-h-screen font-sans bg-slate-950 text-slate-100 selection:bg-nyaya-500 selection:text-white relative">
           <Routes>
             <Route path="/" element={<LandingPage />} />
             <Route path="/dashboard/:documentId" element={<Dashboard />} />
@@ -36,7 +37,11 @@ function App() {
             <Route path="/signUp" element={<SignUp />} />
             <Route path="/signIn" element={<SignIn />} />
           </Routes>
-          <LanguageToggle />
+          
+          {/* Pinned Controls Layout */}
+          <div className="fixed bottom-6 right-6 z-50">
+            <LanguageToggle />
+          </div>
         </div>
       </Router>
     </LanguageProvider>
