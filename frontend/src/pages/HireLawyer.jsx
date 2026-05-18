@@ -17,7 +17,6 @@ export default function HireLawyer() {
       specialty: "Real Estate & Property",
       experience: "15 Years",
       rating: 4.8,
-      reviews: 124,
       location: "New Delhi, Delhi",
       fee: "₹2,000/Consultation",
       image: "https://i.pravatar.cc/150?u=a042581f4e29026024d"
@@ -28,7 +27,6 @@ export default function HireLawyer() {
       specialty: "Family Law & Divorce",
       experience: "12 Years",
       rating: 4.9,
-      reviews: 210,
       location: "Mumbai, Maharashtra",
       fee: "₹2,500/Consultation",
       image: "https://i.pravatar.cc/150?u=a04258a2462d826712d"
@@ -39,7 +37,6 @@ export default function HireLawyer() {
       specialty: "Corporate & Business",
       experience: "20 Years",
       rating: 4.7,
-      reviews: 89,
       location: "Bengaluru, Karnataka",
       fee: "₹5,000/Consultation",
       image: "https://i.pravatar.cc/150?u=a042581f4e29026704d"
@@ -50,7 +47,6 @@ export default function HireLawyer() {
       specialty: "Criminal Defense",
       experience: "8 Years",
       rating: 4.6,
-      reviews: 67,
       location: "Pune, Maharashtra",
       fee: "₹1,500/Consultation",
       image: "https://i.pravatar.cc/150?u=a048581f4e29026701d"
@@ -61,7 +57,6 @@ export default function HireLawyer() {
       specialty: "Civil Litigation",
       experience: "18 Years",
       rating: 4.8,
-      reviews: 156,
       location: "Chennai, Tamil Nadu",
       fee: "₹3,000/Consultation",
       image: "https://i.pravatar.cc/150?u=a04258114e29026702d"
@@ -72,7 +67,6 @@ export default function HireLawyer() {
       specialty: "Intellectual Property",
       experience: "10 Years",
       rating: 4.9,
-      reviews: 92,
       location: "Hyderabad, Telangana",
       fee: "₹4,000/Consultation",
       image: "https://i.pravatar.cc/150?u=a04258114e29026302d"
@@ -114,7 +108,7 @@ export default function HireLawyer() {
       <main className="max-w-7xl mx-auto px-6 mt-8">
         <div className="mb-10 text-center max-w-2xl mx-auto">
           <h1 className="text-4xl font-extrabold text-slate-900 mb-4 tracking-tight">{t("lawyers.title")}</h1>
-          <p className="text-lg text-slate-600">{t("lawyers.subtitle")}</p>
+          <p className="text-lg text-slate-600">{t("lawyers.disclaimer")}</p>
         </div>
 
         {/* Search and Filters */}
@@ -164,7 +158,6 @@ export default function HireLawyer() {
                     <div className="flex items-center gap-1 text-sm text-slate-500 mt-1">
                       <Star className="w-4 h-4 text-amber-500 fill-amber-500" />
                       <span className="font-semibold text-slate-700">{lawyer.rating}</span>
-                      <span>({lawyer.reviews} reviews)</span>
                     </div>
                   </div>
                 </div>
@@ -193,6 +186,7 @@ export default function HireLawyer() {
             ))}
           </div>
         )}
+
       </main>
     </div>
   );
