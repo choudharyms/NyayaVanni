@@ -339,7 +339,7 @@ export default function HireLawyer() {
                 </div>
 
                 <button 
-                  onClick={() => handleBookConsultancy(lawyer.name)}
+                  onClick={() => handleOpenBooking(lawyer)}
                   className="w-full bg-slate-900 hover:bg-nyaya-600 text-white font-semibold py-3 px-4 rounded-xl transition-colors flex items-center justify-center gap-2"
                 >
                   <Calendar className="w-4 h-4" /> Request Consultation
