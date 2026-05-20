@@ -12,3 +12,10 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     response: str
+
+class DocumentGenerationRequest(BaseModel):
+    party_one_name: str
+    party_two_name: str
+    effective_date: str
+    consideration_amount: str
+    jurisdiction: str

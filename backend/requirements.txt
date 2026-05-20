@@ -13,3 +13,4 @@ pydantic
 pydantic-settings
 python-dotenv
 gunicorn
+reportlab
