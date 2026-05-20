@@ -1,3 +1,5 @@
+import os
+from services.document_classifier import classify_document
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends
 from services.storage_service import (
     upload_to_local, save_document_record, get_document_record,
@@ -62,8 +64,11 @@ async def analyze_document(document_id: str, language: str = "en", file: UploadF
             contents = await file.read()
             filename = file.filename
         
-        # 1. OCR Extraction
+       # 1. OCR Extraction
         text = extract_document(contents, filename)
+
+        # 1.5 Document Classification (NEW)
+        classification = classify_document(text)
         
         # 2. RAG Retrieval
         relevant_laws = retrieve_relevant_laws(text, k=3)
@@ -77,9 +82,11 @@ async def analyze_document(document_id: str, language: str = "en", file: UploadF
         return {
             "documentId": document_id,
             "analysis": analysis_result,
+            "classification": classification,   # NEW
             "extracted_text": text[:500] + "...",
             "cached": False
         }
+
     except HTTPException as http_err:
         raise http_err
     except ValueError as val_err:
