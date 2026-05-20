@@ -202,7 +202,7 @@ export default function ScamDetector() {
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
                 <Scale className="text-nyaya-400 w-5 h-5" />
               </span>
-              Nyaya<span className="text-nyaya-400">Vanni</span>
+              <span>Nyaya<span className="text-nyaya-400">Vanni</span></span>
             </div>
           </div>
 
