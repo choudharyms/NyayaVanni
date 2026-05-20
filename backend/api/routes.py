@@ -29,15 +29,6 @@ logger = logging.getLogger(__name__)
 
 api_router = APIRouter()
 graph_builder = LegalKnowledgeGraphBuilder()
-@api_router.post("/upload")
-async def upload_document(file: UploadFile = File(...)):
-    """Upload document to S3 and return documentId"""
-    try:
-        contents = await file.read()
-        doc_id, local_path = upload_to_local(contents, file.filename)
-        # Assuming dummy user 'user_123' for MVP
-        save_document_record("user_123", doc_id, file.filename, local_path)
-
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
@@ -282,37 +273,36 @@ async def chat_general(request: ChatRequest):
         if not request.user_message or not request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-        analysis = request.document_analysis or {}
+        analysis = {}
 
         history = [
             {"role": msg.role, "message": msg.message}
             for msg in request.chat_history
         ]
 
-        text = generate_chat_response(
+        generator = stream_chat_response(
             analysis,
             history,
             request.user_message,
             request.language
         )
 
-        return ChatResponse(response=text)
+        return StreamingResponse(generator, media_type="text/plain")
     except Exception as e:
         logger.error(f"General chat failed: {e}")
         raise HTTPException(status_code=500, detail="Chat generation failed")
 
-
-@api_router.post("/chat/{document_id}", response_model=ChatResponse)
-async def chat_with_document(document_id: str, request: ChatRequest):
+@api_router.post("/chat/{document_id}")
+async def chat_with_document(document_id: str, chat_request: ChatRequest, http_request: Request):
     """Send chat message with document context loaded server-side."""
     try:
-        cached = get_cached_analysis(document_id, request.language)
+        cached = get_cached_analysis(document_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
 
-        history = [{"role": msg.role, "message": msg.message} for msg in request.chat_history]
-        response_text = generate_chat_response(analysis, history, request.user_message, request.language)
+        history = [{"role": msg.role, "message": msg.message} for msg in chat_request.chat_history]
+        generator = stream_chat_response(analysis, history, chat_request.user_message, chat_request.language)
 
-        return ChatResponse(response=response_text)
+        return StreamingResponse(generator, media_type="text/plain")
     except Exception as e:
         logger.error(f"Chat failed for document {document_id}: {e}")
         raise HTTPException(status_code=500, detail="Chat generation failed")

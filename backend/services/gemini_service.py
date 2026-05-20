@@ -149,3 +149,55 @@ def generate_chat_response(document_analysis: dict, chat_history: list, user_mes
     except Exception as e:
         logger.error(f"Gemini Chat Failed: {e}")
         return "Sorry, I am unable to respond at the moment."
+
+def stream_chat_response(document_analysis: dict, chat_history: list, user_message: str, language: str = "en"):
+    """
+    Generate a conversational response using the Gemini chat model and yield it as a stream.
+    """
+    optimized_message = query_optimizer.optimize_prompt(user_message)
+    
+    history_str = "\n".join([f"{msg['role'].capitalize()}: {msg['message']}" for msg in chat_history])
+    
+    if document_analysis:
+        context_prompt = f"You are helping a user understand their legal document ({document_analysis.get('document_type', 'Document')}).\nPrevious analysis: {json.dumps(document_analysis)}"
+    else:
+        context_prompt = "You are an expert Indian Legal AI Assistant helping a user with general legal queries based on Indian law."
+
+    lang_instruction = ""
+    if language == "hi":
+        lang_instruction = "IMPORTANT: You MUST respond entirely in the Hindi language (हिन्दी)."
+
+    prompt = f"""
+    CONTEXT:
+    {context_prompt}
+
+    CONVERSATION HISTORY:
+    {history_str}
+
+    USER QUESTION (OPTIMIZED):
+    {optimized_message}
+
+    Provide a helpful, accurate answer in simple, jargon-free language.
+    If legal consultation is needed, recommend it clearly.
+    
+    STRICT FORMATTING RULES:
+    1. Organize your answer clearly using bullet points (use * or -).
+    2. Use **bold** for key terms or section names.
+    3. Break down complex sentences into short, easy-to-read points.
+    4. Each point should be on a new line.
+    
+    Example Structure:
+    * **Observation:** [Brief point]
+    * **Next Step:** [Actionable advice]
+    * **Note:** [Relevant legal mention]
+    
+    {lang_instruction}
+    """
+    try:
+        response = chat_model.generate_content(prompt, stream=True)
+        for chunk in response:
+            if chunk.text:
+                yield chunk.text
+    except Exception as e:
+        logger.error(f"Gemini Chat Stream Failed: {e}")
+        yield "Sorry, I am unable to respond at the moment."
