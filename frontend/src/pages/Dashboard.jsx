@@ -1,3 +1,10 @@
+import ReactFlow, {
+  MiniMap,
+  Controls,
+  Background
+} from 'reactflow';
+
+import 'reactflow/dist/style.css';
 import React, { useState, useEffect } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search } from 'lucide-react';
@@ -13,6 +20,10 @@ export default function Dashboard() {
   const file = location.state?.file;
 
   const [analysis, setAnalysis] = useState(null);
+  const [knowledgeGraph, setKnowledgeGraph] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(null);
+const [searchTerm, setSearchTerm] = useState('');
+const [selectedType, setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [chatHistory, setChatHistory] = useState([
@@ -47,6 +58,7 @@ export default function Dashboard() {
         }
         const data = await response.json();
         setAnalysis(data.analysis);
+setKnowledgeGraph(data.knowledge_graph);
       } catch (err) {
         console.error(err);
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -109,6 +121,77 @@ export default function Dashboard() {
       setChatLoading(false);
     }
   };
+ const filteredNodes = knowledgeGraph?.nodes?.filter((node) => {
+
+  const matchesSearch =
+    node.label.toLowerCase().includes(
+      searchTerm.toLowerCase()
+    );
+
+  const matchesType =
+    selectedType === 'all'
+      ? true
+      : node.type === selectedType;
+
+  return matchesSearch && matchesType;
+
+}) || [];
+
+const graphNodes = filteredNodes.map((node, index) => ({
+
+  id: node.id,
+
+ data: {
+  label: node.label,
+  type: node.type
+},
+
+  position: {
+    x: (index % 4) * 250,
+    y: Math.floor(index / 4) * 150
+  },
+
+  style: {
+    padding: 10,
+    borderRadius: 12,
+    border: '1px solid #cbd5e1',
+    background:
+      node.type === 'clauses'
+        ? '#dbeafe'
+        : node.type === 'obligations'
+        ? '#fef3c7'
+        : node.type === 'parties'
+        ? '#dcfce7'
+        : node.type === 'dates'
+        ? '#fee2e2'
+        : '#ffffff',
+
+    width: 180,
+    fontSize: 12
+  }
+
+}));
+
+const visibleNodeIds = new Set(
+  graphNodes.map(node => node.id)
+);
+
+const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
+
+  return (
+    visibleNodeIds.has(edge.source) &&
+    visibleNodeIds.has(edge.target)
+  );
+
+}).map((edge) => ({
+
+  id: edge.id,
+  source: edge.source,
+  target: edge.target,
+  label: edge.label,
+  animated: true
+
+})) || [];
 
   if (loading) {
     return (
@@ -279,6 +362,139 @@ export default function Dashboard() {
             
           </div>
         </div>
+        {knowledgeGraph && (
+  <div className="bg-white rounded-2xl shadow-sm border border-slate-200 p-6">
+    
+   <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-4">
+
+  <div>
+    <h2 className="text-2xl font-bold text-slate-900">
+      Legal Knowledge Graph
+    </h2>
+
+    <p className="text-slate-500 text-sm mt-1">
+      Interactive visualization of clauses, obligations, parties, and relationships
+    </p>
+  </div>
+
+  <div className="flex gap-3">
+
+    <input
+      type="text"
+      placeholder="Search nodes..."
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="px-4 py-2 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-nyaya-200"
+    />
+
+    <select
+      value={selectedType}
+      onChange={(e) => setSelectedType(e.target.value)}
+      className="px-4 py-2 border border-slate-300 rounded-xl text-sm outline-none focus:ring-2 focus:ring-nyaya-200"
+    >
+      <option value="all">All Types</option>
+      <option value="parties">Parties</option>
+      <option value="clauses">Clauses</option>
+      <option value="obligations">Obligations</option>
+      <option value="dates">Dates</option>
+      <option value="legal_terms">Legal Terms</option>
+      <option value="financial_terms">Financial Terms</option>
+    </select>
+
+  </div>
+
+</div>
+
+    <div className="h-[600px] rounded-xl overflow-hidden border border-slate-200">
+      <ReactFlow
+  nodes={graphNodes}
+  edges={graphEdges}
+  fitView
+  onNodeClick={(event, node) => {
+    setSelectedNode(node);
+  }}
+>
+        <MiniMap />
+        <Controls />
+        <Background />
+      </ReactFlow>
+        </div>
+
+    {selectedNode && (
+      <div className="mt-5 bg-slate-50 border border-slate-200 rounded-xl p-4">
+
+        <h3 className="text-lg font-bold text-slate-900 mb-3">
+          Node Details
+        </h3>
+
+        <div className="space-y-2 text-sm">
+
+          <div>
+            <span className="font-semibold text-slate-700">
+              Label:
+            </span>{" "}
+            {selectedNode.data.label}
+          </div>
+
+          <div>
+            <span className="font-semibold text-slate-700">
+              Type:
+            </span>{" "}
+            {selectedNode.data.type}
+          </div>
+
+          <div>
+            <span className="font-semibold text-slate-700">
+              Node ID:
+            </span>{" "}
+            {selectedNode.id}
+          </div>
+
+        </div>
+
+      </div>
+    )}
+
+    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-5 text-sm">
+      <div className="bg-slate-50 rounded-lg p-3 border">
+        <div className="font-semibold text-slate-900">Nodes</div>
+        <div className="text-slate-600">
+          {knowledgeGraph.nodes?.length || 0}
+        </div>
+      </div>
+
+      <div className="bg-slate-50 rounded-lg p-3 border">
+        <div className="font-semibold text-slate-900">Relationships</div>
+        <div className="text-slate-600">
+          {knowledgeGraph.edges?.length || 0}
+        </div>
+      </div>
+
+      <div className="bg-slate-50 rounded-lg p-3 border">
+        <div className="font-semibold text-slate-900">Clauses</div>
+        <div className="text-slate-600">
+          {
+            knowledgeGraph.nodes?.filter(
+              n => n.type === "clauses"
+            ).length || 0
+          }
+        </div>
+      </div>
+
+      <div className="bg-slate-50 rounded-lg p-3 border">
+        <div className="font-semibold text-slate-900">Obligations</div>
+        <div className="text-slate-600">
+          {
+            knowledgeGraph.nodes?.filter(
+              n => n.type === "obligations"
+            ).length || 0
+          }
+        </div>
+      </div>
+    </div>
+
+  </div>
+)}
 
         {/* Right Column: AI Chat */}
         <div className="lg:col-span-5 h-[calc(100vh-8rem)] sticky top-24 flex flex-col bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
