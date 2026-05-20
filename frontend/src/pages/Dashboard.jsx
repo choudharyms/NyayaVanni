@@ -102,29 +102,8 @@ setKnowledgeGraph(data.knowledge_graph);
       });
 
       if (!response.ok) throw new Error("Chat failed");
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder("utf-8");
-      
-      // Initialize assistant message
-      setChatHistory(prev => [...prev, { role: 'assistant', message: '' }]);
-      
-      let aiText = '';
-      setChatLoading(false); // Stop loading animation since we're streaming
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        const chunk = decoder.decode(value, { stream: true });
-        aiText += chunk;
-        
-        // Update the last message in history with new chunks
-        setChatHistory(prev => {
-          const newArr = [...prev];
-          newArr[newArr.length - 1] = { role: 'assistant', message: aiText };
-          return newArr;
-        });
-      }
+      const data = await response.json();
+      setChatHistory([...newHistory, { role: 'assistant', message: data.response }]);
     } catch (err) {
       console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -134,7 +113,10 @@ setKnowledgeGraph(data.knowledge_graph);
         msg = "Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.";
       }
 
-      setChatHistory([...newHistory, { role: 'assistant', message: msg }]);
+      setTimeout(() => {
+        setChatHistory([...newHistory, { role: 'assistant', message: msg }]);
+        setChatLoading(false);
+      }, 1000);
     } finally {
       setChatLoading(false);
     }
