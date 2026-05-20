@@ -3,6 +3,10 @@ import os
 import json
 import logging
 import re
+from dotenv import load_dotenv
+
+load_dotenv()
+
 # Import the custom Legal Query Optimizer
 from services.legal_processor import LegalQueryOptimizer
 

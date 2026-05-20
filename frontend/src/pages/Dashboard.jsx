@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
+import { ensureSessionId } from '../utils/session';
 
 export default function Dashboard() {
   const { t, language } = useLanguage();
@@ -33,8 +34,10 @@ export default function Dashboard() {
         if (file) formData.append('file', file);
         
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const sessionId = await ensureSessionId(apiUrl);
         const response = await fetch(`${apiUrl}/api/analyze/${documentId}?language=${language}`, {
           method: 'POST',
+          headers: { 'X-Session-Id': sessionId },
           body: formData
         });
         
@@ -75,9 +78,10 @@ export default function Dashboard() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const sessionId = await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: chatHistory,

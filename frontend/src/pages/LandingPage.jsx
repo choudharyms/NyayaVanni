@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { ensureSessionId } from '../utils/session';
 
 export default function LandingPage() {
   const { t } = useLanguage();
@@ -51,8 +52,10 @@ export default function LandingPage() {
       formData.append('file', file);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const sessionId = await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
+        headers: { 'X-Session-Id': sessionId },
         body: formData,
       });
       
@@ -86,7 +89,7 @@ export default function LandingPage() {
       <nav className="w-full max-w-7xl mx-auto px-6 py-6 flex justify-between items-center z-10">
         <div className="flex items-center gap-2 text-2xl font-bold tracking-tight text-white cursor-pointer" onClick={() => navigate('/')}>
           <Scale className="text-nyaya-500 w-8 h-8" />
-          Nyaya<span className="text-nyaya-500">Vanni</span>
+          <span>Nyaya<span className="text-nyaya-500">Vanni</span></span>
         </div>
         <div className="flex gap-4">
           <button 
@@ -303,7 +306,7 @@ export default function LandingPage() {
                 <span className="inline-flex items-center justify-center w-10 h-10 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
                   <Scale className="w-5 h-5 text-nyaya-400" />
                 </span>
-                Nyaya<span className="text-nyaya-400">Vanni</span>
+                <span>Nyaya<span className="text-nyaya-400">Vanni</span></span>
               </div>
               <p className="mt-3 text-slate-400">
                 Understand Indian legal documents in simple language. Upload contracts/notices and get clearer insights fast.

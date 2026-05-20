@@ -48,6 +48,8 @@ def extract_text_from_image(image_bytes: bytes) -> str:
     except Exception as e:
         if getattr(e, "__class__", None) and "TesseractNotFoundError" in e.__class__.__name__:
             return "[Error: OCR software is not installed. System cannot read image text.]"
+        if getattr(e, "__class__", None) and "UnidentifiedImageError" in e.__class__.__name__:
+            raise ValueError("The uploaded image is corrupted or in an unsupported format.")
         raise
 
 def extract_document(file_bytes: bytes, filename: str) -> str:
