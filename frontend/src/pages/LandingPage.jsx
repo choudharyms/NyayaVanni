@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
+import { ensureSessionId } from '../utils/session';
 
 export default function LandingPage() {
   const { t } = useLanguage();
@@ -51,8 +52,10 @@ export default function LandingPage() {
       formData.append('file', file);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const sessionId = await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
+        headers: { 'X-Session-Id': sessionId },
         body: formData,
       });
       

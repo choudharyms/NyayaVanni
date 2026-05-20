@@ -23,6 +23,7 @@ def init_db():
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS documents (
             document_id TEXT PRIMARY KEY,
+            session_id TEXT,
             user_id TEXT,
             filename TEXT,
             local_path TEXT,
@@ -42,6 +43,17 @@ def init_db():
             PRIMARY KEY (document_id, language)
         )
     ''')
+    cursor.execute('''
+        CREATE INDEX IF NOT EXISTS idx_documents_session_id
+        ON documents(session_id)
+    ''')
+    cursor.execute("PRAGMA table_info(documents)")
+    existing_columns = {row[1] for row in cursor.fetchall()}
+    if "session_id" not in existing_columns:
+        cursor.execute("ALTER TABLE documents ADD COLUMN session_id TEXT")
+    if "user_id" not in existing_columns:
+        cursor.execute("ALTER TABLE documents ADD COLUMN user_id TEXT")
+
     conn.commit()
     conn.close()
 
@@ -62,15 +74,19 @@ def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
         logger.error(f"Local storage save failed: {e}")
         raise e
 
-def save_document_record(user_id: str, doc_id: str, filename: str, local_path: str):
+def create_session_id() -> str:
+    return str(uuid.uuid4())
+
+
+def save_document_record(session_id: str, doc_id: str, filename: str, local_path: str):
     """Save document metadata to SQLite"""
     timestamp = datetime.utcnow().isoformat()
     try:
         conn = sqlite3.connect(DB_PATH)
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT INTO documents (document_id, user_id, filename, local_path, status, uploaded_at) VALUES (?, ?, ?, ?, ?, ?)",
-            (doc_id, user_id, filename, local_path, 'processing', timestamp)
+            "INSERT INTO documents (document_id, session_id, user_id, filename, local_path, status, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (doc_id, session_id, None, filename, local_path, 'processing', timestamp)
         )
         conn.commit()
         conn.close()
@@ -92,6 +108,37 @@ def get_document_record(doc_id: str) -> Optional[dict]:
     except Exception as e:
         logger.error(f"SQLite retrieve failed: {e}")
         return None
+
+
+def delete_document_and_cache(doc_id: str) -> bool:
+    record = get_document_record(doc_id)
+    if not record:
+        return False
+
+    local_path = record.get("local_path")
+    if local_path and os.path.exists(local_path):
+        try:
+            os.remove(local_path)
+        except OSError as exc:
+            logger.warning(f"Failed to delete local file {local_path}: {exc}")
+
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM document_analysis_cache WHERE document_id = ?",
+            (doc_id,)
+        )
+        cursor.execute(
+            "DELETE FROM documents WHERE document_id = ?",
+            (doc_id,)
+        )
+        conn.commit()
+        conn.close()
+        return True
+    except Exception as e:
+        logger.error(f"SQLite delete failed: {e}")
+        return False
 
 
 def save_cached_analysis(doc_id: str, language: str, extracted_text: str, analysis_result: dict):
