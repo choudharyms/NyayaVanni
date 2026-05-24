@@ -26,5 +26,7 @@ jobs:
           pip install httpx
 
       - name: Run tests
+        env:
+          PYTHONPATH: backend
         run: |
           pytest -q
