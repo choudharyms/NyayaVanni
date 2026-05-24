@@ -224,13 +224,15 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
             raise HTTPException(status_code=400, detail="The uploaded document is corrupted or could not be parsed.")
 
 @api_router.post("/chat/general")
-def chat_general(request: ChatRequest):
+def chat_general(request: ChatRequest, http_request: Request):
     """General legal chat no document context."""
     try:
+        session_id = require_session_id(http_request)
         if not request.user_message or not request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-        analysis = request.document_analysis or {}
+        # General chat does not use document-specific analysis context.
+        analysis = {}
         history = [{"role": msg.role, "message": msg.message} for msg in request.chat_history]
 
         response_text = generate_chat_response(

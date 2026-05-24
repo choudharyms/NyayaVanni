@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
-import { useNavigate, useLocation } from 'react-router-dom';
-import { Bot, User, Send, ArrowLeft, Scale } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
-import { useLanguage } from '../contexts/LanguageContext';
-import ThemeToggle from '../components/ThemeToggle';
-import Footer from '../components/Footer';
+import React, { useState } from "react";
+import { useNavigate, useLocation } from "react-router-dom";
+import { Bot, User, Send, ArrowLeft, Scale } from "lucide-react";
+import ReactMarkdown from "react-markdown";
+import { useLanguage } from "../contexts/LanguageContext";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
+import { ensureSessionId } from "../utils/session";
 
 export default function GeneralChat() {
   const { t, language } = useLanguage();
@@ -31,10 +32,14 @@ export default function GeneralChat() {
     setChatLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const sessionId = await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/chat/general`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { 
+          "Content-Type": "application/json",
+          "X-Session-Id": sessionId
+        },
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: currentHistory,
