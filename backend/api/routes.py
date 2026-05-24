@@ -249,6 +249,9 @@ async def chat_general(request: ChatRequest):
 async def chat_with_document(document_id: str, chat_request: ChatRequest, http_request: Request):
     """Send chat message with document context loaded server-side."""
     try:
+        session_id = require_session_id(http_request)
+        require_document_owner(document_id, session_id)
+        
         cached = get_cached_analysis(document_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
 
@@ -256,6 +259,8 @@ async def chat_with_document(document_id: str, chat_request: ChatRequest, http_r
         generator = stream_chat_response(analysis, history, chat_request.user_message, chat_request.language)
 
         return StreamingResponse(generator, media_type="text/plain")
+    except HTTPException as http_err:
+        raise http_err
     except Exception as e:
         logger.error(f"Chat failed for document {document_id}: {e}")
         raise HTTPException(status_code=500, detail="Chat generation failed")

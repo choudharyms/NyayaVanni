@@ -3,6 +3,8 @@ import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, Me
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
+import { useDocumentHistory } from '../hooks/useDocumentHistory';
+import RecentDocuments from '../components/RecentDocuments';
 
 export default function LandingPage() {
   const { t } = useLanguage();
@@ -11,6 +13,7 @@ export default function LandingPage() {
   const [loading, setLoading] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
+  const { history, clearHistory } = useDocumentHistory();
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -243,7 +246,14 @@ export default function LandingPage() {
             </div>
           </div>
         </div>
+        {/* Recent Documents History */}
+        {history.length > 0 && (
+          <div className="w-full max-w-lg mx-auto mt-8">
+            <RecentDocuments history={history} onClear={clearHistory} />
+          </div>
+        )}
       </main>
+
 
 
       {/* FAQ + Footer */}

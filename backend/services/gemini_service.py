@@ -40,8 +40,10 @@ chat_model = genai.GenerativeModel(
 )
 
 def analyze_document_with_gemini(document_text: str, retrieved_laws: list, language: str = "en") -> dict:
+    # Truncate document and laws to keep total prompt under model limits
+    document_text = document_text[:8000]
+    retrieved_laws = [law[:500] for law in retrieved_laws[:3]]
     context = "\n".join(retrieved_laws)
-    
     lang_instruction = ""
     if language == "hi":
         lang_instruction = "IMPORTANT: You MUST translate all your analysis, summaries, and action points into Hindi (हिन्दी). Provide the values in Hindi, but keep the JSON keys strictly in English."
