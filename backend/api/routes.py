@@ -34,8 +34,13 @@ graph_builder = LegalKnowledgeGraphBuilder()
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
-ALLOWED_MIME_TYPES = {'application/pdf', 'image/png', 'image/jpeg'}
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx'}
+ALLOWED_MIME_TYPES = {
+    'application/pdf', 
+    'image/png', 
+    'image/jpeg',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+}
 
 class DocumentGenerationRequest(BaseModel):
     effective_date: str
@@ -76,7 +81,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
                 status_code=400, 
-                detail="Unsupported file format or MIME type. Only PDF, PNG, JPG, and JPEG are allowed."
+                detail="Unsupported file format or MIME type. Only PDF, DOCX, PNG, JPG, and JPEG are allowed."
             )
             
         # 2. Generate unique document ID and local file path

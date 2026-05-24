@@ -3,6 +3,7 @@ import pytesseract
 from PIL import Image
 import io
 import os
+import docx
 import re
 import logging
 
@@ -154,6 +155,23 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> st
     return text.strip()
 
 
+def extract_text_from_docx(docx_bytes: bytes) -> str:
+    """
+    Extract text from a Word document (.docx).
+    """
+    try:
+        doc = docx.Document(io.BytesIO(docx_bytes))
+        text = "\n".join([para.text for para in doc.paragraphs if para.text.strip()])
+        
+        if is_invalid_extracted_text(text):
+            logger.warning("Docx extraction produced invalid or empty text.")
+            return ""
+            
+        return text
+    except Exception as e:
+        logger.error(f"Docx extraction failed: {e}")
+        raise ValueError("Failed to parse the Word Document.")
+
 def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
     """
     Extract text from image using OCR.
@@ -209,6 +227,11 @@ def extract_document(
             force_ocr=force_ocr,
             language=language
         )
+
+    # Word Documents
+    elif ext == 'docx':
+        
+        extracted_text = extract_text_from_docx(file_bytes)
 
     # Images
     elif ext in ['jpg', 'jpeg', 'png', 'tiff', 'bmp']:
