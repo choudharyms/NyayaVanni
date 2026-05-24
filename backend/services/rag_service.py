@@ -10,12 +10,9 @@ logger = logging.getLogger(__name__)
 # Validate GEMINI_API_KEY on startup
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key or not api_key.strip():
-    raise RuntimeError(
-        "GEMINI_API_KEY environment variable is not set or empty. "
-        "Please set this variable to use RAG and document analysis features."
-    )
-
-genai.configure(api_key=api_key)
+    logger.warning("GEMINI_API_KEY environment variable is not set or empty. RAG features will fail if called.")
+else:
+    genai.configure(api_key=api_key)
 
 # Load Legal Corpus
 CORPUS_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'legal_corpus.json')
