@@ -67,7 +67,7 @@ def preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
     return img
 
 
-def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False) -> str:
+def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False, language: str = "en") -> str:
     """
     Extract text from PDF using PyMuPDF with OCR fallback.
     """
@@ -77,7 +77,7 @@ def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False) -> str:
     # Forced OCR mode
     if force_ocr:
         try:
-            return extract_text_with_ocr_from_pdf(pdf_bytes)
+            return extract_text_with_ocr_from_pdf(pdf_bytes, language=language)
 
         except Exception as e:
             logger.error(f"Forced OCR extraction failed: {e}")
@@ -105,7 +105,7 @@ def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False) -> str:
     # OCR fallback for scanned PDFs
     if is_scanned:
         try:
-            ocr_text = extract_text_with_ocr_from_pdf(pdf_bytes)
+            ocr_text = extract_text_with_ocr_from_pdf(pdf_bytes, language=language)
 
             # Use OCR result only if valid
             if not is_invalid_extracted_text(ocr_text):
@@ -126,7 +126,7 @@ def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False) -> str:
     return text.strip()
 
 
-def extract_text_with_ocr_from_pdf(pdf_bytes: bytes) -> str:
+def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> str:
     """
     Extract text from scanned PDFs using OCR.
     """
@@ -134,6 +134,8 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes) -> str:
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
     text = ""
+    
+    tesseract_lang = "hin+eng" if language == "hi" else "eng"
 
     for page in doc:
         pix = page.get_pixmap()
@@ -145,14 +147,14 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes) -> str:
         # Improve OCR quality
         img = preprocess_image_for_ocr(img)
 
-        page_text = pytesseract.image_to_string(img)
+        page_text = pytesseract.image_to_string(img, lang=tesseract_lang)
 
         text += page_text + "\n"
 
     return text.strip()
 
 
-def extract_text_from_image(image_bytes: bytes) -> str:
+def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
     """
     Extract text from image using OCR.
     """
@@ -163,7 +165,8 @@ def extract_text_from_image(image_bytes: bytes) -> str:
         # Improve OCR quality
         img = preprocess_image_for_ocr(img)
 
-        text = pytesseract.image_to_string(img)
+        tesseract_lang = "hin+eng" if language == "hi" else "eng"
+        text = pytesseract.image_to_string(img, lang=tesseract_lang)
 
         # Validate OCR output
         if is_invalid_extracted_text(text):
@@ -189,7 +192,8 @@ def extract_text_from_image(image_bytes: bytes) -> str:
 def extract_document(
     file_bytes: bytes,
     filename: str,
-    force_ocr: bool = False
+    force_ocr: bool = False,
+    language: str = "en"
 ) -> str:
     """
     Main router for text extraction based on file extension.
@@ -202,13 +206,14 @@ def extract_document(
 
         extracted_text = extract_text_from_pdf(
             file_bytes,
-            force_ocr=force_ocr
+            force_ocr=force_ocr,
+            language=language
         )
 
     # Images
     elif ext in ['jpg', 'jpeg', 'png', 'tiff', 'bmp']:
 
-        extracted_text = extract_text_from_image(file_bytes)
+        extracted_text = extract_text_from_image(file_bytes, language=language)
 
     else:
         raise ValueError(f"Unsupported file format: {ext}")
