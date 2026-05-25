@@ -114,7 +114,7 @@ export default function HireLawyer() {
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=256&h=256",
       },
     ],
-    []
+    [],
   );
 
   const categories = useMemo(
@@ -127,7 +127,7 @@ export default function HireLawyer() {
       "Civil Litigation",
       "Intellectual Property",
     ],
-    []
+    [],
   );
 
   // Helper: next 7 days
@@ -148,8 +148,15 @@ export default function HireLawyer() {
   }, []);
 
   const timeSlots = useMemo(
-    () => ["09:30 AM", "11:00 AM", "01:30 PM", "03:00 PM", "04:30 PM", "06:00 PM"],
-    []
+    () => [
+      "09:30 AM",
+      "11:00 AM",
+      "01:30 PM",
+      "03:00 PM",
+      "04:30 PM",
+      "06:00 PM",
+    ],
+    [],
   );
 
   // Filter logic
@@ -160,7 +167,8 @@ export default function HireLawyer() {
         lawyer.name.toLowerCase().includes(s) ||
         lawyer.specialty.toLowerCase().includes(s) ||
         lawyer.location.toLowerCase().includes(s);
-      const matchesFilter = filterType === "All" || lawyer.specialty === filterType;
+      const matchesFilter =
+        filterType === "All" || lawyer.specialty === filterType;
       return matchesSearch && matchesFilter;
     });
   }, [mockLawyers, searchTerm, filterType]);
@@ -201,20 +209,29 @@ export default function HireLawyer() {
       rawDate: selectedDate,
       time: selectedTime,
       description: caseDescription,
-      attachedContext: attachDocument ? "NyayaVanni_Extracted_Context.pdf" : null,
+      attachedContext: attachDocument
+        ? "NyayaVanni_Extracted_Context.pdf"
+        : null,
       bookedAt: new Date().toLocaleDateString(),
     };
 
     const updatedBookings = [newBooking, ...activeBookings];
     setActiveBookings(updatedBookings);
-    localStorage.setItem("nyayavanni_consultations", JSON.stringify(updatedBookings));
+    localStorage.setItem(
+      "nyayavanni_consultations",
+      JSON.stringify(updatedBookings),
+    );
 
     setCurrentTicket(newBooking);
     setBookingComplete(true);
   };
 
   const handleCancelBooking = (bookingId) => {
-    if (window.confirm("Are you sure you want to cancel this consultation booking?")) {
+    if (
+      window.confirm(
+        "Are you sure you want to cancel this consultation booking?",
+      )
+    ) {
       const next = activeBookings.filter((b) => b.id !== bookingId);
       setActiveBookings(next);
       localStorage.setItem("nyayavanni_consultations", JSON.stringify(next));
@@ -246,7 +263,12 @@ export default function HireLawyer() {
               <span className="inline-flex items-center justify-center border rounded-full w-9 h-9 bg-nyaya-500/15 border-nyaya-500/25">
                 <Scale className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
               </span>
-              <span>Nyaya<span className="text-nyaya-600 dark:text-nyaya-400">Vanni</span></span>
+              <span>
+                Nyaya
+                <span className="text-nyaya-600 dark:text-nyaya-400">
+                  Vanni
+                </span>
+              </span>
             </div>
           </div>
 
@@ -281,7 +303,9 @@ export default function HireLawyer() {
             <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10">
               <div className="flex items-center gap-2">
                 <Bookmark className="w-5 h-5 text-nyaya-600 dark:text-nyaya-300" />
-                <h2 className="text-lg font-bold text-slate-850 dark:text-white">Your Active Consultations</h2>
+                <h2 className="text-lg font-bold text-slate-850 dark:text-white">
+                  Your Active Consultations
+                </h2>
               </div>
               <span className="px-3 py-1 text-xs font-semibold border rounded-full bg-slate-100 border-slate-200 dark:bg-white/5 dark:border-white/10 text-slate-700 dark:text-slate-200">
                 {activeBookings.length} Scheduled
@@ -301,7 +325,9 @@ export default function HireLawyer() {
                   />
 
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 dark:text-white truncate">{booking.lawyer.name}</h4>
+                    <h4 className="font-bold text-slate-800 dark:text-white truncate">
+                      {booking.lawyer.name}
+                    </h4>
                     <p className="text-xs font-semibold truncate text-nyaya-600 dark:text-nyaya-300">
                       {booking.lawyer.specialty}
                     </p>
@@ -370,7 +396,11 @@ export default function HireLawyer() {
                   className="w-full py-4 pl-12 pr-10 text-slate-900 dark:text-white transition border appearance-none cursor-pointer rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
                 >
                   {categories.map((cat) => (
-                    <option key={cat} value={cat} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
+                    <option
+                      key={cat}
+                      value={cat}
+                      className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                    >
                       {cat}
                     </option>
                   ))}
@@ -385,13 +415,25 @@ export default function HireLawyer() {
             <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-500 dark:text-slate-400">
               <p>
                 Showing{" "}
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{filteredLawyers.length}</span>{" "}
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
+                  {filteredLawyers.length}
+                </span>{" "}
                 result(s)
               </p>
               <p className="hidden sm:block">
-                Tip: Search by <span className="text-slate-800 dark:text-slate-250 font-semibold">name</span>,{" "}
-                <span className="text-slate-800 dark:text-slate-250 font-semibold">specialty</span>, or{" "}
-                <span className="text-slate-800 dark:text-slate-250 font-semibold">location</span>.
+                Tip: Search by{" "}
+                <span className="text-slate-800 dark:text-slate-250 font-semibold">
+                  name
+                </span>
+                ,{" "}
+                <span className="text-slate-800 dark:text-slate-250 font-semibold">
+                  specialty
+                </span>
+                , or{" "}
+                <span className="text-slate-800 dark:text-slate-250 font-semibold">
+                  location
+                </span>
+                .
               </p>
             </div>
           </div>
@@ -401,8 +443,12 @@ export default function HireLawyer() {
         {filteredLawyers.length === 0 ? (
           <div className="p-10 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
             <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
-            <h3 className="text-xl font-bold text-slate-850 dark:text-white">No lawyers found</h3>
-            <p className="mt-2 text-slate-650 dark:text-slate-400">Try adjusting your search or filters.</p>
+            <h3 className="text-xl font-bold text-slate-850 dark:text-white">
+              No lawyers found
+            </h3>
+            <p className="mt-2 text-slate-650 dark:text-slate-400">
+              Try adjusting your search or filters.
+            </p>
             <button
               onClick={() => {
                 setSearchTerm("");
@@ -429,14 +475,20 @@ export default function HireLawyer() {
 
                 <div className="flex items-start gap-4">
                   <div className="relative w-16 h-16 overflow-hidden transition rounded-full shrink-0 ring-2 ring-slate-200 dark:ring-white/10 group-hover:ring-nyaya-500/40">
-                    <img src={lawyer.image} alt={lawyer.name} className="object-cover w-full h-full" />
+                    <img
+                      src={lawyer.image}
+                      alt={lawyer.name}
+                      className="object-cover w-full h-full"
+                    />
                   </div>
 
                   <div className="min-w-0">
                     <h3 className="text-lg font-bold text-slate-850 dark:text-white truncate transition-colors group-hover:text-nyaya-600 dark:group-hover:text-nyaya-300">
                       {lawyer.name}
                     </h3>
-                    <p className="text-sm font-semibold text-nyaya-600 dark:text-nyaya-300/90">{lawyer.specialty}</p>
+                    <p className="text-sm font-semibold text-nyaya-600 dark:text-nyaya-300/90">
+                      {lawyer.specialty}
+                    </p>
                   </div>
                 </div>
 
@@ -470,7 +522,9 @@ export default function HireLawyer() {
                   </span>
                 </button>
 
-                <p className="mt-3 text-xs text-slate-500 dark:text-slate-500">Informational directory only (BCI compliant).</p>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-500">
+                  Informational directory only (BCI compliant).
+                </p>
               </div>
             ))}
           </div>
@@ -496,8 +550,12 @@ export default function HireLawyer() {
                   <Scale className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Consultation Scheduler</h3>
-                  <p className="text-xs font-semibold text-slate-500">NyayaVanni Instant Match</p>
+                  <h3 className="text-lg font-bold text-slate-800">
+                    Consultation Scheduler
+                  </h3>
+                  <p className="text-xs font-semibold text-slate-500">
+                    NyayaVanni Instant Match
+                  </p>
                 </div>
               </div>
 
@@ -519,9 +577,15 @@ export default function HireLawyer() {
                       className="object-cover w-12 h-12 border rounded-full"
                     />
                     <div>
-                      <h4 className="font-bold text-slate-800">{selectedLawyer.name}</h4>
-                      <p className="text-xs font-semibold text-blue-600">{selectedLawyer.specialty}</p>
-                      <p className="text-xs font-semibold text-slate-500 mt-0.5">{selectedLawyer.fee}</p>
+                      <h4 className="font-bold text-slate-800">
+                        {selectedLawyer.name}
+                      </h4>
+                      <p className="text-xs font-semibold text-blue-600">
+                        {selectedLawyer.specialty}
+                      </p>
+                      <p className="text-xs font-semibold text-slate-500 mt-0.5">
+                        {selectedLawyer.fee}
+                      </p>
                     </div>
                   </div>
 
@@ -544,9 +608,15 @@ export default function HireLawyer() {
                                 : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
                             }`}
                           >
-                            <span className="text-[10px] uppercase font-bold tracking-wider">{d.dayName}</span>
-                            <span className="text-lg font-extrabold my-0.5 leading-none">{d.dayNum}</span>
-                            <span className="text-[9px] uppercase font-semibold">{d.month}</span>
+                            <span className="text-[10px] uppercase font-bold tracking-wider">
+                              {d.dayName}
+                            </span>
+                            <span className="text-lg font-extrabold my-0.5 leading-none">
+                              {d.dayNum}
+                            </span>
+                            <span className="text-[9px] uppercase font-semibold">
+                              {d.month}
+                            </span>
                           </button>
                         );
                       })}
@@ -587,23 +657,35 @@ export default function HireLawyer() {
                     <div
                       onClick={() => setAttachDocument(!attachDocument)}
                       className={`p-3.5 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
-                        attachDocument ? "bg-blue-50/50 border-blue-200 shadow-sm" : "bg-white border-slate-200 hover:border-slate-300"
+                        attachDocument
+                          ? "bg-blue-50/50 border-blue-200 shadow-sm"
+                          : "bg-white border-slate-200 hover:border-slate-300"
                       }`}
                     >
                       <div
                         className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center border shrink-0 transition-colors ${
-                          attachDocument ? "bg-blue-600 border-blue-600 text-white" : "border-slate-300 bg-white"
+                          attachDocument
+                            ? "bg-blue-600 border-blue-600 text-white"
+                            : "border-slate-300 bg-white"
                         }`}
                       >
-                        {attachDocument && <Check className="w-3.5 h-3.5 stroke-3" />}
+                        {attachDocument && (
+                          <Check className="w-3.5 h-3.5 stroke-3" />
+                        )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5">
-                          <FileText className={`w-4 h-4 ${attachDocument ? "text-blue-600" : "text-slate-400"}`} />
-                          <h5 className="text-xs font-bold text-slate-800">Attach Document Analysis</h5>
+                          <FileText
+                            className={`w-4 h-4 ${attachDocument ? "text-blue-600" : "text-slate-400"}`}
+                          />
+                          <h5 className="text-xs font-bold text-slate-800">
+                            Attach Document Analysis
+                          </h5>
                         </div>
                         <p className="text-[11px] text-slate-500 font-semibold mt-1">
-                          Share your active analyzed legal document automatically with {selectedLawyer.name} for instant briefing.
+                          Share your active analyzed legal document
+                          automatically with {selectedLawyer.name} for instant
+                          briefing.
                         </p>
                       </div>
                     </div>
@@ -619,7 +701,7 @@ export default function HireLawyer() {
                       value={caseDescription}
                       onChange={(e) => setCaseDescription(e.target.value)}
                       rows={3}
-                      className="w-full p-3 text-xs font-medium border bg-slate-50 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      className="w-full p-3 text-xs font-medium border bg-slate-50 border-slate-200 dark:text-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
                     />
                   </div>
 
@@ -637,7 +719,9 @@ export default function HireLawyer() {
                   </div>
 
                   <div className="text-center">
-                    <h3 className="text-xl font-bold text-slate-900">Appointment Confirmed!</h3>
+                    <h3 className="text-xl font-bold text-slate-900">
+                      Appointment Confirmed!
+                    </h3>
                     <p className="mt-1 text-xs font-semibold text-slate-500">
                       Your instant match ticket has been generated below.
                     </p>
@@ -664,7 +748,9 @@ export default function HireLawyer() {
                           className="object-cover w-12 h-12 border-2 rounded-full border-blue-500/20"
                         />
                         <div>
-                          <h4 className="text-sm font-extrabold">{currentTicket?.lawyer?.name}</h4>
+                          <h4 className="text-sm font-extrabold">
+                            {currentTicket?.lawyer?.name}
+                          </h4>
                           <p className="text-[11px] text-blue-400 font-bold uppercase">
                             {currentTicket?.lawyer?.specialty}
                           </p>
@@ -673,14 +759,21 @@ export default function HireLawyer() {
 
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
-                          <span className="text-[10px] text-slate-500 font-bold block uppercase">Date</span>
+                          <span className="text-[10px] text-slate-500 font-bold block uppercase">
+                            Date
+                          </span>
                           <span className="font-semibold text-slate-200">
-                            {currentTicket?.date?.split(",")[1] || currentTicket?.date}
+                            {currentTicket?.date?.split(",")[1] ||
+                              currentTicket?.date}
                           </span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-500 font-bold block uppercase">Time Slot</span>
-                          <span className="font-semibold text-slate-200">{currentTicket?.time}</span>
+                          <span className="text-[10px] text-slate-500 font-bold block uppercase">
+                            Time Slot
+                          </span>
+                          <span className="font-semibold text-slate-200">
+                            {currentTicket?.time}
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -694,11 +787,13 @@ export default function HireLawyer() {
                           <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
                             {currentTicket?.attachedContext ? (
                               <>
-                                <BadgeCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" /> Context Attached
+                                <BadgeCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />{" "}
+                                Context Attached
                               </>
                             ) : (
                               <>
-                                <BadgeAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" /> No Context
+                                <BadgeAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />{" "}
+                                No Context
                               </>
                             )}
                           </span>
@@ -706,11 +801,19 @@ export default function HireLawyer() {
 
                         <div className="flex flex-col items-end gap-1">
                           <div className="flex gap-0.5">
-                            {[1, 3, 2, 4, 1, 3, 1, 2, 4, 2, 3, 1, 4].map((w, idx) => (
-                              <div key={idx} className="bg-slate-400" style={{ width: `${w}px`, height: "24px" }} />
-                            ))}
+                            {[1, 3, 2, 4, 1, 3, 1, 2, 4, 2, 3, 1, 4].map(
+                              (w, idx) => (
+                                <div
+                                  key={idx}
+                                  className="bg-slate-400"
+                                  style={{ width: `${w}px`, height: "24px" }}
+                                />
+                              ),
+                            )}
                           </div>
-                          <span className="text-[8px] font-mono text-slate-500">MEMBER SLOT</span>
+                          <span className="text-[8px] font-mono text-slate-500">
+                            MEMBER SLOT
+                          </span>
                         </div>
                       </div>
                     </div>
@@ -718,10 +821,13 @@ export default function HireLawyer() {
 
                   <div className="flex w-full max-w-sm gap-3">
                     <button
-                      onClick={() => alert("Adding to Google Calendar... Done!")}
+                      onClick={() =>
+                        alert("Adding to Google Calendar... Done!")
+                      }
                       className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5"
                     >
-                      <CalendarDays className="w-4 h-4 text-slate-500" /> Add to Calendar
+                      <CalendarDays className="w-4 h-4 text-slate-500" /> Add to
+                      Calendar
                     </button>
                     <button
                       onClick={() => setIsModalOpen(false)}
