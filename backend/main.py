@@ -2,6 +2,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 import os
 from dotenv import load_dotenv
+from slowapi.middleware import SlowAPIMiddleware
+from middleware.rate_limit import limiter, rate_limit_handler
+from slowapi.errors import RateLimitExceeded
+
 
 load_dotenv()
 
@@ -15,6 +19,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
+app.add_middleware(SlowAPIMiddleware)
 
 @app.get("/")
 def read_root():

@@ -3,13 +3,14 @@ import uuid
 import json
 import logging
 import io
-
+from middleware.rate_limit import limiter
+from config.rate_limits import *
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
 from reportlab.pdfgen import canvas
 from reportlab.lib.pagesizes import letter
-
+from fastapi.responses import JSONResponse
 from services.document_classifier import classify_document
 from services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from services.storage_service import (
@@ -59,10 +60,14 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
     return record
 
 @api_router.get("/session")
-async def create_session():
-    return {"sessionId": create_session_id()}
+@limiter.limit("10/minute")
+async def create_session(request: Request):
+    return JSONResponse(
+        content={"sessionId": create_session_id()}
+    )
 
 @api_router.post("/upload")
+@limiter.limit(UPLOAD_RATE_LIMIT)
 async def upload_document(request: Request, file: UploadFile = File(...)):
     """Upload document and return documentId"""
     try:
@@ -117,6 +122,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/analyze/{document_id}")
+@limiter.limit(ANALYZE_RATE_LIMIT)
 def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False, file: UploadFile = File(None)):
     """Trigger full analysis pipeline."""
     try:
@@ -224,21 +230,22 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
             raise HTTPException(status_code=400, detail="The uploaded document is corrupted or could not be parsed.")
 
 @api_router.post("/chat/general")
-def chat_general(request: ChatRequest):
+@limiter.limit(GENERAL_CHAT_RATE_LIMIT)
+def chat_general(request: Request, chat_request: ChatRequest):
     """General legal chat no document context."""
     try:
-        if not request.user_message or not request.user_message.strip():
+        if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
         # General chat does not use document-specific analysis context.
         analysis = {}
-        history = [{"role": msg.role, "message": msg.message} for msg in request.chat_history]
+        history = [{"role": msg.role, "message": msg.message} for msg in chat_request.chat_history]
 
         response_text = generate_chat_response(
             analysis,
             history,
-            request.user_message,
-            request.language
+            chat_request.user_message,
+            chat_request.language
         )
 
         return ChatResponse(response=response_text)
@@ -247,27 +254,43 @@ def chat_general(request: ChatRequest):
         raise HTTPException(status_code=500, detail="Chat generation failed")
 
 @api_router.post("/chat/{document_id}")
-def chat_with_document(document_id: str, chat_request: ChatRequest, http_request: Request):
+@limiter.limit(CHAT_RATE_LIMIT)
+def chat_with_document(
+    request: Request,
+    document_id: str,
+    chat_request: ChatRequest
+):
     """Send chat message with document context loaded server-side."""
     try:
-        session_id = require_session_id(http_request)
+        session_id = require_session_id(request)
         require_document_owner(document_id, session_id)
-        
+
         cached = get_cached_analysis(document_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
 
-        history = [{"role": msg.role, "message": msg.message} for msg in chat_request.chat_history]
-        generator = stream_chat_response(analysis, history, chat_request.user_message, chat_request.language)
+        history = [
+            {"role": msg.role, "message": msg.message}
+            for msg in chat_request.chat_history
+        ]
+
+        generator = stream_chat_response(
+            analysis,
+            history,
+            chat_request.user_message,
+            chat_request.language
+        )
 
         return StreamingResponse(generator, media_type="text/plain")
+
     except HTTPException as http_err:
         raise http_err
+
     except Exception as e:
         logger.error(f"Chat failed for document {document_id}: {e}")
         raise HTTPException(status_code=500, detail="Chat generation failed")
-
 @api_router.post("/generate-document")
-def generate_document(request: DocumentGenerationRequest):
+@limiter.limit("10/minute")
+def generate_document(request: Request, payload: DocumentGenerationRequest):
     """Generates a standard NDA document as a PDF based on provided details."""
     try:
         buffer = io.BytesIO()
@@ -281,14 +304,14 @@ def generate_document(request: DocumentGenerationRequest):
         text = c.beginText(50, height - 100)
         
         template_text = (
-            f"This Non-Disclosure Agreement (the \"Agreement\") is entered into on {request.effective_date} "
-            f"by and between {request.party_one_name} (\"Disclosing Party\") and {request.party_two_name} "
+            f"This Non-Disclosure Agreement (the \"Agreement\") is entered into on {payload.effective_date} "
+            f"by and between {payload.party_one_name} (\"Disclosing Party\") and {payload.party_two_name} "
             f"(\"Receiving Party\").\n\n"
             f"1. Confidential Information: The Receiving Party agrees to keep confidential any proprietary "
             f"information disclosed by the Disclosing Party.\n\n"
             f"2. Consideration: In consideration for the obligations set forth herein, the parties acknowledge "
-            f"the receipt and sufficiency of {request.consideration_amount}.\n\n"
-            f"3. Jurisdiction: This Agreement shall be governed by the laws of {request.jurisdiction}.\n\n"
+            f"the receipt and sufficiency of {payload.consideration_amount}.\n\n"
+            f"3. Jurisdiction: This Agreement shall be governed by the laws of {payload.jurisdiction}.\n\n"
             f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
         )
         
