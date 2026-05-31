@@ -5,7 +5,6 @@ import io
 import os
 import re
 import logging
-import zipfile
 import docx
 
 logger = logging.getLogger(__name__)
@@ -247,9 +246,9 @@ def extract_document(
 
         extracted_text = extract_text_from_image(file_bytes, language=language)
 
-    # Word Documents
-    elif ext in ['docx']:
-        
+    # DOCX
+    elif ext == 'docx':
+
         extracted_text = extract_text_from_docx(file_bytes)
 
     else:
@@ -264,7 +263,7 @@ def extract_document(
 
         raise ValueError(
             "Unable to extract readable text from the document. "
-            "Please upload a clearer PDF or image."
+            "Please upload a clearer PDF, DOCX, or image."
         )
 
     return extracted_text
