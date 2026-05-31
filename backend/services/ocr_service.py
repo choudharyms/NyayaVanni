@@ -6,6 +6,7 @@ import os
 import docx
 import re
 import logging
+import docx
 
 logger = logging.getLogger(__name__)
 
@@ -207,6 +208,19 @@ def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
         raise
 
 
+def extract_text_from_docx(file_bytes: bytes) -> str:
+    """
+    Extract text from Microsoft Word Document (.docx).
+    """
+    try:
+        doc = docx.Document(io.BytesIO(file_bytes))
+        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
+        return text.strip()
+    except Exception as e:
+        logger.error(f"DOCX extraction failed: {e}")
+        raise ValueError("The uploaded DOCX document is corrupted or could not be parsed.")
+
+
 def extract_document(
     file_bytes: bytes,
     filename: str,
@@ -238,6 +252,11 @@ def extract_document(
 
         extracted_text = extract_text_from_image(file_bytes, language=language)
 
+    # DOCX
+    elif ext == 'docx':
+
+        extracted_text = extract_text_from_docx(file_bytes)
+
     else:
         raise ValueError(f"Unsupported file format: {ext}")
 
@@ -250,7 +269,7 @@ def extract_document(
 
         raise ValueError(
             "Unable to extract readable text from the document. "
-            "Please upload a clearer PDF or image."
+            "Please upload a clearer PDF, DOCX, or image."
         )
 
     return extracted_text
