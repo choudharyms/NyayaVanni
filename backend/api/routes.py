@@ -238,8 +238,7 @@ def chat_general(request: Request, chat_request: ChatRequest):
             chat_request.language
         )
         return ChatResponse(response=response_text)
-
-    except RateLimitExceeded:
+    except HTTPException:
         raise
     except Exception as e:
         logger.error(f"General chat failed: {e}")

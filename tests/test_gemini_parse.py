@@ -1,10 +1,10 @@
 import json
-from backend.services.gemini_service import analyze_document_with_gemini
-from backend.services.gemini_service import DocumentAnalysis
+from services.gemini_service import analyze_document_with_gemini
+from services.gemini_service import DocumentAnalysis
 
 # We'll import the internal parser via function name lookup
 from importlib import import_module
-mod = import_module('backend.services.gemini_service')
+mod = import_module('services.gemini_service')
 _parse = getattr(mod, '_parse_structured_response')
 
 class MockRespJSON:
