@@ -72,7 +72,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     """Upload document and return documentId"""
     try:
         session_id = require_session_id(request)
-        
+
         # 1. Validate file extension and MIME type
         filename = file.filename
         if not filename:
@@ -80,14 +80,14 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         ext = filename.split('.')[-1].lower() if '.' in filename else ''
         if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
-                status_code=400, 
+                status_code=400,
                 detail="Unsupported file format or MIME type. Only PDF, DOCX, PNG, JPG, and JPEG are allowed."
             )
-            
+
         # 2. Generate unique document ID and local file path
         doc_id = str(uuid.uuid4())
         local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
-        
+
         # 3. Stream write to disk to prevent OOM / high memory consumption
         size = 0
         try:
@@ -96,32 +96,29 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                     size += len(chunk)
                     if size > MAX_FILE_SIZE:
                         raise HTTPException(
-                            status_code=413, 
+                            status_code=413,
                             detail="File size exceeds the maximum allowed limit of 10MB."
                         )
                     buffer.write(chunk)
         except HTTPException as http_exc:
-            # Delete partial file if limit is exceeded
             if os.path.exists(local_path):
                 os.remove(local_path)
             raise http_exc
         except Exception as e:
-            # Clean up on write failure
             if os.path.exists(local_path):
                 os.remove(local_path)
             raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
-            
+
         # 4. Save metadata record to SQLite
         try:
             save_document_record(session_id, doc_id, filename, local_path)
         except Exception as e:
-            # Clean up file if database write fails
             if os.path.exists(local_path):
                 os.remove(local_path)
             raise HTTPException(status_code=500, detail=f"Failed to save document metadata: {str(e)}")
 
         return {"documentId": doc_id, "message": "Uploaded successfully"}
-        
+
     except HTTPException as http_err:
         raise http_err
     except Exception as e:
@@ -133,13 +130,12 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
     try:
         session_id = require_session_id(request)
         record = require_document_owner(document_id, session_id)
-        
+
         if not force_ocr:
             cached = get_cached_analysis(document_id, language)
             if cached:
                 logger.info(f"Cache HIT for document {document_id}")
                 knowledge_graph = graph_builder.generate_graph(cached["extracted_text"])
-                
                 return {
                     "documentId": document_id,
                     "analysis": cached["analysis"],
@@ -155,11 +151,10 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
                 detail="Document not found or file missing"
             )
         try:
-            # Ensure file size is within limits even when read from disk
             file_size = os.path.getsize(record["local_path"])
             if file_size > MAX_FILE_SIZE:
                 raise HTTPException(status_code=413, detail="File size exceeds maximum allowed limit.")
-                
+
             with open(record["local_path"], "rb") as f:
                 contents = f.read()
         except IOError:
@@ -167,6 +162,7 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
                 status_code=500,
                 detail="Failed to read document from storage"
             )
+
         filename = record["filename"]
 
         # 1. Extract Text
@@ -176,12 +172,8 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
         relevant_laws = retrieve_relevant_laws(text, k=3)
 
         # 3. Gemini Analysis
-        analysis_result = analyze_document_with_gemini(
-            text,
-            relevant_laws,
-            language
-        )
-        
+        analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+
         # 4. Classification
         classification = classify_document(text)
 
@@ -189,12 +181,7 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
         knowledge_graph = graph_builder.generate_graph(text)
 
         # 6. Save cache
-        save_cached_analysis(
-            document_id,
-            language,
-            text,
-            analysis_result
-        )
+        save_cached_analysis(document_id, language, text, analysis_result)
 
         return {
             "documentId": document_id,
@@ -213,14 +200,10 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
         raise HTTPException(status_code=404, detail="Requested document file not found on storage.")
     except Exception as e:
         import traceback
-        from google.api_core.exceptions import (
-            ResourceExhausted,
-            InvalidArgument,
-            GoogleAPIError
-        )
+        from google.api_core.exceptions import ResourceExhausted, InvalidArgument, GoogleAPIError
 
         trace = traceback.format_exc()
-        logger.error(f"Analysis failed: {e}")
+        logger.error(f"Analysis failed: {e}\n{trace}")
 
         if isinstance(e, ResourceExhausted):
             raise HTTPException(status_code=429, detail="AI Quota limit reached. Please wait a minute and try again.")
@@ -228,16 +211,18 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
             raise HTTPException(status_code=400, detail="Invalid input structure. The document may be too long for the model.")
         elif isinstance(e, GoogleAPIError):
             raise HTTPException(status_code=502, detail="Upstream AI Service error. Please try again in a few moments.")
-        
+
         if not os.getenv("GEMINI_API_KEY"):
             raise HTTPException(status_code=500, detail="Server configuration issue: GEMINI_API_KEY environment variable is missing.")
 
         if "fitz" in str(e.__class__) or "FileDataError" in type(e).__name__:
             raise HTTPException(status_code=400, detail="The uploaded document is corrupted or could not be parsed.")
 
+        raise HTTPException(status_code=500, detail="An unexpected error occurred during analysis.")
+
 @api_router.post("/chat/general")
 def chat_general(request: ChatRequest):
-    """General legal chat no document context."""
+    """General legal chat with no document context."""
     try:
         if not request.user_message or not request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
@@ -253,9 +238,22 @@ def chat_general(request: ChatRequest):
         )
 
         return ChatResponse(response=response_text)
+
+    except HTTPException as http_err:
+        raise http_err
     except Exception as e:
         logger.error(f"General chat failed: {e}")
-        raise HTTPException(status_code=500, detail="Chat generation failed")
+
+        if not os.getenv("GEMINI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="Server configuration issue: GEMINI_API_KEY is missing."
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail="AI service is temporarily unavailable. Please try again later."
+        )
 
 @api_router.post("/chat/{document_id}")
 def chat_with_document(document_id: str, chat_request: ChatRequest, http_request: Request):
@@ -263,34 +261,55 @@ def chat_with_document(document_id: str, chat_request: ChatRequest, http_request
     try:
         session_id = require_session_id(http_request)
         require_document_owner(document_id, session_id)
-        
+
         cached = get_cached_analysis(document_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
 
-        history = [{"role": msg.role, "message": msg.message} for msg in chat_request.chat_history]
-        generator = stream_chat_response(analysis, history, chat_request.user_message, chat_request.language)
+        history = [
+            {"role": msg.role, "message": msg.message}
+            for msg in chat_request.chat_history
+        ]
+
+        generator = stream_chat_response(
+            analysis,
+            history,
+            chat_request.user_message,
+            chat_request.language
+        )
 
         return StreamingResponse(generator, media_type="text/plain")
+
     except HTTPException as http_err:
         raise http_err
     except Exception as e:
         logger.error(f"Chat failed for document {document_id}: {e}")
-        raise HTTPException(status_code=500, detail="Chat generation failed")
+
+        if not os.getenv("GEMINI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="Server configuration issue: GEMINI_API_KEY is missing."
+            )
+
+        raise HTTPException(
+            status_code=502,
+            detail="AI service is temporarily unavailable. Please try again later."
+        )
 
 @api_router.post("/generate-document")
 def generate_document(request: DocumentGenerationRequest):
     """Generates a standard NDA document as a PDF based on provided details."""
     try:
+        import textwrap
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
-        
+
         c.setFont("Helvetica-Bold", 16)
         c.drawCentredString(width / 2.0, height - 50, "NON-DISCLOSURE AGREEMENT")
-        
+
         c.setFont("Helvetica", 12)
         text = c.beginText(50, height - 100)
-        
+
         template_text = (
             f"This Non-Disclosure Agreement (the \"Agreement\") is entered into on {request.effective_date} "
             f"by and between {request.party_one_name} (\"Disclosing Party\") and {request.party_two_name} "
@@ -302,12 +321,11 @@ def generate_document(request: DocumentGenerationRequest):
             f"3. Jurisdiction: This Agreement shall be governed by the laws of {request.jurisdiction}.\n\n"
             f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
         )
-        
+
         lines = template_text.split('\n')
         for line in lines:
             if not line:
                 continue
-            import textwrap
             wrapped_lines = textwrap.wrap(line, width=75)
             for wline in wrapped_lines:
                 text.textLine(wline)
@@ -316,14 +334,14 @@ def generate_document(request: DocumentGenerationRequest):
         c.drawText(text)
         c.setFont("Helvetica-Oblique", 10)
         c.drawCentredString(width / 2.0, 30, "Generated by NyayaVanni - For informational purposes only.")
-        
+
         c.showPage()
         c.save()
         buffer.seek(0)
-        
+
         return StreamingResponse(
-            buffer, 
-            media_type="application/pdf", 
+            buffer,
+            media_type="application/pdf",
             headers={"Content-Disposition": 'attachment; filename="NDA_Document.pdf"'}
         )
     except Exception as e:
