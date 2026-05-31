@@ -137,7 +137,7 @@ export default function LandingPage() {
             >
               <input 
                 ref={inputRef} type="file" className="hidden" 
-                accept="application/pdf,image/png,image/jpeg"
+                accept="application/pdf,image/png,image/jpeg,.docx"
                 onChange={handleChange} 
               />
               
@@ -279,7 +279,7 @@ export default function LandingPage() {
             {[
               {
                 q: "What file types are supported?",
-                a: "You can upload PDF, PNG, and JPG files. For best results, use clear scans and readable text."
+                a: "You can upload PDF, DOCX, PNG, and JPG files. For best results, use clear scans and readable text."
               },
               {
                 q: "Is my document stored permanently?",
@@ -311,17 +311,17 @@ export default function LandingPage() {
         </div>
 
         {/* Footer */}
-        <footer className="p-8 mt-10 border rounded-4xl border-slate-700/50 bg-slate-900/60 backdrop-blur-xl md:p-10">
+        <footer className="p-8 mt-10 border rounded-4xl border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/90 backdrop-blur-xl md:p-10 z-20">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             {/* Brand */}
             <div className="max-w-md">
-              <div className="flex items-center gap-2 text-xl font-bold text-white">
+              <div className="flex items-center gap-2 text-xl font-bold text-slate-800 dark:text-white">
                 <span className="inline-flex items-center justify-center w-10 h-10 border rounded-full bg-nyaya-500/15 border-nyaya-500/25">
                   <Scale className="w-5 h-5 text-nyaya-400" />
                 </span>
                 <span>Nyaya<span className="text-nyaya-400">Vanni</span></span>
               </div>
-              <p className="mt-3 text-slate-400">
+              <p className="mt-3 text-slate-600 dark:text-slate-400">
                 Understand Indian legal documents in simple language. Upload contracts/notices and get clearer insights fast.
               </p>
             </div>
@@ -329,44 +329,44 @@ export default function LandingPage() {
             {/* Links */}
             <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Product</p>
-                <div className="flex flex-col gap-2 text-slate-400">
-                  <button onClick={() => navigate('/chat')} className="text-left transition hover:text-white">Chat with AI</button>
-                  <button onClick={() => navigate('/document-generator')} className="text-left transition hover:text-white">Generate NDA</button>
-                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-left transition hover:text-white">Upload Document</button>
-                  <button onClick={() => navigate('/lawyers')} className="text-left transition hover:text-white">Hire a Lawyer</button>
+                <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Product</p>
+                <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <button onClick={() => navigate('/chat')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Chat with AI</button>
+                  <button onClick={() => navigate('/document-generator')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Generate NDA</button>
+                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-left transition hover:text-slate-900 dark:hover:text-white">Upload Document</button>
+                  <button onClick={() => navigate('/lawyers')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Hire a Lawyer</button>
                 </div>
               </div>
 
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Resources</p>
-                <div className="flex flex-col gap-2 text-slate-400">
+                <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Resources</p>
+                <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
                 <button
                   onClick={() => navigate('/faq')}
-                  className="text-left transition hover:text-white"
+                  className="text-left transition hover:text-slate-900 dark:hover:text-white"
                 >
                   FAQ
                 </button>
-                  <button onClick={() => navigate('/privacy-policy')} className="text-left transition hover:text-white">Privacy Policy</button>
-                  <button onClick={() => navigate('/terms')} className="text-left transition hover:text-white">Terms of Service</button>
+                  <button onClick={() => navigate('/privacy-policy')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Privacy Policy</button>
+                  <button onClick={() => navigate('/terms')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Terms of Service</button>
                 </div>
               </div>
 
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Contact</p>
-                <div className="flex flex-col gap-2 text-slate-400">
-                  <a href="mailto:support@nyayavanni.com" className="transition hover:text-white">support@nyayavanni.com</a>
-                  <span className="text-sm text-slate-500">Mon–Fri, 10AM–6PM</span>
+                <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Contact</p>
+                <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <a href="mailto:support@nyayavanni.com" className="transition hover:text-slate-900 dark:hover:text-white">support@nyayavanni.com</a>
+                  <span className="text-sm text-slate-600 dark:text-slate-500">Mon–Fri, 10AM–6PM</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-700/50 sm:flex-row sm:items-center">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600 dark:text-slate-500">
               © {new Date().getFullYear()} NyayaVanni. All rights reserved.
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600 dark:text-slate-500">
               Not legal advice. For professional help, consult a lawyer.
             </p>
           </div>

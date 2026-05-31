@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from typing import List
+from typing import Any, Dict, List, Optional
 
 class ChatMessage(BaseModel):
     role: str
@@ -9,6 +9,7 @@ class ChatRequest(BaseModel):
     user_message: str
     chat_history: List[ChatMessage]
     language: str = "en"
+    document_analysis: Optional[Dict[str, Any]] = None
 
 class ChatResponse(BaseModel):
     response: str
