@@ -34,8 +34,13 @@ graph_builder = LegalKnowledgeGraphBuilder()
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
-ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg'}
-ALLOWED_MIME_TYPES = {'application/pdf', 'image/png', 'image/jpeg'}
+ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx'}
+ALLOWED_MIME_TYPES = {
+    'application/pdf',
+    'image/png',
+    'image/jpeg',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+}
 
 class DocumentGenerationRequest(BaseModel):
     effective_date: str
@@ -76,7 +81,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
                 status_code=400, 
-                detail="Unsupported file format or MIME type. Only PDF, PNG, JPG, and JPEG are allowed."
+                detail="Unsupported file format or MIME type. Only PDF, DOCX, PNG, JPG, and JPEG are allowed."
             )
             
         # 2. Generate unique document ID and local file path
@@ -107,7 +112,13 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             raise HTTPException(status_code=500, detail=f"File save failed: {str(e)}")
             
         # 4. Save metadata record to SQLite
-        save_document_record(session_id, doc_id, filename, local_path)
+        try:
+            save_document_record(session_id, doc_id, filename, local_path)
+        except Exception as e:
+            # Clean up file if database write fails
+            if os.path.exists(local_path):
+                os.remove(local_path)
+            raise HTTPException(status_code=500, detail=f"Failed to save document metadata: {str(e)}")
 
         return {"documentId": doc_id, "message": "Uploaded successfully"}
         
@@ -117,7 +128,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         raise HTTPException(status_code=500, detail=str(e))
 
 @api_router.post("/analyze/{document_id}")
-def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False, file: UploadFile = File(None)):
+def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False):
     """Trigger full analysis pipeline."""
     try:
         session_id = require_session_id(request)
@@ -137,25 +148,26 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
                     "cached": True
                 }
 
-        if not file:
-            record = get_document_record(document_id)
-            if not record or not record.get("local_path"):
-                raise HTTPException(
-                    status_code=404,
-                    detail="Document not found or file missing"
-                )
-            try:
-                with open(record["local_path"], "rb") as f:
-                    contents = f.read()
-            except IOError:
-                raise HTTPException(
-                    status_code=500,
-                    detail="Failed to read document from storage"
-                )
-            filename = record["filename"]
-        else:
-            contents = file.file.read()
-            filename = file.filename
+        record = get_document_record(document_id)
+        if not record or not record.get("local_path"):
+            raise HTTPException(
+                status_code=404,
+                detail="Document not found or file missing"
+            )
+        try:
+            # Ensure file size is within limits even when read from disk
+            file_size = os.path.getsize(record["local_path"])
+            if file_size > MAX_FILE_SIZE:
+                raise HTTPException(status_code=413, detail="File size exceeds maximum allowed limit.")
+                
+            with open(record["local_path"], "rb") as f:
+                contents = f.read()
+        except IOError:
+            raise HTTPException(
+                status_code=500,
+                detail="Failed to read document from storage"
+            )
+        filename = record["filename"]
 
         # 1. Extract Text
         text = extract_document(contents, filename, force_ocr=force_ocr, language=language)
@@ -230,8 +242,7 @@ def chat_general(request: ChatRequest):
         if not request.user_message or not request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-        # General chat does not use document-specific analysis context.
-        analysis = {}
+        analysis = getattr(request, "document_analysis", None) or {}
         history = [{"role": msg.role, "message": msg.message} for msg in request.chat_history]
 
         response_text = generate_chat_response(
