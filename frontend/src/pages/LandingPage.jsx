@@ -99,9 +99,15 @@ export default function LandingPage() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/lawyers')}
-            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block"
+            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
           >
             {t("nav.hire")}
+          </button>
+          <button 
+            onClick={() => navigate('/contact')}
+            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+          >
+            {t("nav.contact")}
           </button>
           <button className="px-5 py-2 font-medium text-slate-800 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/10 rounded-full backdrop-blur-md transition-all">
             {t("nav.signin")}

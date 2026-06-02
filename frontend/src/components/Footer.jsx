@@ -68,7 +68,10 @@ export default function Footer() {
               {language === 'en' ? 'Contact' : 'संपर्क'}
             </p>
             <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400 text-sm">
-              <a href="mailto:support@nyayavanni.com" className="hover:text-nyaya-600 dark:hover:text-white transition duration-250 flex items-center gap-1.5">
+              <button onClick={() => navigate('/contact')} className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer">
+                {language === 'en' ? 'Contact Us Page' : 'संपर्क पृष्ठ'}
+              </button>
+              <a href="mailto:support@nyayavanni.com" className="hover:text-nyaya-600 dark:hover:text-white transition duration-250 flex items-center gap-1.5 mt-2">
                 <Mail className="w-4 h-4 shrink-0" />
                 support@nyayavanni.com
               </a>
