@@ -39,6 +39,7 @@ export default function GeneralChat() {
       const response = await fetch(`${apiUrl}/api/chat/general`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: currentHistory,
