@@ -3,7 +3,7 @@ uvicorn
 google-generativeai
 faiss-cpu
 numpy
-PyMuPDF  # for standard PDF text extraction
+PyMuPDF
 pytesseract
 Pillow
 python-multipart
@@ -15,4 +15,3 @@ python-dotenv
 gunicorn
 reportlab
 slowapi
-python-docx
