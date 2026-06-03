@@ -71,3 +71,27 @@
 .animate-pulse-soft {
   animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
+
+.chat-textarea {
+  resize: none;
+  overflow-y: auto;
+
+  /* Important */
+  padding-right: 14px;
+
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.4) transparent;
+}
+
+.chat-textarea::-webkit-scrollbar {
+  width: 6px;
+}
+
+.chat-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.chat-textarea::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,.4);
+  border-radius: 999px;
+}
