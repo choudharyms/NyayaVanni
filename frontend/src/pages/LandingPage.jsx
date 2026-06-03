@@ -16,6 +16,7 @@ export default function LandingPage() {
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const { history, clearHistory } = useDocumentHistory();
+  const [openFaq, setOpenFaq] = useState(0);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -275,7 +276,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="columns-1 md:columns-2 gap-4 space-y-4">
             {[
               {
                 q: "What file types are supported?",
@@ -294,18 +295,46 @@ export default function LandingPage() {
                 a: "Check your internet connection and try a smaller file. If the backend is offline, you’ll see a fallback demo navigation."
               },
             ].map((item, idx) => (
-              <details
+              <div
                 key={idx}
-                className="p-5 transition border group rounded-xl border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-950/40 hover:border-slate-350 dark:hover:border-slate-650 transition-all duration-300"
+                className="mb-4 break-inside-avoid p-5 transition-all duration-300 border rounded-xl border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-950/40 hover:border-slate-350 dark:hover:border-slate-650"
               >
-                <summary className="flex items-center justify-between gap-4 list-none cursor-pointer">
-                  <span className="font-semibold text-slate-800 dark:text-white">{item.q}</span>
-                  <span className="flex items-center justify-center w-8 h-8 transition border rounded-full shrink-0 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 group-open:bg-slate-200 dark:group-open:bg-white/10">
-                    <span className="transition-transform text-slate-600 dark:text-slate-300 group-open:rotate-45">+</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenFaq(openFaq === idx ? null : idx)
+                  }
+                  className="flex items-center justify-between w-full gap-4 text-left cursor-pointer"
+                >
+                  <span className="font-semibold text-slate-800 dark:text-white">
+                    {item.q}
                   </span>
-                </summary>
-                <p className="mt-3 leading-relaxed text-slate-600 dark:text-slate-400">{item.a}</p>
-              </details>
+
+                  <span
+                    className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 border transition-all duration-300 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 ${
+                      openFaq === idx
+                        ? "rotate-45 bg-slate-200 dark:bg-white/10"
+                        : ""
+                    }`}
+                  >
+                    <span className="text-slate-600 dark:text-slate-300">
+                      +
+                    </span>
+                  </span>
+                </button>
+
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    openFaq === idx
+                      ? "max-h-40 opacity-100 mt-3"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <p className="leading-relaxed text-slate-600 dark:text-slate-400">
+                    {item.a}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
