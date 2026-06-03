@@ -57,10 +57,11 @@ export default function LandingPage() {
       formData.append('file', file);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const sessionId = await ensureSessionId(apiUrl);
+      await ensureSessionId(apiUrl);
+      
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
-        headers: { 'X-Session-Id': sessionId },
+        credentials: 'include',
         body: formData,
       });
       
