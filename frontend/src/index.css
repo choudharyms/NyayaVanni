@@ -1,5 +1,6 @@
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
   --color-nyaya-50: #f0fdfa;
@@ -17,11 +18,16 @@
 
 @layer base {
   body {
-    @apply font-sans antialiased bg-slate-50 text-slate-900;
+    @apply font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300;
   }
   button,
   a {
     @apply transition-colors duration-300 ease-in-out cursor-pointer;
+  }
+  
+  /* Smooth transitions for theme colors */
+  html, body, div, section, nav, header, main, footer, p, span, h1, h2, h3, h4, h5, h6, button, a, input, select, textarea {
+    @apply transition-colors duration-300 ease-in-out;
   }
 }
 

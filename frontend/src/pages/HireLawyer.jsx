@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -18,6 +18,8 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 
 export default function HireLawyer() {
   const { t } = useLanguage();
@@ -38,17 +40,15 @@ export default function HireLawyer() {
   const [currentTicket, setCurrentTicket] = useState(null);
 
   // Persistence State
-  const [activeBookings, setActiveBookings] = useState([]);
-
-  // Load existing bookings from local storage
-  useEffect(() => {
+  const [activeBookings, setActiveBookings] = useState(() => {
     try {
       const stored = localStorage.getItem("nyayavanni_consultations");
-      if (stored) setActiveBookings(JSON.parse(stored));
+      return stored ? JSON.parse(stored) : [];
     } catch (e) {
       console.error("Failed to load consultations", e);
+      return [];
     }
-  }, []);
+  });
 
   // Mock Data for Lawyers (BCI Compliant - No Ratings)
   const mockLawyers = useMemo(
@@ -222,36 +222,39 @@ export default function HireLawyer() {
   };
 
   return (
-    <div className="relative min-h-screen pb-16 overflow-hidden bg-slate-900 text-slate-100">
+    <div className="relative min-h-screen pb-16 overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
       {/* Background gradients (match LandingPage) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-nyaya-500/25 rounded-full blur-[140px] mix-blend-screen pointer-events-none" />
-      <div className="absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[160px] mix-blend-screen pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-nyaya-500/10 dark:bg-nyaya-500/25 rounded-full blur-[140px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+      <div className="absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[160px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-30 border-b border-white/10 bg-slate-900/60 backdrop-blur-xl">
+      <nav className="sticky top-0 z-30 border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300">
         <div className="flex items-center justify-between h-16 px-6 mx-auto max-w-7xl">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 transition border rounded-full bg-white/5 border-white/10 hover:bg-white/10"
+              className="p-2 transition border rounded-full bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer"
               aria-label="Go back"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-200" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
 
             <div
-              className="flex items-center gap-2 text-xl font-bold tracking-tight text-white cursor-pointer"
+              className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer"
               onClick={() => navigate("/")}
             >
               <span className="inline-flex items-center justify-center border rounded-full w-9 h-9 bg-nyaya-500/15 border-nyaya-500/25">
-                <Scale className="w-5 h-5 text-nyaya-400" />
+                <Scale className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
               </span>
-              <span>Nyaya<span className="text-nyaya-400">Vanni</span></span>
+              <span>Nyaya<span className="text-nyaya-600 dark:text-nyaya-400">Vanni</span></span>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-200 text-sm">
-            {t("nav.directory")}
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-sm">
+              {t("nav.directory")}
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
@@ -259,28 +262,28 @@ export default function HireLawyer() {
       <main className="relative z-10 px-6 pt-10 mx-auto max-w-7xl">
         {/* Header */}
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-block mb-5 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-300 font-medium text-sm">
+          <div className="inline-block mb-5 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 font-medium text-sm">
             Legal Experts Directory
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+          <h1 className="text-4xl font-extrabold tracking-tight text-slate-850 dark:text-white md:text-5xl">
             {t("lawyers.title")}
           </h1>
 
-          <p className="mt-4 text-base md:text-lg text-slate-300">
+          <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-300">
             {t("lawyers.disclaimer")}
           </p>
         </div>
 
         {/* Active Consultations */}
         {activeBookings.length > 0 && (
-          <div className="mt-10 mb-10 rounded-4xl border border-white/10 bg-slate-900/60 backdrop-blur-xl p-6 shadow-[0_0_40px_rgba(0,0,0,0.25)]">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-white/10">
+          <div className="mt-10 mb-10 rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-md">
+            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10">
               <div className="flex items-center gap-2">
-                <Bookmark className="w-5 h-5 text-nyaya-300" />
-                <h2 className="text-lg font-bold text-white">Your Active Consultations</h2>
+                <Bookmark className="w-5 h-5 text-nyaya-600 dark:text-nyaya-300" />
+                <h2 className="text-lg font-bold text-slate-850 dark:text-white">Your Active Consultations</h2>
               </div>
-              <span className="px-3 py-1 text-xs font-semibold border rounded-full bg-white/5 border-white/10 text-slate-200">
+              <span className="px-3 py-1 text-xs font-semibold border rounded-full bg-slate-100 border-slate-200 dark:bg-white/5 dark:border-white/10 text-slate-700 dark:text-slate-200">
                 {activeBookings.length} Scheduled
               </span>
             </div>
@@ -289,27 +292,27 @@ export default function HireLawyer() {
               {activeBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="flex items-center gap-4 p-4 transition border group rounded-2xl border-white/10 bg-slate-950/30 hover:bg-slate-950/45"
+                  className="flex items-center gap-4 p-4 transition border group rounded-2xl border-slate-200 dark:border-white/10 bg-white/50 dark:bg-slate-950/30 hover:bg-slate-100 dark:hover:bg-slate-950/45"
                 >
                   <img
                     src={booking.lawyer.image}
                     alt={booking.lawyer.name}
-                    className="object-cover w-12 h-12 border rounded-full border-white/10"
+                    className="object-cover w-12 h-12 border rounded-full border-slate-200 dark:border-white/10"
                   />
 
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-white truncate">{booking.lawyer.name}</h4>
-                    <p className="text-xs font-semibold truncate text-nyaya-300">
+                    <h4 className="font-bold text-slate-800 dark:text-white truncate">{booking.lawyer.name}</h4>
+                    <p className="text-xs font-semibold truncate text-nyaya-600 dark:text-nyaya-300">
                       {booking.lawyer.specialty}
                     </p>
 
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-300 font-semibold">
+                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-600 dark:text-slate-300 font-semibold">
                       <span className="flex items-center gap-1">
-                        <CalendarDays className="w-3.5 h-3.5 text-slate-400" />
+                        <CalendarDays className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         {booking.date.split(",")[1] || booking.date}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400" />
+                        <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
                         {booking.time}
                       </span>
                     </div>
@@ -317,7 +320,7 @@ export default function HireLawyer() {
 
                   <button
                     onClick={() => handleCancelBooking(booking.id)}
-                    className="px-3 py-2 text-xs font-semibold transition border rounded-full bg-white/5 border-white/10 hover:bg-rose-500/15 hover:border-rose-500/30 text-rose-300"
+                    className="px-3 py-2 text-xs font-semibold transition border rounded-full bg-slate-50 border-slate-250 dark:bg-white/5 dark:border-white/10 hover:bg-rose-500/15 hover:border-rose-500/30 dark:hover:bg-rose-500/15 dark:hover:border-rose-500/30 text-rose-600 dark:text-rose-300 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -329,18 +332,18 @@ export default function HireLawyer() {
 
         {/* Search + Filters */}
         <div className="mt-10 mb-10">
-          <div className="rounded-4xl border border-white/10 bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 shadow-[0_0_40px_rgba(37,99,235,0.08)]">
+          <div className="rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 shadow-md">
             <div className="flex flex-col gap-4 md:flex-row">
               {/* Search */}
               <div className="relative flex-1">
                 <div className="absolute inset-y-0 flex items-center pointer-events-none left-4">
-                  <Search className="w-5 h-5 text-slate-400" />
+                  <Search className="w-5 h-5 text-slate-400 dark:text-slate-500" />
                 </div>
 
                 {searchTerm.length > 0 && (
                   <button
                     onClick={() => setSearchTerm("")}
-                    className="absolute inset-y-0 px-3 my-auto text-sm transition border rounded-full right-3 h-9 bg-white/5 border-white/10 hover:bg-white/10 text-slate-200"
+                    className="absolute inset-y-0 px-3 my-auto text-sm transition border rounded-full right-3 h-9 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer"
                   >
                     Clear
                   </button>
@@ -351,44 +354,44 @@ export default function HireLawyer() {
                   placeholder={t("lawyers.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full py-4 pl-12 pr-20 text-white transition border rounded-2xl bg-slate-950/40 border-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+                  className="w-full py-4 pl-12 pr-20 text-slate-900 dark:text-white transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
                 />
               </div>
 
               {/* Filter */}
               <div className="relative md:w-72">
                 <div className="absolute inset-y-0 flex items-center pointer-events-none left-4">
-                  <Filter className="w-5 h-5 text-slate-400" />
+                  <Filter className="w-5 h-5 text-slate-400 dark:text-slate-500" />
                 </div>
 
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full py-4 pl-12 pr-10 text-white transition border appearance-none cursor-pointer rounded-2xl bg-slate-950/40 border-white/10 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+                  className="w-full py-4 pl-12 pr-10 text-slate-900 dark:text-white transition border appearance-none cursor-pointer rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
                 >
                   {categories.map((cat) => (
-                    <option key={cat} value={cat} className="bg-slate-900">
+                    <option key={cat} value={cat} className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white">
                       {cat}
                     </option>
                   ))}
                 </select>
 
-                <div className="absolute inset-y-0 flex items-center pointer-events-none right-4 text-slate-400">
+                <div className="absolute inset-y-0 flex items-center pointer-events-none right-4 text-slate-400 dark:text-slate-500">
                   ▾
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-400">
+            <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-500 dark:text-slate-400">
               <p>
                 Showing{" "}
-                <span className="font-semibold text-slate-200">{filteredLawyers.length}</span>{" "}
+                <span className="font-semibold text-slate-800 dark:text-slate-200">{filteredLawyers.length}</span>{" "}
                 result(s)
               </p>
               <p className="hidden sm:block">
-                Tip: Search by <span className="text-slate-200">name</span>,{" "}
-                <span className="text-slate-200">specialty</span>, or{" "}
-                <span className="text-slate-200">location</span>.
+                Tip: Search by <span className="text-slate-800 dark:text-slate-250 font-semibold">name</span>,{" "}
+                <span className="text-slate-800 dark:text-slate-250 font-semibold">specialty</span>, or{" "}
+                <span className="text-slate-800 dark:text-slate-250 font-semibold">location</span>.
               </p>
             </div>
           </div>
@@ -396,16 +399,16 @@ export default function HireLawyer() {
 
         {/* Grid */}
         {filteredLawyers.length === 0 ? (
-          <div className="p-10 text-center border rounded-4xl border-white/10 bg-slate-900/60 backdrop-blur-xl">
-            <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-            <h3 className="text-xl font-bold text-white">No lawyers found</h3>
-            <p className="mt-2 text-slate-400">Try adjusting your search or filters.</p>
+          <div className="p-10 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
+            <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
+            <h3 className="text-xl font-bold text-slate-850 dark:text-white">No lawyers found</h3>
+            <p className="mt-2 text-slate-650 dark:text-slate-400">Try adjusting your search or filters.</p>
             <button
               onClick={() => {
                 setSearchTerm("");
                 setFilterType("All");
               }}
-              className="inline-flex items-center justify-center px-6 py-3 mt-6 font-semibold text-white transition border rounded-full bg-white/10 border-white/10 hover:bg-white/15"
+              className="inline-flex items-center justify-center px-6 py-3 mt-6 font-semibold text-slate-700 dark:text-white transition border rounded-full bg-slate-100 hover:bg-slate-150 border-slate-250 dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15 cursor-pointer shadow-xs"
             >
               Reset Filters
             </button>
@@ -415,40 +418,40 @@ export default function HireLawyer() {
             {filteredLawyers.map((lawyer) => (
               <div
                 key={lawyer.id}
-                className="group relative rounded-4xl border border-white/10 bg-slate-900/65 backdrop-blur-xl p-6
-                           shadow-[0_0_30px_rgba(0,0,0,0.25)]
+                className="group relative rounded-4xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/65 backdrop-blur-xl p-6
+                           shadow-md
                            transition-all duration-500
-                           hover:-translate-y-2 hover:border-nyaya-500/40 hover:shadow-[0_0_45px_rgba(37,99,235,0.22)]"
+                           hover:-translate-y-2 hover:border-nyaya-500/40 hover:shadow-[0_0_45px_rgba(37,99,235,0.15)] dark:hover:shadow-[0_0_45px_rgba(37,99,235,0.22)]"
               >
                 {/* glow blobs */}
-                <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -top-10 -right-10 h-28 w-28 bg-nyaya-500/20 blur-3xl group-hover:opacity-100" />
-                <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -bottom-10 -left-10 h-28 w-28 bg-blue-500/20 blur-3xl group-hover:opacity-100" />
+                <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -top-10 -right-10 h-28 w-28 bg-nyaya-500/10 dark:bg-nyaya-500/20 blur-3xl group-hover:opacity-100" />
+                <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -bottom-10 -left-10 h-28 w-28 bg-blue-500/10 dark:bg-blue-500/20 blur-3xl group-hover:opacity-100" />
 
                 <div className="flex items-start gap-4">
-                  <div className="relative w-16 h-16 overflow-hidden transition rounded-full shrink-0 ring-2 ring-white/10 group-hover:ring-nyaya-500/40">
+                  <div className="relative w-16 h-16 overflow-hidden transition rounded-full shrink-0 ring-2 ring-slate-200 dark:ring-white/10 group-hover:ring-nyaya-500/40">
                     <img src={lawyer.image} alt={lawyer.name} className="object-cover w-full h-full" />
                   </div>
 
                   <div className="min-w-0">
-                    <h3 className="text-lg font-bold text-white truncate transition-colors group-hover:text-nyaya-300">
+                    <h3 className="text-lg font-bold text-slate-850 dark:text-white truncate transition-colors group-hover:text-nyaya-600 dark:group-hover:text-nyaya-300">
                       {lawyer.name}
                     </h3>
-                    <p className="text-sm font-medium text-nyaya-300/90">{lawyer.specialty}</p>
+                    <p className="text-sm font-semibold text-nyaya-600 dark:text-nyaya-300/90">{lawyer.specialty}</p>
                   </div>
                 </div>
 
-                <div className="mt-5 space-y-2 text-sm text-slate-300">
+                <div className="mt-5 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400" />
+                    <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     <span className="truncate">{lawyer.location}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-slate-400" />
+                    <Briefcase className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                     <span>{lawyer.experience} Experience</span>
                   </div>
 
-                  <div className="pt-3 mt-3 font-semibold border-t border-white/10 text-slate-100">
+                  <div className="pt-3 mt-3 font-semibold border-t border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100">
                     {lawyer.fee}
                   </div>
                 </div>
@@ -456,23 +459,27 @@ export default function HireLawyer() {
                 <button
                   onClick={() => handleOpenBooking(lawyer)}
                   className="mt-6 w-full rounded-2xl py-3.5 px-4 font-semibold text-white
-                             bg-linear-to-r from-nyaya-500 to-blue-600
-                             shadow-[0_0_25px_rgba(37,99,235,0.22)]
+                             bg-gradient-to-r from-nyaya-500 to-blue-600
+                             shadow-[0_0_25px_rgba(37,99,235,0.15)] dark:shadow-[0_0_25px_rgba(37,99,235,0.22)]
                              transition-all duration-300
                              hover:scale-[1.02] active:scale-[0.99]
-                             flex items-center justify-center gap-2"
+                             flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
                     <Calendar className="w-4 h-4" /> {t("lawyers.book")}
                   </span>
                 </button>
 
-                <p className="mt-3 text-xs text-slate-500">Informational directory only (BCI compliant).</p>
+                <p className="mt-3 text-xs text-slate-500 dark:text-slate-500">Informational directory only (BCI compliant).</p>
               </div>
             ))}
           </div>
         )}
       </main>
+
+      <section className="z-10 w-full px-6 pb-16 mx-auto max-w-7xl">
+        <Footer />
+      </section>
 
       {/* Modal */}
       {isModalOpen && selectedLawyer && (

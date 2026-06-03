@@ -12,6 +12,8 @@ import {
   Copy,
   RefreshCw,
 } from "lucide-react";
+import ThemeToggle from "../components/ThemeToggle";
+import Footer from "../components/Footer";
 
 const RULES = [
   {
@@ -122,8 +124,7 @@ function scoreText(text) {
 
   // Extra heuristics
   const hasManyCaps = (text.match(/[A-Z]/g) || []).length >= 20;
-  const hasLotsOfSymbols =
-    (text.match(/[!$%^&*()_+={}\[\];:'",.<>/?\\|-]/g) || []).length >= 12;
+  const hasLotsOfSymbols = (text.match(/[!$%^&*()_+={}[\];:'",.<>/?\\|-]/g) || []).length >= 12;
   const hasPhone = /(\+?\d[\d\s-]{8,}\d)/.test(text);
 
   if (hasManyCaps) score += 8;
@@ -179,39 +180,42 @@ export default function ScamDetector() {
   };
 
   return (
-    <div className="relative min-h-screen pb-16 overflow-hidden bg-slate-900 text-slate-100">
+    <div className="relative min-h-screen pb-16 overflow-hidden transition-colors duration-300 bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
       {/* background */}
-      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-nyaya-500/25 rounded-full blur-[140px] mix-blend-screen pointer-events-none" />
-      <div className="absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] bg-blue-600/20 rounded-full blur-[160px] mix-blend-screen pointer-events-none" />
+      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-nyaya-500/10 dark:bg-nyaya-500/25 rounded-full blur-[140px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+      <div className="absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[160px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
 
       {/* navbar */}
-      <nav className="sticky top-0 z-30 border-b border-white/10 bg-slate-900/60 backdrop-blur-xl">
+      <nav className="sticky top-0 z-30 transition-all duration-300 border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl">
         <div className="flex items-center justify-between h-16 px-6 mx-auto max-w-7xl">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 transition border rounded-full bg-white/5 border-white/10 hover:bg-white/10"
+              className="p-2 transition border rounded-full bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
               aria-label="Go back"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-200" />
+              <ArrowLeft className="w-5 h-5" />
             </button>
 
             <div
-              className="flex items-center gap-2 text-xl font-bold tracking-tight text-white cursor-pointer"
+              className="flex items-center gap-2 text-xl font-bold tracking-tight cursor-pointer text-slate-800 dark:text-white"
               onClick={() => navigate("/")}
             >
               <span className="inline-flex items-center justify-center border rounded-full w-9 h-9 bg-nyaya-500/15 border-nyaya-500/25">
-                <Scale className="w-5 h-5 text-nyaya-400" />
+                <Scale className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
               </span>
               <span>
-                Nyaya<span className="text-nyaya-400">Vanni</span>
+                Nyaya<span className="text-nyaya-600 dark:text-nyaya-400">Vanni</span>
               </span>
             </div>
           </div>
 
-          <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/5 border border-white/10 text-slate-200 text-sm">
-            <Sparkles className="w-4 h-4 text-nyaya-300" />
-            Scam Detector
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-250 text-sm">
+              <Sparkles className="w-4 h-4 text-nyaya-600 dark:text-nyaya-300" />
+              Scam Detector
+            </div>
+            <ThemeToggle />
           </div>
         </div>
       </nav>
@@ -219,39 +223,38 @@ export default function ScamDetector() {
       <main className="max-w-5xl px-6 pt-10 mx-auto">
         {/* header */}
         <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-300 font-medium text-sm">
+          <div className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 font-medium text-sm">
             <ShieldAlert className="w-4 h-4" />
             Detect suspicious legal messages
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-white md:text-5xl">
+          <h1 className="text-4xl font-extrabold tracking-tight md:text-5xl text-slate-850 dark:text-white">
             Scam Detector for Legal Messages
           </h1>
-          <p className="mt-4 text-base md:text-lg text-slate-300">
-            Paste a message / notice text. You’ll get a risk score + reasons.
-            (This is not legal advice.)
+          <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-350">
+            Paste a message / notice text. You’ll get a risk score + reasons. (This is not legal advice.)
           </p>
         </div>
 
         {/* content */}
         <div className="grid gap-6 mt-10 lg:grid-cols-5">
           {/* input */}
-          <div className="lg:col-span-3 rounded-4xl border border-white/10 bg-slate-900/60 backdrop-blur-xl p-6 shadow-[0_0_40px_rgba(37,99,235,0.08)]">
+          <div className="lg:col-span-3 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-md">
             <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-lg font-bold text-white">
+              <h2 className="text-lg font-bold text-slate-850 dark:text-white">
                 Message / Notice Text
               </h2>
               <div className="flex items-center gap-2">
                 <button
                   onClick={onCopy}
-                  className="inline-flex items-center gap-2 px-3 text-sm transition border rounded-full h-9 bg-white/5 border-white/10 hover:bg-white/10 text-slate-200"
+                  className="inline-flex items-center gap-2 px-3 text-sm transition border rounded-full cursor-pointer h-9 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-250 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
                 >
                   <Copy className="w-4 h-4" />
                   {copied ? "Copied" : "Copy"}
                 </button>
                 <button
                   onClick={onReset}
-                  className="inline-flex items-center gap-2 px-3 text-sm transition border rounded-full h-9 bg-white/5 border-white/10 hover:bg-white/10 text-slate-200"
+                  className="inline-flex items-center gap-2 px-3 text-sm transition border rounded-full cursor-pointer h-9 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-250 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200"
                 >
                   <RefreshCw className="w-4 h-4" />
                   Reset
@@ -264,23 +267,18 @@ export default function ScamDetector() {
               onChange={(e) => setText(e.target.value)}
               rows={10}
               placeholder="Paste the suspicious SMS/WhatsApp/email/legal notice text here…"
-              className="w-full p-4 text-white transition border rounded-2xl bg-slate-950/40 border-white/10 placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+              className="w-full p-4 transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
             />
 
             <div className="flex flex-col gap-3 mt-4 sm:flex-row sm:items-center sm:justify-between">
-              <p className="text-xs text-slate-400">
+              <p className="text-xs text-slate-500 dark:text-slate-400">
                 Tip: include links/phone numbers if present (helps detection).
               </p>
 
               <button
                 onClick={onAnalyze}
                 disabled={!text.trim()}
-                className="rounded-2xl px-6 py-3.5 font-semibold text-white
-                           bg-linear-to-r from-nyaya-500 to-blue-600
-                           shadow-[0_0_25px_rgba(37,99,235,0.22)]
-                           transition-all duration-300
-                           hover:scale-[1.02] active:scale-[0.99]
-                           disabled:opacity-50 disabled:hover:scale-100"
+                className="rounded-2xl px-6 py-3.5 font-semibold text-white bg-gradient-to-r from-nyaya-500 to-blue-600 shadow-[0_0_25px_rgba(37,99,235,0.15)] dark:shadow-[0_0_25px_rgba(37,99,235,0.22)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
               >
                 Analyze Message
               </button>
@@ -288,37 +286,39 @@ export default function ScamDetector() {
           </div>
 
           {/* result */}
-          <div className="p-6 border lg:col-span-2 rounded-4xl border-white/10 bg-slate-900/60 backdrop-blur-xl">
+          <div className="lg:col-span-2 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-md">
             {!analysis ? (
               <div className="py-10 text-center">
-                <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-slate-400" />
-                <h3 className="text-xl font-bold text-white">
+                <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-slate-500 dark:text-slate-400" />
+                <h3 className="text-xl font-bold text-slate-850 dark:text-white">
                   No analysis yet
                 </h3>
-                <p className="mt-2 text-sm text-slate-400">
+                <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
                   Paste text and click{" "}
-                  <span className="font-semibold text-slate-200">Analyze</span>.
+                  <span className="font-semibold text-slate-800 dark:text-slate-200">
+                    Analyze
+                  </span>.
                 </p>
               </div>
             ) : (
               <div>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm text-slate-400">Risk Score</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Risk Score</p>
                     <div className="flex items-center gap-2 mt-1">
-                      <span className="text-3xl font-extrabold text-white">
+                      <span className="text-3xl font-extrabold text-slate-850 dark:text-white">
                         {analysis.score}
                       </span>
-                      <span className="text-sm text-slate-400">/ 100</span>
+                      <span className="text-sm text-slate-500 dark:text-slate-400">/ 100</span>
                     </div>
                     <p
                       className={`mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold
                         ${
                           risk.tone === "high"
-                            ? "bg-rose-500/15 border border-rose-500/25 text-rose-200"
+                            ? "bg-rose-500/15 border border-rose-500/25 text-rose-800 dark:text-rose-200"
                             : risk.tone === "mid"
-                              ? "bg-amber-500/15 border border-amber-500/25 text-amber-200"
-                              : "bg-emerald-500/15 border border-emerald-500/25 text-emerald-200"
+                              ? "bg-amber-500/15 border border-amber-500/25 text-amber-800 dark:text-amber-200"
+                              : "bg-emerald-500/15 border border-emerald-500/25 text-emerald-800 dark:text-emerald-200"
                         }`}
                     >
                       {risk.tone === "high" ? (
@@ -332,43 +332,53 @@ export default function ScamDetector() {
 
                   {/* meter */}
                   <div className="w-28">
-                    <div className="h-2.5 rounded-full bg-white/10 overflow-hidden">
+                    <div className="overflow-hidden rounded-full h-2.5 bg-slate-100 dark:bg-white/10">
                       <div
-                        className="h-full rounded-full bg-linear-to-r from-nyaya-500 to-blue-600"
+                        className="h-full rounded-full bg-gradient-to-r from-nyaya-500 to-blue-600"
                         style={{ width: `${analysis.score}%` }}
                       />
                     </div>
-                    <p className="mt-2 text-[11px] text-slate-500 text-right">
+                    <p className="mt-2 text-[11px] text-right text-slate-500 dark:text-slate-650">
                       Heuristic score
                     </p>
                   </div>
                 </div>
 
                 <div className="mt-6">
-                  <h4 className="mb-3 font-bold text-white">Reasons flagged</h4>
+                  <h4 className="mb-3 font-bold text-slate-850 dark:text-white">
+                    Reasons flagged
+                  </h4>
                   <div className="space-y-2">
                     {RULES.map((r) => {
                       const hit = analysis.hits.includes(r.id);
                       return (
                         <div
                           key={r.id}
-                          className={`flex items-center justify-between gap-3 p-3 rounded-xl border
-                            ${hit ? "border-nyaya-500/30 bg-nyaya-500/10" : "border-white/10 bg-white/5"}`}
+                          className={`flex items-center justify-between gap-3 p-3 rounded-xl border transition-all duration-300
+                            ${
+                              hit
+                                ? "border-nyaya-500/30 bg-nyaya-500/10 text-nyaya-900 dark:text-nyaya-200"
+                                : "border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5"
+                            }`}
                         >
                           <div className="flex items-center gap-2">
                             {hit ? (
-                              <BadgeAlert className="w-4 h-4 text-amber-300" />
+                              <BadgeAlert className="w-4 h-4 text-amber-600 dark:text-amber-300" />
                             ) : (
-                              <BadgeCheck className="w-4 h-4 text-slate-500" />
+                              <BadgeCheck className="w-4 h-4 text-slate-400 dark:text-slate-500" />
                             )}
                             <span
-                              className={`text-sm ${hit ? "text-slate-100" : "text-slate-400"}`}
+                              className={`text-sm ${
+                                hit ? "text-slate-800 dark:text-slate-100" : "text-slate-605 dark:text-slate-400"
+                              }`}
                             >
                               {r.label}
                             </span>
                           </div>
                           <span
-                            className={`text-xs font-semibold ${hit ? "text-slate-200" : "text-slate-500"}`}
+                            className={`text-xs font-semibold ${
+                              hit ? "text-slate-700 dark:text-slate-200" : "text-slate-500"
+                            }`}
                           >
                             +{r.weight}
                           </span>
@@ -377,11 +387,11 @@ export default function ScamDetector() {
                     })}
                   </div>
 
-                  <div className="p-4 mt-6 border rounded-2xl border-white/10 bg-slate-950/30">
-                    <p className="text-sm font-semibold text-slate-300">
+                  <div className="p-4 mt-6 border rounded-2xl border-slate-200 dark:border-white/10 bg-slate-100/50 dark:bg-slate-950/30">
+                    <p className="text-sm font-semibold text-slate-800 dark:text-slate-300">
                       What to do next
                     </p>
-                    <ul className="mt-2 space-y-1 text-sm list-disc list-inside text-slate-400">
+                    <ul className="mt-2 text-sm space-y-1 list-disc list-inside text-slate-650 dark:text-slate-400">
                       <li>Do not share OTP/passwords/bank details.</li>
                       <li>Verify the sender via official website/number.</li>
                       <li>
@@ -393,12 +403,16 @@ export default function ScamDetector() {
               </div>
             )}
 
-            <div className="mt-6 text-xs text-slate-500">
+            <div className="mt-6 text-xs text-slate-500 dark:text-slate-600">
               Note: This is an assistive tool, not legal advice.
             </div>
           </div>
         </div>
       </main>
+
+      <section className="z-10 w-full px-6 mx-auto max-w-7xl">
+        <Footer />
+      </section>
     </div>
   );
 }

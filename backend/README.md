@@ -1,3 +1,34 @@
+# NyayaVanni Backend
+
+## Prerequisites & Setup
+
+### Required Environment Variables
+
+**GEMINI_API_KEY** (Required)
+- Enables document analysis and RAG (Retrieval-Augmented Generation) functionality
+- Obtain a free API key from: https://ai.google.dev
+- **The backend will fail to start if this variable is not set**
+
+### Setup Instructions
+
+1. Copy `.env.example` to `.env` in the `backend/` directory:
+   ```bash
+   cp .env.example .env
+   ```
+
+2. Edit `.env` and set your `GEMINI_API_KEY`:
+   ```bash
+   GEMINI_API_KEY=your_actual_api_key_here
+   ```
+
+3. Verify the key is valid by starting the backend:
+   ```bash
+   python main.py
+   ```
+   If the API key is missing or invalid, the backend will exit with a clear error message.
+
+---
+
 # NyayaVanni API Documentation
 
 ## 0. Create Session
