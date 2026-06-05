@@ -21,18 +21,18 @@ export default function ContactUs() {
 
   const validate = () => {
     const newErrors = {};
-    if (!formData.name.trim()) newErrors.name = language === 'en' ? "Full Name is required" : "पूरा नाम आवश्यक है";
+    if (!formData.name.trim())  newErrors.name = language === 'en' ? "Full Name is required" : "पूरा नाम आवश्यक है";
     
-    if (!formData.email.trim()) {
+    if (!formData.email.trim())  {
       newErrors.email = language === 'en' ? "Email is required" : "ईमेल आवश्यक है";
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+    }  else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email.trim()))  {
       newErrors.email = language === 'en' ? "Invalid email format" : "अमान्य ईमेल प्रारूप";
     }
 
-    if (!formData.subject.trim()) newErrors.subject = language === 'en' ? "Subject is required" : "विषय आवश्यक है";
-    if (!formData.message.trim()) {
+    if (!formData.subject.trim())  newErrors.subject = language === 'en' ? "Subject is required" : "विषय आवश्यक है";
+    if (!formData.message.trim())  {
       newErrors.message = language === 'en' ? "Message is required" : "संदेश आवश्यक है";
-    } else if (formData.message.length < 10) {
+    } else if (formData.message.trim().length < 10)  {
       newErrors.message = language === 'en' ? "Message must be at least 10 characters" : "संदेश कम से कम 10 वर्णों का होना चाहिए";
     }
 
@@ -53,7 +53,6 @@ export default function ContactUs() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    
     setIsSubmitting(true);
     setSubmitStatus(null);
 
