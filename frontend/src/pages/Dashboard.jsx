@@ -35,6 +35,7 @@ export default function Dashboard() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [confidence, setConfidence] = useState(null);
   const messagesEndRef = useRef(null);
 
   useEffect(() => {
@@ -71,6 +72,7 @@ export default function Dashboard() {
         setClassification(data.classification);
         setKnowledgeGraph(data.knowledge_graph);
         setExtractedText(data.extracted_text);
+        setConfidence(data.confidence);
         
         saveToHistory({
           documentId,
@@ -330,10 +332,81 @@ export default function Dashboard() {
                   {analysis?.risk_level} {t("dashboard.risk")}
                 </div>
               </div>
+              {/* AI Confidence Meter */}
+{confidence && (
+  <>
+    <div className="flex items-center gap-2 mb-4">
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-semibold ${
+          confidence.level === "High"
+            ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+            : confidence.level === "Medium"
+            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400"
+            : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+        }`}
+      >
+        {confidence.level === "High" && "🟢"}
+        {confidence.level === "Medium" && "🟡"}
+        {confidence.level === "Low" && "🔴"}
 
-              <p className="mb-6 text-lg leading-relaxed text-slate-700 dark:text-slate-350">
-                {analysis?.summary}
-              </p>
+        {" "}
+        {confidence.level} Confidence ({confidence.score}%)
+      </span>
+    </div>
+
+    {confidence.score < 60 && (
+      <div className="p-4 mb-4 border rounded-xl bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300">
+        ⚠️ This analysis has low confidence. Please verify the document manually before relying on the generated legal insights.
+      </div>
+    )}
+  </>
+)}
+
+{/* Summary */}
+<p className="mb-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+  {analysis?.summary}
+</p>
+
+{/* Confidence Metrics */}
+{confidence && (
+  <div className="grid grid-cols-2 gap-3 mb-6">
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Coverage
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.coverage}%
+      </div>
+    </div>
+
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Similarity
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.similarity}%
+      </div>
+    </div>
+
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Evidence
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.evidence_score}%
+      </div>
+    </div>
+
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Supported Chunks
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.matched_chunks}/{confidence.total_chunks}
+      </div>
+    </div>
+  </div>
+)}
 
               <div className="grid grid-cols-2 gap-4 mb-8">
                 <div className="flex items-start gap-3 p-4 border rounded-xl bg-slate-50 dark:bg-slate-950 border-slate-150 dark:border-slate-800">

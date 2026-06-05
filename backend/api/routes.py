@@ -29,7 +29,7 @@ from services.ocr_service import extract_document
 from services.rag_service import retrieve_relevant_laws
 from services.gemini_service import analyze_document_with_gemini, generate_chat_response, stream_chat_response
 from models.schemas import ChatRequest, ChatResponse
-
+from services.confidence_service import ConfidenceService
 logger = logging.getLogger(__name__)
 
 api_router = APIRouter()
@@ -182,18 +182,24 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
         text = extract_document(contents, filename, force_ocr=force_ocr, language=language)
         relevant_laws = retrieve_relevant_laws(text, k=3)
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+        confidence = ConfidenceService.generate(
+            document_text=text,
+            summary=analysis_result.get("summary", ""),
+            relevant_laws=relevant_laws
+        )
         classification = classify_document(text)
         knowledge_graph = graph_builder.generate_graph(text)
         save_cached_analysis(document_id, language, text, analysis_result)
 
         return {
-            "documentId": document_id,
-            "analysis": analysis_result,
-            "classification": classification,
-            "knowledge_graph": knowledge_graph,
-            "extracted_text": text[:500] + "...",
-            "cached": False
-        }
+        "documentId": document_id,
+        "analysis": analysis_result,
+        "confidence": confidence,
+        "classification": classification,
+        "knowledge_graph": knowledge_graph,
+        "extracted_text": text[:500] + "...",
+        "cached": False
+    }
 
     except RateLimitExceeded:
         raise
