@@ -9,6 +9,11 @@ load_dotenv()
 
 app = FastAPI(title="NyayaVanni API", description="Legal Document Analyzer API")
 
+# Initialize search service with full-text indexing
+from services.storage_service import DB_PATH as STORAGE_DB_PATH
+from services.search_service import init_search_service
+init_search_service(STORAGE_DB_PATH)
+
 class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
     def __init__(self, app, max_upload_size: int):
         super().__init__(app)
