@@ -1,5 +1,16 @@
 from typing import Dict, List
 import re
+import os
+import json
+import logging
+import google.generativeai as genai
+
+logger = logging.getLogger(__name__)
+
+# Configure API key only if available
+api_key = os.getenv("GEMINI_API_KEY")
+if api_key:
+    genai.configure(api_key=api_key)
 
 DOCUMENT_TYPES = [
     "Non-Disclosure Agreement",
@@ -14,14 +25,9 @@ DOCUMENT_TYPES = [
     "Other / Unknown"
 ]
 
-def classify_document(text: str) -> Dict:
-    """
-    Lightweight rule + AI-ready classifier (MVP version).
-    Later you can replace with OpenAI/Gemini classification.
-    """
-
+def _heuristic_classify(text: str) -> Dict:
+    """Fallback heuristic-based classifier."""
     text_lower = text.lower()
-
     scores = {doc: 0 for doc in DOCUMENT_TYPES}
 
     # --- simple heuristics ---
@@ -62,3 +68,55 @@ def classify_document(text: str) -> Dict:
             for k, v in sorted_scores[1:4]
         ]
     }
+
+def classify_document(text: str) -> Dict:
+    """
+    AI-powered document classifier using Gemini 1.5 Flash.
+    Falls back to heuristic model on failure.
+    """
+    if not api_key:
+        logger.warning("GEMINI_API_KEY not set. Using heuristic fallback for classification.")
+        return _heuristic_classify(text)
+        
+    try:
+        model = genai.GenerativeModel("models/gemini-1.5-flash")
+        
+        # Read only the first 10k chars to save tokens (classification only needs the top)
+        truncated_text = text[:10000]
+        
+        prompt = f"""
+You are an expert legal AI classifier.
+Analyze the following document text and classify it into exactly ONE of the following categories:
+{json.dumps(DOCUMENT_TYPES)}
+
+Respond ONLY with a valid JSON object matching this schema:
+{{
+  "predicted_type": "string (must be from the allowed list)",
+  "confidence": "float between 0.0 and 1.0",
+  "alternatives": [
+    {{"type": "string", "score": "float"}}
+  ]
+}}
+
+Document Text:
+{truncated_text}
+"""
+        response = model.generate_content(
+            prompt,
+            generation_config=genai.GenerationConfig(
+                response_mime_type="application/json",
+                temperature=0.1
+            )
+        )
+        
+        result = json.loads(response.text)
+        
+        # Validate that the predicted type is in the allowed list
+        if result.get("predicted_type") not in DOCUMENT_TYPES:
+            result["predicted_type"] = "Other / Unknown"
+            
+        return result
+        
+    except Exception as e:
+        logger.error(f"Gemini classification failed: {e}. Falling back to heuristics.")
+        return _heuristic_classify(text)
