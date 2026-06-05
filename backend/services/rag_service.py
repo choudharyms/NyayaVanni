@@ -7,7 +7,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
-# Validate GEMINI_API_KEY on startup
+# Configure API key only if available
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key or not api_key.strip():
     logger.warning("GEMINI_API_KEY environment variable is not set or empty. RAG and document analysis features will fail.")
