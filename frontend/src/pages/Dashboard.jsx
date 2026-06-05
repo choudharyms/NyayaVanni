@@ -57,7 +57,7 @@ export default function Dashboard() {
         const response = await fetch(`${apiUrl}/api/analyze/${documentId}?language=${language}`, {
           method: 'POST',
           credentials: 'include',
-          body: formData
+          body: formData,
           headers: { 'X-Session-Id': sessionId }
         });
         

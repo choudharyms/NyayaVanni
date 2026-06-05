@@ -5,8 +5,9 @@ import io
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from reportlab.pdfgen import canvas
+from pydantic import BaseModel, Field
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
 from slowapi import Limiter
 from slowapi.util import get_remote_address
@@ -52,19 +53,19 @@ RATE_LIMIT_CHAT    = os.getenv("RATE_LIMIT_CHAT",    "30/minute")
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx'}
 ALLOWED_MIME_TYPES = {
-    'application/pdf',
-    'image/png',
+    'application/pdf', 
+    'image/png', 
     'image/jpeg',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 }
 
 
 class DocumentGenerationRequest(BaseModel):
-    effective_date: str
-    party_one_name: str
-    party_two_name: str
-    consideration_amount: str
-    jurisdiction: str
+    effective_date: str = Field(..., max_length=100)
+    party_one_name: str = Field(..., max_length=500)
+    party_two_name: str = Field(..., max_length=500)
+    consideration_amount: str = Field(..., max_length=500)
+    jurisdiction: str = Field(..., max_length=200)
 
 
 def require_session_id(request: Request) -> str:
