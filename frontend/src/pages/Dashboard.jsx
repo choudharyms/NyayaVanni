@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
@@ -10,7 +10,7 @@ import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
-import { useDocumentHistory } from '../hooks/useDocumentHistory';
+import DocumentHistorySidebar from '../components/DocumentHistorySidebar';
 
 export default function Dashboard() {
   const { t, language } = useLanguage();
@@ -18,7 +18,7 @@ export default function Dashboard() {
   const location = useLocation();
   const navigate = useNavigate();
   const file = location.state?.file || null;
-  const { saveToHistory } = useDocumentHistory();
+  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
   const [previewUrl, setPreviewUrl] = useState(null);
   const [analysis, setAnalysis] = useState(null);
@@ -35,7 +35,40 @@ export default function Dashboard() {
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
+  const [documentHistory, setDocumentHistory] = useState([]);
+  const [historyLoading, setHistoryLoading] = useState(false);
+  const [historyCollapsed, setHistoryCollapsed] = useState(false);
+  const [deletingDocumentId, setDeletingDocumentId] = useState(null);
   const messagesEndRef = useRef(null);
+
+  const loadSessionDocuments = useCallback(async () => {
+    setHistoryLoading(true);
+    try {
+      await ensureSessionId(apiUrl);
+      const response = await fetch(`${apiUrl}/api/documents`, {
+        method: 'GET',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to load document history');
+      }
+
+      const documents = await response.json();
+      setDocumentHistory(Array.isArray(documents) ? documents : []);
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Document history error:', err);
+      }
+      setDocumentHistory([]);
+    } finally {
+      setHistoryLoading(false);
+    }
+  }, [apiUrl]);
+
+  useEffect(() => {
+    loadSessionDocuments();
+  }, [loadSessionDocuments]);
 
   useEffect(() => {
     if (file) {
@@ -43,6 +76,7 @@ export default function Dashboard() {
       setPreviewUrl(objectUrl);
       return () => URL.revokeObjectURL(objectUrl);
     }
+    setPreviewUrl(null);
   }, [file]);
 
   useEffect(() => {
@@ -51,14 +85,22 @@ export default function Dashboard() {
 
   useEffect(() => {
     const fetchAnalysis = async () => {
+      setLoading(true);
+      setError(null);
+      setAnalysis(null);
+      setClassification(null);
+      setKnowledgeGraph(null);
+      setSelectedNode(null);
+      setExtractedText('');
+      setChatHistory([
+        { role: 'assistant', message: 'I have analyzed your document. How can I help you understand it better?' }
+      ]);
+
       try {
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         await ensureSessionId(apiUrl);
         const response = await fetch(`${apiUrl}/api/analyze/${documentId}?language=${language}`, {
           method: 'POST',
           credentials: 'include',
-          body: formData,
-          headers: { 'X-Session-Id': sessionId }
         });
         
         if (!response.ok) {
@@ -68,22 +110,14 @@ export default function Dashboard() {
         
         const data = await response.json();
         setAnalysis(data.analysis);
-        setClassification(data.classification);
+        setClassification(data.classification || null);
         setKnowledgeGraph(data.knowledge_graph);
         setExtractedText(data.extracted_text);
-        
-        saveToHistory({
-          documentId,
-          fileName: file?.name || 'Unknown Document',
-          fileType: file?.type?.includes('pdf') ? 'PDF' : file?.type?.includes('image') ? 'Image' : 'Document',
-          riskLevel: data.analysis?.risk_level || data.classification?.risk_level || 'unknown',
-          analyzedAt: new Date().toISOString(),
-        });
+        loadSessionDocuments();
       } catch (err) {
         if (import.meta.env.DEV) {
           console.error("Error:", err);
         }
-        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         let msg = err.message !== "Failed to fetch" && err.message !== "Analysis request failed" 
                    ? err.message 
                    : "Analysis failed. Please try uploading the document again.";
@@ -98,7 +132,48 @@ export default function Dashboard() {
     };
 
     fetchAnalysis();
-  }, [documentId, file, language]);
+  }, [apiUrl, documentId, language, loadSessionDocuments]);
+
+  const handleSelectDocument = useCallback((nextDocumentId) => {
+    if (nextDocumentId === documentId) return;
+    navigate(`/dashboard/${nextDocumentId}`);
+  }, [documentId, navigate]);
+
+  const handleDeleteDocument = useCallback(async (targetDocumentId) => {
+    const targetDocument = documentHistory.find((doc) => doc.document_id === targetDocumentId);
+    const confirmed = window.confirm(`Delete ${targetDocument?.filename || 'this document'} from your history?`);
+    if (!confirmed) return;
+
+    setDeletingDocumentId(targetDocumentId);
+    try {
+      await ensureSessionId(apiUrl);
+      const response = await fetch(`${apiUrl}/api/documents/${targetDocumentId}`, {
+        method: 'DELETE',
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const errData = await response.json().catch(() => ({}));
+        throw new Error(errData.detail || 'Delete failed');
+      }
+
+      const remainingDocuments = documentHistory.filter((doc) => doc.document_id !== targetDocumentId);
+      setDocumentHistory(remainingDocuments);
+
+      if (targetDocumentId === documentId) {
+        const nextDocument = remainingDocuments[0];
+        navigate(nextDocument ? `/dashboard/${nextDocument.document_id}` : '/', { replace: true });
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) {
+        console.error('Delete document error:', err);
+      }
+      setError(err.message || 'Failed to delete document');
+    } finally {
+      setDeletingDocumentId(null);
+      loadSessionDocuments();
+    }
+  }, [apiUrl, documentHistory, documentId, loadSessionDocuments, navigate]);
 
   const handleChat = async (e) => {
     e.preventDefault();
@@ -111,7 +186,6 @@ export default function Dashboard() {
     setChatLoading(true);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
         method: 'POST',
@@ -152,7 +226,6 @@ export default function Dashboard() {
       }
     } catch (err) {
       console.error(err);
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       let msg = "This is a fallback response. The backend might not be running correctly.";
       
       if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
@@ -257,7 +330,19 @@ export default function Dashboard() {
         </div>
       </nav>
 
-     <main className="px-6 mt-8 space-y-8 mx-auto max-w-7xl">
+     <main className="mx-auto mt-8 flex max-w-7xl flex-col gap-6 px-6 lg:flex-row lg:items-start">
+        <DocumentHistorySidebar
+          documents={documentHistory}
+          activeDocumentId={documentId}
+          collapsed={historyCollapsed}
+          loading={historyLoading}
+          deletingId={deletingDocumentId}
+          onToggle={() => setHistoryCollapsed((value) => !value)}
+          onSelect={handleSelectDocument}
+          onDelete={handleDeleteDocument}
+        />
+
+        <div className="min-w-0 flex-1 space-y-8">
         <div className="p-6 bg-white border shadow-sm rounded-2xl dark:bg-slate-900 border-slate-200 dark:border-slate-800">
           <div className="mb-6">
             <h2 className="text-2xl font-bold text-slate-900 dark:text-white">OCR Verification</h2>
@@ -552,6 +637,7 @@ export default function Dashboard() {
               </button>
             </form>
           </div>
+        </div>
         </div>
       </main>
     </div>

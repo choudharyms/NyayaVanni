@@ -19,6 +19,7 @@ from services.storage_service import (
     upload_to_local,
     save_document_record,
     get_document_record,
+    get_session_documents,
     save_cached_analysis,
     get_cached_analysis,
     create_session_id,
@@ -142,6 +143,12 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         raise http_err
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@api_router.get("/documents")
+async def list_session_documents(request: Request):
+    session_id = require_session_id(request)
+    return get_session_documents(session_id)
 
 
 @api_router.post("/analyze/{document_id}")

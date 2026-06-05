@@ -110,6 +110,40 @@ def get_document_record(doc_id: str) -> Optional[dict]:
         return None
 
 
+def get_session_documents(session_id: str) -> list[dict]:
+    """Return document metadata for a session, newest uploads first."""
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT
+                d.document_id,
+                d.filename,
+                d.uploaded_at,
+                CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM document_analysis_cache c
+                        WHERE c.document_id = d.document_id
+                    ) THEN 'completed'
+                    ELSE d.status
+                END AS status
+            FROM documents d
+            WHERE d.session_id = ?
+            ORDER BY d.uploaded_at DESC
+            """,
+            (session_id,)
+        )
+        documents = [dict(row) for row in cursor.fetchall()]
+        conn.close()
+        return documents
+    except Exception as e:
+        logger.error(f"SQLite session documents retrieve failed: {e}")
+        return []
+
+
 def delete_document_and_cache(doc_id: str) -> bool:
     record = get_document_record(doc_id)
     if not record:
