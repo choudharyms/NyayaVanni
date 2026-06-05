@@ -57,10 +57,11 @@ export default function LandingPage() {
       formData.append('file', file);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const sessionId = await ensureSessionId(apiUrl);
+      await ensureSessionId(apiUrl);
+      
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
-        headers: { 'X-Session-Id': sessionId },
+        credentials: 'include',
         body: formData,
       });
       
@@ -99,9 +100,15 @@ export default function LandingPage() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/lawyers')}
-            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block"
+            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
           >
             {t("nav.hire")}
+          </button>
+          <button 
+            onClick={() => navigate('/contact')}
+            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+          >
+            {t("nav.contact")}
           </button>
           <button className="px-5 py-2 font-medium text-slate-800 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/10 rounded-full backdrop-blur-md transition-all">
             {t("nav.signin")}
@@ -137,7 +144,7 @@ export default function LandingPage() {
             >
               <input 
                 ref={inputRef} type="file" className="hidden" 
-                accept="application/pdf,image/png,image/jpeg"
+                accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/png,image/jpeg"
                 onChange={handleChange} 
               />
               
@@ -306,7 +313,7 @@ export default function LandingPage() {
             {[
               {
                 q: "What file types are supported?",
-                a: "You can upload PDF, PNG, and JPG files. For best results, use clear scans and readable text."
+                a: "You can upload PDF, Word Document (.docx), PNG, and JPG files. For best results, use clear scans and readable text."
               },
               {
                 q: "Is my document stored permanently?",
@@ -321,9 +328,8 @@ export default function LandingPage() {
                 a: "Check your internet connection and try a smaller file. If the backend is offline, you'll see a fallback demo navigation."
               },
             ].map((item, idx) => (
-              <details
-                key={idx}
-                className="p-5 transition border group rounded-xl border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-950/40 hover:border-slate-350 dark:hover:border-slate-650 transition-all duration-300"
+              <details key={idx}
+                className="p-5 border group rounded-xl cursor-pointer  border-slate-200 dark:border-slate-700/50  bg-white/50 dark:bg-slate-950/40  transition-all duration-300  hover:-translate-y-1 hover:bg-white/80 dark:hover:bg-slate-900/70  hover:border-nyaya-400/50 dark:hover:border-nyaya-500/50  hover:shadow-lg hover:shadow-nyaya-500/10"
               >
                 <summary className="flex items-center justify-between gap-4 list-none cursor-pointer">
                   <span className="font-semibold text-slate-800 dark:text-white">{item.q}</span>
@@ -338,17 +344,17 @@ export default function LandingPage() {
         </div>
 
         {/* Footer */}
-        <footer className="p-8 mt-10 border rounded-4xl border-slate-700/50 bg-slate-900/60 backdrop-blur-xl md:p-10">
+        <footer className="p-8 mt-10 border rounded-4xl border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/90 backdrop-blur-xl md:p-10 z-20">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             {/* Brand */}
             <div className="max-w-md">
-              <div className="flex items-center gap-2 text-xl font-bold text-white">
+              <div className="flex items-center gap-2 text-xl font-bold text-slate-800 dark:text-white">
                 <span className="inline-flex items-center justify-center w-10 h-10 border rounded-full bg-nyaya-500/15 border-nyaya-500/25">
                   <Scale className="w-5 h-5 text-nyaya-400" />
                 </span>
                 <span>Nyaya<span className="text-nyaya-400">Vanni</span></span>
               </div>
-              <p className="mt-3 text-slate-400">
+              <p className="mt-3 text-slate-600 dark:text-slate-400">
                 Understand Indian legal documents in simple language. Upload contracts/notices and get clearer insights fast.
               </p>
             </div>
@@ -356,45 +362,45 @@ export default function LandingPage() {
             {/* Links */}
             <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Product</p>
-                <div className="flex flex-col gap-2 text-slate-400">
-                  <button onClick={() => navigate('/chat')} className="text-left transition hover:text-white">Chat with AI</button>
-                  <button onClick={() => navigate('/document-generator')} className="text-left transition hover:text-white">Generate NDA</button>
-                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-left transition hover:text-white">Upload Document</button>
-                  <button onClick={() => navigate('/lawyers')} className="text-left transition hover:text-white">Hire a Lawyer</button>
-                  <button onClick={() => navigate('/version-diff')} className="text-left transition hover:text-white">Version Diff</button>
+                <p className="mb-3 text-sm font-semibold text-white">Product</p>    
+                <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <button onClick={() => navigate('/chat')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Chat with AI</button>
+                  <button onClick={() => navigate('/document-generator')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Generate NDA</button>
+                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-left transition hover:text-slate-900 dark:hover:text-white">Upload Document</button>
+                  <button onClick={() => navigate('/lawyers')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Hire a Lawyer</button>
+                  <button onClick={() => navigate('/version-diff')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Version Diff</button>
                 </div>
               </div>
 
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Resources</p>
-                <div className="flex flex-col gap-2 text-slate-400">
+                <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Resources</p>
+                <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
                 <button
                   onClick={() => navigate('/faq')}
-                  className="text-left transition hover:text-white"
+                  className="text-left transition hover:text-slate-900 dark:hover:text-white"
                 >
                   FAQ
                 </button>
-                  <button onClick={() => navigate('/privacy-policy')} className="text-left transition hover:text-white">Privacy Policy</button>
-                  <button onClick={() => navigate('/terms')} className="text-left transition hover:text-white">Terms of Service</button>
+                  <button onClick={() => navigate('/privacy-policy')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Privacy Policy</button>
+                  <button onClick={() => navigate('/terms')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Terms of Service</button>
                 </div>
               </div>
 
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Contact</p>
-                <div className="flex flex-col gap-2 text-slate-400">
-                  <a href="mailto:support@nyayavanni.com" className="transition hover:text-white">support@nyayavanni.com</a>
-                  <span className="text-sm text-slate-500">Mon–Fri, 10AM–6PM</span>
+                <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Contact</p>
+                <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <a href="mailto:support@nyayavanni.com" className="transition hover:text-slate-900 dark:hover:text-white">support@nyayavanni.com</a>
+                  <span className="text-sm text-slate-600 dark:text-slate-500">Mon–Fri, 10AM–6PM</span>
                 </div>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-700/50 sm:flex-row sm:items-center">
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600 dark:text-slate-500">
               © {new Date().getFullYear()} NyayaVanni. All rights reserved.
             </p>
-            <p className="text-sm text-slate-500">
+            <p className="text-sm text-slate-600 dark:text-slate-500">
               Not legal advice. For professional help, consult a lawyer.
             </p>
           </div>

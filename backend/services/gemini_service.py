@@ -3,24 +3,27 @@ import os
 import json
 import logging
 import re
+from pydantic import BaseModel, Field
+from typing import List, Optional, Literal
+from datetime import date
+
 from dotenv import load_dotenv
+
+from models.llm_schemas import DocumentAnalysis
 
 load_dotenv()
 
 # Import the custom Legal Query Optimizer
 from services.legal_processor import LegalQueryOptimizer
 
-logger = logging.getLogger(__name__)
 
-# Validate GEMINI_API_KEY on startup
+logger = logging.getLogger(__name__)
+# Configure API key only if available
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key or not api_key.strip():
-    raise RuntimeError(
-        "GEMINI_API_KEY environment variable is not set or empty. "
-        "Please set this variable to use RAG and document analysis features."
-    )
-
-genai.configure(api_key=api_key)
+    logger.warning("GEMINI_API_KEY environment variable is not set or empty. RAG and document analysis features will fail.")
+else:
+    genai.configure(api_key=api_key)
 
 # Instantiate the optimizer module globally
 query_optimizer = LegalQueryOptimizer()
@@ -31,12 +34,16 @@ generation_config = {
   "top_k": 40,
   "max_output_tokens": 8192,
   "response_mime_type": "application/json",
+  "response_schema": DocumentAnalysis ,
 }
 
 chat_config = {
   "temperature": 0.5,
   "response_mime_type": "text/plain",
 }
+
+
+
 
 model = genai.GenerativeModel(
     model_name="gemini-3.1-flash-lite-preview",
@@ -47,6 +54,69 @@ chat_model = genai.GenerativeModel(
     model_name="gemini-3.1-flash-lite-preview",
     generation_config=chat_config
 )
+
+
+def _parse_structured_response(resp) -> dict:
+    """
+    Robustly extract JSON/dict from various model response shapes.
+    Supports objects with a `.json()` method, a `.text` field containing
+    either raw JSON or fenced ```json``` blocks, or plain dicts.
+    This is a module-level helper so it can be unit-tested independently.
+    """
+    # If the model already returned a dict-like object
+    if isinstance(resp, dict):
+        return resp
+
+    # If response exposes a json() method (common for requests-like objects)
+    if hasattr(resp, "json") and callable(getattr(resp, "json")):
+        try:
+            data = resp.json()
+            if isinstance(data, dict):
+                return data
+        except Exception:
+            pass
+
+    # Try to get text payload
+    text = None
+    if hasattr(resp, "text"):
+        try:
+            text = resp.text
+        except Exception:
+            text = None
+
+    # If the resp itself is a str, use it
+    if text is None and isinstance(resp, str):
+        text = resp
+
+    if not text:
+        # Try to stringify the object
+        try:
+            text = json.dumps(resp)
+        except Exception:
+            text = None
+
+    if text:
+        # Remove fenced code blocks if present
+        m = re.search(r'```(?:json)?\s*(\{.*\})\s*```', text, re.DOTALL)
+        if m:
+            candidate = m.group(1)
+        else:
+            candidate = text
+
+        # Try direct JSON parse
+        try:
+            return json.loads(candidate)
+        except Exception:
+            # Fallback: find the first { and last } and parse the substring
+            start = candidate.find('{')
+            end = candidate.rfind('}')
+            if start != -1 and end != -1 and end > start:
+                try:
+                    return json.loads(candidate[start:end+1])
+                except Exception:
+                    pass
+
+    raise ValueError("Unable to parse structured JSON from model response")
 
 def analyze_document_with_gemini(document_text: str, retrieved_laws: list, language: str = "en") -> dict:
     # Truncate document and laws to keep total prompt under model limits
@@ -95,22 +165,12 @@ def analyze_document_with_gemini(document_text: str, retrieved_laws: list, langu
     
     try:
         response = model.generate_content(prompt)
-        text = response.text
-        # Clean potential markdown markdown wrapping if Gemini messes up
-        match = re.search(r'```(?:json)?\n(.*?)\n```', text, re.DOTALL)
-        if match:
-            text = match.group(1)
-        else:
-            # Fallback to finding the first { and last }
-            start = text.find('{')
-            end = text.rfind('}')
-            if start != -1 and end != -1:
-                text = text[start:end+1]
-
-        return json.loads(text)
+        # Parse into a dict using the module-level helper and return
+        parsed = _parse_structured_response(response)
+        return parsed
     except Exception as e:
         logger.error(f"Gemini Analysis Failed: {e}")
-        raise e
+        raise
 
 
 def generate_chat_response(document_analysis: dict, chat_history: list, user_message: str, language: str = "en") -> str:

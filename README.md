@@ -224,6 +224,7 @@ NyayaVanni/
 ├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
 ├── LICENSE
+├── SECURITY.md
 ├── main.py
 └── README.md
 ```
