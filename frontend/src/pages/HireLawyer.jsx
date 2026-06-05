@@ -383,15 +383,29 @@ export default function HireLawyer() {
             </div>
 
             <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-500 dark:text-slate-400">
-              <p>
-                Showing{" "}
-                <span className="font-semibold text-slate-800 dark:text-slate-200">{filteredLawyers.length}</span>{" "}
-                result(s)
-              </p>
-              <p className="hidden sm:block">
-                Tip: Search by <span className="text-slate-800 dark:text-slate-250 font-semibold">name</span>,{" "}
-                <span className="text-slate-800 dark:text-slate-250 font-semibold">specialty</span>, or{" "}
-                <span className="text-slate-800 dark:text-slate-250 font-semibold">location</span>.
+<p>
+  {searchTerm.trim().length > 0 ? (
+    <>
+      Showing{" "}
+      <span className="font-semibold text-slate-800 dark:text-slate-200">
+        {filteredLawyers.length}
+      </span>{" "}
+      result(s)
+    </>
+  ) : (
+    <>
+      Showing all{" "}
+      <span className="font-semibold text-slate-800 dark:text-slate-200">
+        {filteredLawyers.length}
+      </span>{" "}
+      available lawyers
+    </>
+  )}
+       </p>
+       <p className="hidden sm:block">
+              Tip: Search by <span className="text-slate-800 dark:text-slate-200 font-semibold">name</span>,{" "}
+                <span className="text-slate-800 dark:text-slate-200 font-semibold">specialty</span>, or{" "}
+                <span className="text-slate-800 dark:text-slate-200 font-semibold">location</span>.
               </p>
             </div>
           </div>

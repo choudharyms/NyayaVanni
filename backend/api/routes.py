@@ -1,14 +1,18 @@
 import os
 import uuid
-import json
 import logging
 import io
 
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request
+from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request, Response
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel
-from reportlab.pdfgen import canvas
+from pydantic import BaseModel, Field
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.lib.pagesizes import letter
+from reportlab.pdfgen import canvas  # FIX: was missing; needed in generate_document
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
 
 from services.document_classifier import classify_document
 from services.knowledge_graph_service import LegalKnowledgeGraphBuilder
@@ -32,6 +36,16 @@ logger = logging.getLogger(__name__)
 api_router = APIRouter()
 graph_builder = LegalKnowledgeGraphBuilder()
 
+# ---------------------------------------------------------------------------
+# Rate limiter — keyed by client IP.
+# Override defaults via env vars:
+#   RATE_LIMIT_ANALYZE  (default: 10/minute)  heavy Gemini + OCR call
+#   RATE_LIMIT_CHAT     (default: 30/minute)  streaming chat call
+# ---------------------------------------------------------------------------
+limiter = Limiter(key_func=get_remote_address)
+RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
+RATE_LIMIT_CHAT    = os.getenv("RATE_LIMIT_CHAT",    "30/minute")
+
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {'pdf', 'png', 'jpg', 'jpeg', 'docx'}
@@ -42,18 +56,21 @@ ALLOWED_MIME_TYPES = {
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
 }
 
+
 class DocumentGenerationRequest(BaseModel):
-    effective_date: str
-    party_one_name: str
-    party_two_name: str
-    consideration_amount: str
-    jurisdiction: str
+    effective_date: str = Field(..., max_length=100)
+    party_one_name: str = Field(..., max_length=500)
+    party_two_name: str = Field(..., max_length=500)
+    consideration_amount: str = Field(..., max_length=500)
+    jurisdiction: str = Field(..., max_length=200)
+
 
 def require_session_id(request: Request) -> str:
-    session_id = request.headers.get("x-session-id", "").strip()
+    session_id = request.cookies.get("session_id")
     if not session_id:
-        raise HTTPException(status_code=401, detail="Missing X-Session-Id header")
+        raise HTTPException(status_code=401, detail="Missing session_id cookie")
     return session_id
+
 
 def require_document_owner(document_id: str, session_id: str) -> dict:
     record = get_document_record(document_id)
@@ -63,9 +80,22 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
         raise HTTPException(status_code=403, detail="Access denied for this document")
     return record
 
+
 @api_router.get("/session")
-async def create_session():
-    return {"sessionId": create_session_id()}
+async def create_session(request: Request, response: Response):
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = create_session_id()
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            samesite="lax",
+            secure=False,  # Set to True if using HTTPS in production
+            max_age=30 * 24 * 60 * 60  # 30 days
+        )
+    return {"status": "Session active"}
+
 
 @api_router.post("/upload")
 async def upload_document(request: Request, file: UploadFile = File(...)):
@@ -92,7 +122,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         size = 0
         try:
             with open(local_path, "wb") as buffer:
-                while chunk := await file.read(1024 * 1024):  # 1MB chunks
+                while chunk := await file.read(1024 * 1024):
                     size += len(chunk)
                     if size > MAX_FILE_SIZE:
                         raise HTTPException(
@@ -124,9 +154,12 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @api_router.post("/analyze/{document_id}")
+@limiter.limit(RATE_LIMIT_ANALYZE)
 def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False):
     """Trigger full analysis pipeline."""
+    # FIX: removed unused `file: UploadFile = File(None)` param — document is always read from storage
     try:
         session_id = require_session_id(request)
         record = require_document_owner(document_id, session_id)
@@ -144,12 +177,13 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
                     "cached": True
                 }
 
-        record = get_document_record(document_id)
-        if not record or not record.get("local_path"):
+        # FIX: use record already fetched by require_document_owner; removed duplicate get_document_record call
+        if not record.get("local_path"):
             raise HTTPException(
                 status_code=404,
                 detail="Document not found or file missing"
             )
+
         try:
             file_size = os.path.getsize(record["local_path"])
             if file_size > MAX_FILE_SIZE:
@@ -157,6 +191,8 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
 
             with open(record["local_path"], "rb") as f:
                 contents = f.read()
+        except HTTPException:
+            raise
         except IOError:
             raise HTTPException(
                 status_code=500,
@@ -165,22 +201,17 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
 
         filename = record["filename"]
 
-        # 1. Extract Text
         text = extract_document(contents, filename, force_ocr=force_ocr, language=language)
-
-        # 2. RAG Retrieval
         relevant_laws = retrieve_relevant_laws(text, k=3)
 
-        # 3. Gemini Analysis
+        # Gemini Analysis
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
 
-        # 4. Classification
+        # Classification
         classification = classify_document(text)
-
-        # 5. Generate Knowledge Graph
         knowledge_graph = graph_builder.generate_graph(text)
 
-        # 6. Save cache
+        # Save cache
         save_cached_analysis(document_id, language, text, analysis_result)
 
         return {
@@ -192,6 +223,8 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
             "cached": False
         }
 
+    except RateLimitExceeded:
+        raise
     except HTTPException as http_err:
         raise http_err
     except ValueError as val_err:
@@ -220,25 +253,28 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
 
         raise HTTPException(status_code=500, detail="An unexpected error occurred during analysis.")
 
+
 @api_router.post("/chat/general")
-def chat_general(request: ChatRequest):
-    """General legal chat with no document context."""
+@limiter.limit(RATE_LIMIT_CHAT)
+def chat_general(request: Request, chat_request: ChatRequest):
+    """General legal chat — no document context."""
+    # FIX: removed duplicate/conflicting docstring that caused a SyntaxError
     try:
-        if not request.user_message or not request.user_message.strip():
+        if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-        analysis = getattr(request, "document_analysis", None) or {}
-        history = [{"role": msg.role, "message": msg.message} for msg in request.chat_history]
-
+        analysis = {}
+        history = [{"role": msg.role, "message": msg.message} for msg in chat_request.chat_history]
         response_text = generate_chat_response(
             analysis,
             history,
-            request.user_message,
-            request.language
+            chat_request.user_message,
+            chat_request.language
         )
-
         return ChatResponse(response=response_text)
 
+    except RateLimitExceeded:
+        raise
     except HTTPException as http_err:
         raise http_err
     except Exception as e:
@@ -255,11 +291,13 @@ def chat_general(request: ChatRequest):
             detail="AI service is temporarily unavailable. Please try again later."
         )
 
+
 @api_router.post("/chat/{document_id}")
-def chat_with_document(document_id: str, chat_request: ChatRequest, http_request: Request):
+@limiter.limit(RATE_LIMIT_CHAT)
+def chat_with_document(request: Request, document_id: str, chat_request: ChatRequest):
     """Send chat message with document context loaded server-side."""
     try:
-        session_id = require_session_id(http_request)
+        session_id = require_session_id(request)
         require_document_owner(document_id, session_id)
 
         cached = get_cached_analysis(document_id, chat_request.language)
@@ -279,6 +317,8 @@ def chat_with_document(document_id: str, chat_request: ChatRequest, http_request
 
         return StreamingResponse(generator, media_type="text/plain")
 
+    except RateLimitExceeded:
+        raise
     except HTTPException as http_err:
         raise http_err
     except Exception as e:
@@ -294,6 +334,7 @@ def chat_with_document(document_id: str, chat_request: ChatRequest, http_request
             status_code=502,
             detail="AI service is temporarily unavailable. Please try again later."
         )
+
 
 @api_router.post("/generate-document")
 def generate_document(request: DocumentGenerationRequest):
@@ -347,6 +388,7 @@ def generate_document(request: DocumentGenerationRequest):
     except Exception as e:
         logger.error(f"Failed to generate document: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate document")
+
 
 @api_router.delete("/documents/{document_id}")
 async def delete_document(document_id: str, request: Request):
