@@ -57,10 +57,11 @@ export default function LandingPage() {
       formData.append('file', file);
       
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const sessionId = await ensureSessionId(apiUrl);
+      await ensureSessionId(apiUrl);
+      
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
-        headers: { 'X-Session-Id': sessionId },
+        credentials: 'include',
         body: formData,
       });
       
@@ -99,9 +100,15 @@ export default function LandingPage() {
         <div className="flex items-center gap-4">
           <button 
             onClick={() => navigate('/lawyers')}
-            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block"
+            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
           >
             {t("nav.hire")}
+          </button>
+          <button 
+            onClick={() => navigate('/contact')}
+            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+          >
+            {t("nav.contact")}
           </button>
           <button className="px-5 py-2 font-medium text-slate-800 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/10 rounded-full backdrop-blur-md transition-all">
             {t("nav.signin")}
@@ -137,7 +144,7 @@ export default function LandingPage() {
             >
               <input 
                 ref={inputRef} type="file" className="hidden" 
-                accept="application/pdf,image/png,image/jpeg,.docx"
+                accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/png,image/jpeg"
                 onChange={handleChange} 
               />
               
@@ -279,7 +286,7 @@ export default function LandingPage() {
             {[
               {
                 q: "What file types are supported?",
-                a: "You can upload PDF, DOCX, PNG, and JPG files. For best results, use clear scans and readable text."
+                a: "You can upload PDF, Word Document (.docx), PNG, and JPG files. For best results, use clear scans and readable text."
               },
               {
                 q: "Is my document stored permanently?",
@@ -294,9 +301,8 @@ export default function LandingPage() {
                 a: "Check your internet connection and try a smaller file. If the backend is offline, you’ll see a fallback demo navigation."
               },
             ].map((item, idx) => (
-              <details
-                key={idx}
-                className="p-5 transition border group rounded-xl border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-950/40 hover:border-slate-350 dark:hover:border-slate-650 transition-all duration-300"
+              <details key={idx}
+                className="p-5 border group rounded-xl cursor-pointer  border-slate-200 dark:border-slate-700/50  bg-white/50 dark:bg-slate-950/40  transition-all duration-300  hover:-translate-y-1 hover:bg-white/80 dark:hover:bg-slate-900/70  hover:border-nyaya-400/50 dark:hover:border-nyaya-500/50  hover:shadow-lg hover:shadow-nyaya-500/10"
               >
                 <summary className="flex items-center justify-between gap-4 list-none cursor-pointer">
                   <span className="font-semibold text-slate-800 dark:text-white">{item.q}</span>

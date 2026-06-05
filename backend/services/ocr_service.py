@@ -3,6 +3,7 @@ import pytesseract
 from PIL import Image
 import io
 import os
+import docx
 import re
 import logging
 import docx
@@ -155,6 +156,23 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> st
     return text.strip()
 
 
+def extract_text_from_docx(docx_bytes: bytes) -> str:
+    """
+    Extract text from a Word document (.docx).
+    """
+    try:
+        doc = docx.Document(io.BytesIO(docx_bytes))
+        text = "\n".join([para.text for para in doc.paragraphs if para.text.strip()])
+        
+        if is_invalid_extracted_text(text):
+            logger.warning("Docx extraction produced invalid or empty text.")
+            return ""
+            
+        return text
+    except Exception as e:
+        logger.error(f"Docx extraction failed: {e}")
+        raise ValueError("Failed to parse the Word Document.")
+
 def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
     """
     Extract text from image using OCR.
@@ -190,18 +208,35 @@ def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
         raise
 
 
-def extract_text_from_docx(file_bytes: bytes) -> str:
+def validate_docx_zip_bomb(file_bytes: bytes, max_uncompressed_size_mb: int = 50):
     """
-    Extract text from Microsoft Word Document (.docx).
+    Prevent Denial of Service (Zip Bomb) by checking the uncompressed
+    size of the DOCX archive before parsing it with python-docx.
     """
     try:
+        with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
+            total_uncompressed_size = sum(info.file_size for info in zf.infolist())
+            max_bytes = max_uncompressed_size_mb * 1024 * 1024
+            
+            if total_uncompressed_size > max_bytes:
+                logger.error(f"Zip bomb detected! Uncompressed size: {total_uncompressed_size} bytes")
+                raise ValueError("Security check failed: Document uncompressed size exceeds safe limits (Zip Bomb protection).")
+    except zipfile.BadZipFile:
+        raise ValueError("The uploaded Word document is corrupted or invalid.")
+
+def extract_text_from_docx(file_bytes: bytes) -> str:
+    """
+    Securely extract text from a Word Document.
+    """
+    validate_docx_zip_bomb(file_bytes)
+    
+    try:
         doc = docx.Document(io.BytesIO(file_bytes))
-        text = "\n".join([paragraph.text for paragraph in doc.paragraphs])
-        return text.strip()
+        text = "\n".join([para.text for para in doc.paragraphs])
+        return text
     except Exception as e:
         logger.error(f"DOCX extraction failed: {e}")
-        raise ValueError("The uploaded DOCX document is corrupted or could not be parsed.")
-
+        raise ValueError("Failed to read text from the Word document.")
 
 def extract_document(
     file_bytes: bytes,
@@ -223,6 +258,11 @@ def extract_document(
             force_ocr=force_ocr,
             language=language
         )
+
+    # Word Documents
+    elif ext == 'docx':
+        
+        extracted_text = extract_text_from_docx(file_bytes)
 
     # Images
     elif ext in ['jpg', 'jpeg', 'png', 'tiff', 'bmp']:
