@@ -204,28 +204,45 @@ Extracts:
 ```text
 NyayaVanni/
 │
-├── .github/
+├── .github/                        # GitHub configuration
+│   ├── ISSUE_TEMPLATE/             # Issue report templates
+│   └── workflows/                  # CI/CD GitHub Actions workflows
 │
-├── backend/
-│   ├── api/
-│   ├── data/
-│   ├── models/
-│   ├── services/
-│   └── uploads/
+├── backend/                        # FastAPI backend server
+│   ├── api/                        # API route definitions (routes.py)
+│   ├── data/                       # Static data and reference files
+│   ├── models/                     # Pydantic schemas (schemas.py, llm_schemas.py)
+│   ├── scripts/                    # Utility and manual test scripts
+│   ├── services/                   # Core business logic
+│   │   ├── document_classifier.py  # Legal document type classification
+│   │   ├── gemini_service.py       # Google Gemini AI integration
+│   │   ├── knowledge_graph_service.py  # Knowledge graph construction
+│   │   ├── legal_processor.py      # Legal document processing pipeline
+│   │   ├── ocr_service.py          # OCR text extraction
+│   │   ├── rag_service.py          # Retrieval-Augmented Generation
+│   │   └── storage_service.py      # File storage management
+│   ├── uploads/                    # Uploaded document storage (runtime)
+│   └── main.py                     # FastAPI application entry point
 │
-├── frontend/
-│   ├── public/
-│   └── src/
+├── frontend/                       # React + Tailwind CSS frontend
+│   ├── public/                     # Static public assets
+│   └── src/                        # React source code
+│       ├── assets/                 # Images, icons, and static assets
+│       ├── components/             # Reusable UI components
+│       ├── contexts/               # React context providers (global state)
+│       ├── hooks/                  # Custom React hooks
+│       ├── pages/                  # Page-level components (routes)
+│       └── utils/                  # Helper utilities and API clients
 │
-├── designs/
-├── screenshots/
-├── tests/
+├── designs/                        # UI/UX design files and mockups
+├── screenshots/                    # Application screenshots for docs
+├── tests/                          # Backend integration tests
 │
 ├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── SECURITY.md
-├── main.py
+├── main.py                         # Top-level entry point
 └── README.md
 ```
 
