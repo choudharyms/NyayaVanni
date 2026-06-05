@@ -5,6 +5,7 @@ import io
 import difflib
 import tempfile
 import re
+import json
 import google.generativeai as genai
 
 from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request, Response
