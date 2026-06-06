@@ -2,6 +2,8 @@ from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+from slowapi import _rate_limit_exceeded_handler
+from slowapi.errors import RateLimitExceeded
 import os
 from dotenv import load_dotenv
 
@@ -44,7 +46,10 @@ app.add_middleware(
 def read_root():
     return {"message": "NyayaVanni Backend API is running."}
 
-from .api.routes import api_router
+from .api.routes import api_router, limiter
+
+app.state.limiter = limiter
+app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
