@@ -13,6 +13,7 @@ export default function GeneralChat() {
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const messagesEndRef = React.useRef(null);
+  const textareaRef = React.useRef(null);
 
   const [chatHistory, setChatHistory] = useState([
     {
@@ -117,7 +118,28 @@ export default function GeneralChat() {
     if (!chatInput.trim()) return;
     const text = chatInput;
     setChatInput("");
+    if(textareaRef.current){
+      textareaRef.current.style.height = "auto";
+    }
     await submitMessage(text, chatHistory);
+  };
+
+  const handleInputChange = (e) => {
+    setChatInput(e.target.value);
+
+    const textarea = e.target;
+    textarea.style.height = "auto";
+    textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+  };
+
+  const handleKeyDown = (e) => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+
+      if (!chatInput.trim() || chatLoading) return;
+
+      handleChat(e);
+    }
   };
 
   return (
@@ -208,16 +230,38 @@ export default function GeneralChat() {
           {/* Form Message Submission Input Dock */}
           <form
             onSubmit={handleChat}
-            className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex gap-2 sm:gap-3 transition-colors duration-300"
+            className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-end gap-2 sm:gap-3 transition-colors duration-300"
           >
-            <input
-              type="text"
+            <textarea
+              ref={textareaRef}
               value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
+              onChange={handleInputChange}
+              onKeyDown={handleKeyDown}
               placeholder={t("chat.placeholder")}
-              className="flex-1 bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-slate-100 placeholder-slate-400 dark:placeholder-slate-500 focus:bg-white dark:focus:bg-slate-950 focus:border-nyaya-500 focus:ring-4 focus:ring-nyaya-500/10 rounded-full px-5 sm:px-6 outline-none transition-all py-3 sm:py-3.5 text-sm sm:text-base"
               disabled={chatLoading}
+              rows={1}
               autoFocus
+              className="
+                chat-textarea
+                flex-1
+                resize-none
+                overflow-y-auto
+                bg-slate-50 dark:bg-slate-950
+                border border-slate-200 dark:border-slate-800
+                text-slate-900 dark:text-slate-100
+                placeholder-slate-400 dark:placeholder-slate-500
+                focus:bg-white dark:focus:bg-slate-950
+                focus:border-nyaya-500
+                focus:ring-4 focus:ring-nyaya-500/10
+                rounded-3xl
+                px-5 sm:px-6
+                py-3
+                outline-none
+                transition-all
+                text-sm sm:text-base
+                min-h-[52px]
+                max-h-[160px]
+              "
             />
             <button
               type="submit"

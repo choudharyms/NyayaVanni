@@ -1,3 +1,6 @@
+ main
+from backend.main import app
+
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -33,3 +36,4 @@ app.include_router(api_router, prefix="/api")
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+ main

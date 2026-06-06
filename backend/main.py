@@ -44,7 +44,7 @@ app.add_middleware(
 def read_root():
     return {"message": "NyayaVanni Backend API is running."}
 
-from api.routes import api_router
+from .api.routes import api_router
 app.include_router(api_router, prefix="/api")
 
 if __name__ == "__main__":
