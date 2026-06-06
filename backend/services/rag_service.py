@@ -10,7 +10,14 @@ logger = logging.getLogger(__name__)
 # Configure API key only if available
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key or not api_key.strip():
+ main
+    logger.warning(
+        "GEMINI_API_KEY environment variable is not set or empty. "
+        "RAG features will be unavailable until configured."
+    )
+
     logger.warning("GEMINI_API_KEY environment variable is not set or empty. RAG and document analysis features will fail.")
+ main
 else:
     genai.configure(api_key=api_key)
 

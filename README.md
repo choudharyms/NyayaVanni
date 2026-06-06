@@ -7,6 +7,7 @@
   <img src="https://img.shields.io/badge/Gemini-AI-orange?style=for-the-badge&logo=google&logoColor=white" />
   <img src="https://img.shields.io/badge/TailwindCSS-Styling-38BDF8?style=for-the-badge&logo=tailwindcss&logoColor=white" />
   <img src="https://img.shields.io/badge/Open%20Source-GSSoC%202026-purple?style=for-the-badge" />
+  <img src="https://img.shields.io/github/license/choudharyms/NyayaVanni?style=for-the-badge" />
 </p>
 
 <p align="center">
@@ -24,6 +25,7 @@
 - [🛠️ Tech Stack](#️-tech-stack)
 - [📂 Project Structure](#-project-structure)
 - [⚙️ Installation & Setup](#️-installation--setup)
+- [🧪 Frontend Validation](#-frontend-validation)
 - [🔑 Environment Variables](#-environment-variables)
 - [📡 API Endpoints](#-api-endpoints)
 - [🔍 OCR Workflow](#-ocr-workflow)
@@ -204,28 +206,45 @@ Extracts:
 ```text
 NyayaVanni/
 │
-├── .github/
+├── .github/                        # GitHub configuration
+│   ├── ISSUE_TEMPLATE/             # Issue report templates
+│   └── workflows/                  # CI/CD GitHub Actions workflows
 │
-├── backend/
-│   ├── api/
-│   ├── data/
-│   ├── models/
-│   ├── services/
-│   └── uploads/
+├── backend/                        # FastAPI backend server
+│   ├── api/                        # API route definitions (routes.py)
+│   ├── data/                       # Static data and reference files
+│   ├── models/                     # Pydantic schemas (schemas.py, llm_schemas.py)
+│   ├── scripts/                    # Utility and manual test scripts
+│   ├── services/                   # Core business logic
+│   │   ├── document_classifier.py  # Legal document type classification
+│   │   ├── gemini_service.py       # Google Gemini AI integration
+│   │   ├── knowledge_graph_service.py  # Knowledge graph construction
+│   │   ├── legal_processor.py      # Legal document processing pipeline
+│   │   ├── ocr_service.py          # OCR text extraction
+│   │   ├── rag_service.py          # Retrieval-Augmented Generation
+│   │   └── storage_service.py      # File storage management
+│   ├── uploads/                    # Uploaded document storage (runtime)
+│   └── main.py                     # FastAPI application entry point
 │
-├── frontend/
-│   ├── public/
-│   └── src/
+├── frontend/                       # React + Tailwind CSS frontend
+│   ├── public/                     # Static public assets
+│   └── src/                        # React source code
+│       ├── assets/                 # Images, icons, and static assets
+│       ├── components/             # Reusable UI components
+│       ├── contexts/               # React context providers (global state)
+│       ├── hooks/                  # Custom React hooks
+│       ├── pages/                  # Page-level components (routes)
+│       └── utils/                  # Helper utilities and API clients
 │
-├── designs/
-├── screenshots/
-├── tests/
+├── designs/                        # UI/UX design files and mockups
+├── screenshots/                    # Application screenshots for docs
+├── tests/                          # Backend integration tests
 │
 ├── CODE_OF_CONDUCT.md
 ├── CONTRIBUTING.md
 ├── LICENSE
 ├── SECURITY.md
-├── main.py
+├── main.py                         # Top-level entry point
 └── README.md
 ```
 
@@ -249,7 +268,9 @@ Before running the project install:
 ## 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/your-username/NyayaVanni.git
+<-- Fix: Replaced placeholder repository URL with the actual project repository URL -->
+
+git clone https://github.com/<actual-owner>/NyayaVanni.git
 cd NyayaVanni
 ```
 
@@ -351,6 +372,48 @@ Frontend runs at:
 
 ```text
 http://localhost:5173
+```
+
+---
+
+# 🧪 Frontend Validation
+
+Run these commands from the `frontend/` directory before submitting UI changes.
+
+## 1️⃣ Install dependencies
+
+```bash
+npm install
+```
+
+## 2️⃣ Check code quality
+
+```bash
+npm run lint
+```
+
+## 3️⃣ Verify the production build
+
+```bash
+npm run build
+```
+
+## 4️⃣ Preview the built UI locally
+
+```bash
+npm run preview
+```
+
+Open the preview URL shown in the terminal and manually verify the touched UI flow.
+
+## Current UI test status
+
+The frontend currently does not define a dedicated unit or integration test script in `frontend/package.json`. Until a test runner is added, use `npm run lint`, `npm run build`, and a local preview smoke check as the required frontend validation path.
+
+When a test runner is introduced, add the command to `frontend/package.json` and document it here, for example:
+
+```bash
+npm run test
 ```
 
 ---
