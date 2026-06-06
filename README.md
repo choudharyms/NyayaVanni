@@ -24,6 +24,7 @@
 - [🛠️ Tech Stack](#️-tech-stack)
 - [📂 Project Structure](#-project-structure)
 - [⚙️ Installation & Setup](#️-installation--setup)
+- [🧪 Frontend Validation](#-frontend-validation)
 - [🔑 Environment Variables](#-environment-variables)
 - [📡 API Endpoints](#-api-endpoints)
 - [🔍 OCR Workflow](#-ocr-workflow)
@@ -351,6 +352,48 @@ Frontend runs at:
 
 ```text
 http://localhost:5173
+```
+
+---
+
+# 🧪 Frontend Validation
+
+Run these commands from the `frontend/` directory before submitting UI changes.
+
+## 1️⃣ Install dependencies
+
+```bash
+npm install
+```
+
+## 2️⃣ Check code quality
+
+```bash
+npm run lint
+```
+
+## 3️⃣ Verify the production build
+
+```bash
+npm run build
+```
+
+## 4️⃣ Preview the built UI locally
+
+```bash
+npm run preview
+```
+
+Open the preview URL shown in the terminal and manually verify the touched UI flow.
+
+## Current UI test status
+
+The frontend currently does not define a dedicated unit or integration test script in `frontend/package.json`. Until a test runner is added, use `npm run lint`, `npm run build`, and a local preview smoke check as the required frontend validation path.
+
+When a test runner is introduced, add the command to `frontend/package.json` and document it here, for example:
+
+```bash
+npm run test
 ```
 
 ---
