@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
-import { Bot, User, Send, ArrowLeft, Scale } from "lucide-react";
+import { Bot, User, Send, ArrowLeft, Scale, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import { useLanguage } from "../contexts/LanguageContext";
 import ThemeToggle from "../components/ThemeToggle";
@@ -175,6 +175,25 @@ export default function GeneralChat() {
     }
   };
 
+  const handleDownload = () => {
+    let content = "NyayaVanni Legal Assistant - Consultation History\n";
+    content += "=================================================\n\n";
+    chatHistory.forEach((msg) => {
+      const role = msg.role === "user" ? "You" : "NyayaVanni";
+      content += `[${role}]:\n${msg.message}\n\n`;
+    });
+
+    const blob = new Blob([content], { type: "text/plain" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `NyayaVanni_Consultation_${new Date().toISOString().slice(0, 10)}.txt`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col transition-colors duration-300">
       {/* Navigation Header */}
@@ -194,7 +213,16 @@ export default function GeneralChat() {
               </span>
             </div>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleDownload}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              title="Download Chat History"
+            >
+              <Download className="w-5 h-5" />
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
 
