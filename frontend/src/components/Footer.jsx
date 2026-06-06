@@ -16,7 +16,7 @@ export default function Footer() {
   };
 
   return (
-    <footer className="w-full mt-16 p-8 border rounded-4xl border-slate-200 dark:border-slate-800 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl md:p-10 transition-colors duration-300">
+    <footer className="w-full mt-16 p-8 border rounded-4xl border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl md:p-10 transition-colors duration-300">
       <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
         {/* Brand Section */}
         <div className="max-w-md">
@@ -26,7 +26,8 @@ export default function Footer() {
             </span>
             <span>Nyaya<span className="text-nyaya-600 dark:text-nyaya-400">Vanni</span></span>
           </div>
-          <p className="mt-3 text-slate-650 dark:text-slate-400 leading-relaxed text-sm">
+          {/* Fix: text-slate-650 is not a valid Tailwind class; replaced with text-slate-600 for proper light mode visibility */}
+          <p className="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed text-sm">
             {language === 'en' 
               ? 'Understand Indian legal documents in simple language. Upload contracts/notices and get clearer insights fast.' 
               : 'भारतीय कानूनी दस्तावेजों को सरल भाषा में समझें। अनुबंध/नोटिस अपलोड करें और तेजी से स्पष्ट जानकारी प्राप्त करें।'}
@@ -36,10 +37,11 @@ export default function Footer() {
         {/* Links Grid */}
         <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
           <div>
-            <p className="mb-3 text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+            <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
               {language === 'en' ? 'Product' : 'उत्पाद'}
             </p>
-            <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400 text-sm">
+            {/* Fix: bumped from text-slate-600 to text-slate-700 for higher contrast in light mode */}
+            <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
               <button onClick={() => navigate('/chat')} className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer">{t("landing.chat.title")}</button>
               <button onClick={handleUploadClick} className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer">{t("landing.upload.title")}</button>
               <button onClick={() => navigate('/lawyers')} className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer">{t("nav.hire")}</button>
@@ -47,10 +49,11 @@ export default function Footer() {
           </div>
 
           <div>
-            <p className="mb-3 text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+            <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
               {language === 'en' ? 'Resources' : 'संसाधन'}
             </p>
-            <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400 text-sm">
+            {/* Fix: bumped from text-slate-600 to text-slate-700 for higher contrast in light mode */}
+            <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
               <button onClick={() => navigate('/faq')} className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer">
                 {language === 'en' ? 'FAQ' : 'प्रश्नोत्तरी (FAQ)'}
               </button>
@@ -64,18 +67,17 @@ export default function Footer() {
           </div>
 
           <div>
-            <p className="mb-3 text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+            <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
               {language === 'en' ? 'Contact' : 'संपर्क'}
             </p>
-            <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400 text-sm">
-              <button onClick={() => navigate('/contact')} className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer">
-                {language === 'en' ? 'Contact Us Page' : 'संपर्क पृष्ठ'}
-              </button>
-              <a href="mailto:support@nyayavanni.com" className="hover:text-nyaya-600 dark:hover:text-white transition duration-250 flex items-center gap-1.5 mt-2">
+            {/* Fix: bumped from text-slate-600 to text-slate-700 for higher contrast in light mode */}
+            <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
+              <a href="mailto:support@nyayavanni.com" className="hover:text-nyaya-600 dark:hover:text-white transition duration-250 flex items-center gap-1.5">
                 <Mail className="w-4 h-4 shrink-0" />
                 support@nyayavanni.com
               </a>
-              <span className="text-xs text-slate-500 dark:text-slate-500">
+              {/* Fix: was text-slate-500 dark:text-slate-500 (same faded color in both modes); light mode now uses text-slate-600 */}
+              <span className="text-xs text-slate-600 dark:text-slate-500">
                 {language === 'en' ? 'Mon–Fri, 10AM–6PM' : 'सोम–शुक्र, सुबह 10–शाम 6'}
               </span>
             </div>
@@ -84,11 +86,13 @@ export default function Footer() {
       </div>
 
       {/* Footer Bottom */}
-      <div className="flex flex-col items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-200 dark:border-slate-800 sm:flex-row sm:items-center">
-        <p className="text-xs text-slate-500 dark:text-slate-500">
+      <div className="flex flex-col items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-200 dark:border-slate-700 sm:flex-row sm:items-center">
+        {/* Fix: was text-slate-500 dark:text-slate-500 (identical in both modes, very low contrast in light); light mode now uses text-slate-600 */}
+        <p className="text-xs text-slate-600 dark:text-slate-500">
           © {new Date().getFullYear()} NyayaVanni. All rights reserved.
         </p>
-        <p className="text-xs text-slate-500 dark:text-slate-500 italic">
+        {/* Fix: disclaimer was same faded slate-500 in both modes; improved for light mode readability */}
+        <p className="text-xs text-slate-600 dark:text-slate-500 italic">
           {language === 'en' 
             ? 'Not legal advice. For professional help, consult a licensed lawyer.' 
             : 'यह कानूनी सलाह नहीं है। पेशेवर मदद के लिए, किसी लाइसेंस प्राप्त वकील से सलाह लें।'}

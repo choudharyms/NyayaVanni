@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare } from 'lucide-react';
+import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
@@ -16,6 +16,7 @@ export default function LandingPage() {
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const { history, clearHistory } = useDocumentHistory();
+  const [openFaq, setOpenFaq] = useState(0);
 
   const handleDrag = (e) => {
     e.preventDefault();
@@ -117,7 +118,7 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <main className="z-10 flex flex-col items-center justify-center flex-1 w-full max-w-5xl px-6 pt-12 pb-24 mx-auto text-center">
+      <main className="z-10 flex flex-col items-center justify-center flex-1 w-full max-w-7xl px-6 pt-12 pb-24 mx-auto text-center">
         <div className="inline-block mb-6 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-400 font-medium text-sm animate-pulse-soft">
           Powered by Advanced AI
         </div>
@@ -128,8 +129,8 @@ export default function LandingPage() {
           {t("landing.hero.subtitle")}
         </p>
 
-        {/* Actions Area */}
-        <div className="relative z-10 grid justify-center w-full max-w-6xl grid-cols-1 gap-8 md:grid-cols-3">
+        {/* Actions Area — 4-card grid */}
+        <div className="relative z-10 grid justify-center w-full max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
           
           {/* Upload Document Card */}
           <div className="relative w-full animate-float group" style={{ animationDelay: '0s' }}>
@@ -255,6 +256,33 @@ export default function LandingPage() {
               </button>
             </div>
           </div>
+
+          {/* Version Difference Analysis Card */}
+          <div className="relative w-full animate-float group" style={{ animationDelay: '0.6s' }}>
+            <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-blue-500/10 dark:from-blue-500/20 to-violet-500/10 dark:to-violet-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
+
+            <div
+              className="flex flex-col items-center justify-center h-full p-10 transition-all duration-300 border-2 cursor-pointer bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 min-h-90 hover:-translate-y-2"
+              onClick={() => navigate('/version-diff')}
+            >
+              <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
+                <GitCompare className="w-8 h-8 text-blue-600 dark:text-blue-400 group-hover:text-violet-600 dark:group-hover:text-violet-300" />
+              </div>
+
+              <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">Version Diff Analysis</h3>
+              <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
+                Compare two versions of a document. Spot added obligations, higher penalties, reduced rights, and hidden changes.
+              </p>
+
+              <button
+                onClick={(e) => { e.stopPropagation(); navigate('/version-diff'); }}
+                className="w-full sm:w-auto bg-linear-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(37,99,235,0.15)] dark:shadow-[0_0_20px_rgba(37,99,235,0.25)] flex items-center justify-center gap-2 hover:scale-105"
+              >
+                Compare Versions <ArrowRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+
         </div>
         {/* Recent Documents History */}
         {history.length > 0 && (
@@ -282,7 +310,7 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="columns-1 md:columns-2 gap-4 space-y-4">
             {[
               {
                 q: "What file types are supported?",
@@ -298,20 +326,49 @@ export default function LandingPage() {
               },
               {
                 q: "What if the upload fails?",
-                a: "Check your internet connection and try a smaller file. If the backend is offline, you’ll see a fallback demo navigation."
+                a: "Check your internet connection and try a smaller file. If the backend is offline, you'll see a fallback demo navigation."
               },
             ].map((item, idx) => (
-              <details key={idx}
-                className="p-5 border group rounded-xl cursor-pointer  border-slate-200 dark:border-slate-700/50  bg-white/50 dark:bg-slate-950/40  transition-all duration-300  hover:-translate-y-1 hover:bg-white/80 dark:hover:bg-slate-900/70  hover:border-nyaya-400/50 dark:hover:border-nyaya-500/50  hover:shadow-lg hover:shadow-nyaya-500/10"
+              <div
+                key={idx}
+                className="mb-4 break-inside-avoid p-5 transition-all duration-300 border rounded-xl border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-950/40 hover:border-slate-350 dark:hover:border-slate-650"
               >
-                <summary className="flex items-center justify-between gap-4 list-none cursor-pointer">
-                  <span className="font-semibold text-slate-800 dark:text-white">{item.q}</span>
-                  <span className="flex items-center justify-center w-8 h-8 transition border rounded-full shrink-0 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 group-open:bg-slate-200 dark:group-open:bg-white/10">
-                    <span className="transition-transform text-slate-600 dark:text-slate-300 group-open:rotate-45">+</span>
+                <button
+                  type="button"
+                  onClick={() =>
+                    setOpenFaq(openFaq === idx ? null : idx)
+                  }
+                  className="flex items-center justify-between w-full gap-4 text-left cursor-pointer"
+                >
+                  <span className="font-semibold text-slate-800 dark:text-white">
+                    {item.q}
                   </span>
-                </summary>
-                <p className="mt-3 leading-relaxed text-slate-600 dark:text-slate-400">{item.a}</p>
-              </details>
+
+                  <span
+                    className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 border transition-all duration-300 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 ${
+                      openFaq === idx
+                        ? "rotate-45 bg-slate-200 dark:bg-white/10"
+                        : ""
+                    }`}
+                  >
+                    <span className="text-slate-600 dark:text-slate-300">
+                      +
+                    </span>
+                  </span>
+                </button>
+
+                <div
+                  className={`overflow-hidden transition-all duration-300 ${
+                    openFaq === idx
+                      ? "max-h-40 opacity-100 mt-3"
+                      : "max-h-0 opacity-0"
+                  }`}
+                >
+                  <p className="leading-relaxed text-slate-600 dark:text-slate-400">
+                    {item.a}
+                  </p>
+                </div>
+              </div>
             ))}
           </div>
         </div>
@@ -335,12 +392,13 @@ export default function LandingPage() {
             {/* Links */}
             <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
               <div>
-                <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Product</p>
+                <p className="mb-3 text-sm font-semibold text-white">Product</p>    
                 <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
                   <button onClick={() => navigate('/chat')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Chat with AI</button>
                   <button onClick={() => navigate('/document-generator')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Generate NDA</button>
                   <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-left transition hover:text-slate-900 dark:hover:text-white">Upload Document</button>
                   <button onClick={() => navigate('/lawyers')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Hire a Lawyer</button>
+                  <button onClick={() => navigate('/version-diff')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Version Diff</button>
                 </div>
               </div>
 

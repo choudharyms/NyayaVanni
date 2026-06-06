@@ -9,6 +9,7 @@ import ScamDetector from "./pages/ScamDetector";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsOfService from "./pages/TermsOfService";
 import DocumentGenerator from "./pages/DocumentGenerator";
+import VersionDiff from "./pages/VersionDiff";
 import ContactUs from "./pages/ContactUs";
 import { LanguageProvider, useLanguage } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
@@ -46,6 +47,7 @@ function App() {
             <Route path="/contact" element={<ContactUs />} />
             <Route path="/privacy-policy" element={<PrivacyPolicy />} />
             <Route path="/terms" element={<TermsOfService />} />
+            <Route path="/version-diff" element={<VersionDiff />} />
           </Routes>
           
           {/* Pinned Controls Layout */}

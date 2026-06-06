@@ -1,0 +1,31 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Lock files and generated files
+package-lock.json
+yarn.lock
+
+# Python virtual environment
+venv/
+__pycache__/
+*.pyc
+
+# Coverage and test output
+coverage/
+.pytest_cache/
+
+# Uploaded files and data
+backend/uploads/
+backend/data/
+
+# Logs
+*.log

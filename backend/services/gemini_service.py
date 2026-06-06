@@ -14,7 +14,7 @@ from models.llm_schemas import DocumentAnalysis
 load_dotenv()
 
 # Import the custom Legal Query Optimizer
-from services.legal_processor import LegalQueryOptimizer
+from ..legal_processor import LegalQueryOptimizer
 
 
 logger = logging.getLogger(__name__)
@@ -22,7 +22,14 @@ logger = logging.getLogger(__name__)
 # Configure API key only if available
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key or not api_key.strip():
+ main
+    logger.warning(
+        "GEMINI_API_KEY environment variable is not set or empty. "
+        "RAG and Gemini features will be unavailable until configured."
+    )
+
     logger.warning("GEMINI_API_KEY environment variable is not set or empty. RAG and document analysis features will fail.")
+main
 else:
     genai.configure(api_key=api_key)
 
@@ -223,12 +230,15 @@ def generate_chat_response(document_analysis: dict, chat_history: list, user_mes
     {lang_instruction}
     """
     try:
+        if not os.getenv("GEMINI_API_KEY"):
+            raise ValueError("GEMINI_API_KEY is not configured")
+
         response = chat_model.generate_content(prompt)
         return response.text
+
     except Exception as e:
         logger.error(f"Gemini Chat Failed: {e}")
-        return "Sorry, I am unable to respond at the moment."
-
+        return "AI service is currently unavailable. Please contact the administrator."
 def stream_chat_response(document_analysis: dict, chat_history: list, user_message: str, language: str = "en"):
     """
     Generate a conversational response using the Gemini chat model and yield it as a stream.
@@ -277,10 +287,15 @@ def stream_chat_response(document_analysis: dict, chat_history: list, user_messa
     {lang_instruction}
     """
     try:
+        if not os.getenv("GEMINI_API_KEY"):
+            raise ValueError("GEMINI_API_KEY is not configured")
+
         response = chat_model.generate_content(prompt, stream=True)
+
         for chunk in response:
             if chunk.text:
                 yield chunk.text
+
     except Exception as e:
         logger.error(f"Gemini Chat Stream Failed: {e}")
-        yield "Sorry, I am unable to respond at the moment."
+        yield "AI service is currently unavailable. Please contact the administrator."
