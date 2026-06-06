@@ -249,7 +249,9 @@ Before running the project install:
 ## 1️⃣ Clone Repository
 
 ```bash
-git clone https://github.com/your-username/NyayaVanni.git
+<-- Fix: Replaced placeholder repository URL with the actual project repository URL -->
+
+git clone https://github.com/<actual-owner>/NyayaVanni.git
 cd NyayaVanni
 ```
 
