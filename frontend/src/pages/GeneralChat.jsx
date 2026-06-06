@@ -5,6 +5,8 @@ import ReactMarkdown from "react-markdown";
 import { useLanguage } from "../contexts/LanguageContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Footer from "../components/Footer";
+import { ensureSessionId } from "../utils/session";
+import { saveChatHistory, getChatHistory } from "../utils/indexedDB";
 
 export default function GeneralChat() {
   const { t, language } = useLanguage();
@@ -22,6 +24,37 @@ export default function GeneralChat() {
         "Hello! I am NyayaVanni Legal Assistant. How can I help you understand your legal rights today?",
     },
   ]);
+  const [dbLoaded, setDbLoaded] = useState(false);
+  const [isOffline, setIsOffline] = useState(!navigator.onLine);
+
+  React.useEffect(() => {
+    const handleOnline = () => setIsOffline(false);
+    const handleOffline = () => setIsOffline(true);
+
+    window.addEventListener("online", handleOnline);
+    window.addEventListener("offline", handleOffline);
+
+    return () => {
+      window.removeEventListener("online", handleOnline);
+      window.removeEventListener("offline", handleOffline);
+    };
+  }, []);
+
+  React.useEffect(() => {
+    getChatHistory().then((history) => {
+      if (history && history.length > 0) {
+        setChatHistory(history);
+      }
+      setDbLoaded(true);
+    });
+  }, []);
+
+  React.useEffect(() => {
+    if (dbLoaded) {
+      // Limit stored history to last 50 messages to avoid excessive storage usage
+      saveChatHistory(chatHistory.slice(-50));
+    }
+  }, [chatHistory, dbLoaded]);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -167,7 +200,16 @@ export default function GeneralChat() {
 
       <main className="flex-1 w-full max-w-4xl mx-auto p-4 sm:p-6 flex flex-col">
         {/* Main Chat Container Block */}
-        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-[calc(100vh-8rem)] transition-colors duration-300">
+        <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col h-[calc(100vh-8rem)] transition-colors duration-300 relative">
+          
+          {/* Offline Indicator Banner */}
+          {isOffline && (
+            <div className="bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400 text-xs sm:text-sm font-medium py-2 px-4 text-center z-10 border-b border-yellow-200 dark:border-yellow-800/50 flex items-center justify-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse"></span>
+              You are currently offline. Viewing cached chat history.
+            </div>
+          )}
+
           {/* Scrollable Message Timeline Area */}
           <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-50/50 dark:bg-slate-950/20">
             {chatHistory.map((msg, idx) => (
