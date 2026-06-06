@@ -503,15 +503,15 @@ export default function HireLawyer() {
             className="absolute inset-0 transition-opacity duration-300 bg-slate-950/60 backdrop-blur-sm"
           />
 
-          <div className="relative w-full max-w-xl bg-white/95 border border-white/20 rounded-3xl shadow-2xl backdrop-blur-xl overflow-hidden transition-all transform scale-100 flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-6 border-b border-slate-100 shrink-0">
+          <div className="relative w-full max-w-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl backdrop-blur-xl overflow-hidden transition-all transform scale-100 flex flex-col max-h-[90vh]">
+            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-white/10 shrink-0">
               <div className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-10 h-10 text-blue-600 rounded-full bg-blue-50 shrink-0">
+                <span className="flex items-center justify-center w-10 h-10 text-blue-600 dark:text-blue-400 rounded-full bg-blue-50 dark:bg-blue-500/10 shrink-0">
                   <Scale className="w-5 h-5" />
                 </span>
                 <div>
-                  <h3 className="text-lg font-bold text-slate-800">Consultation Scheduler</h3>
-                  <p className="text-xs font-semibold text-slate-500">NyayaVanni Instant Match</p>
+                  <h3 className="text-lg font-bold text-slate-800 dark:text-white">Consultation Scheduler</h3>
+                  <p className="text-xs font-semibold text-slate-500 dark:text-slate-400">NyayaVanni Instant Match</p>
                 </div>
               </div>
 
@@ -526,22 +526,22 @@ export default function HireLawyer() {
             <div className="flex-1 p-6 overflow-y-auto">
               {!bookingComplete ? (
                 <form onSubmit={handleConfirmBooking} className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 border bg-slate-50 border-slate-100 rounded-2xl">
+                  <div className="flex items-center gap-4 p-4 border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 rounded-2xl">
                     <img
                       src={selectedLawyer.image}
                       alt={selectedLawyer.name}
                       className="object-cover w-12 h-12 border rounded-full"
                     />
                     <div>
-                      <h4 className="font-bold text-slate-800">{selectedLawyer.name}</h4>
+                      <h4 className="font-bold text-slate-800 dark:text-white">{selectedLawyer.name}</h4>
                       <p className="text-xs font-semibold text-blue-600">{selectedLawyer.specialty}</p>
-                      <p className="text-xs font-semibold text-slate-500 mt-0.5">{selectedLawyer.fee}</p>
+                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">{selectedLawyer.fee}</p>
                     </div>
                   </div>
 
                   {/* Date selector */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700">
+                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
                       Select Date Slot
                     </label>
                     <div className="flex gap-2.5 overflow-x-auto pb-2">
@@ -554,8 +554,8 @@ export default function HireLawyer() {
                             onClick={() => setSelectedDate(d.fullDate)}
                             className={`flex flex-col items-center justify-center p-3 rounded-xl border shrink-0 w-16 transition-all ${
                               isSelected
-                                ? "bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/10"
-                                : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
+                                ? "bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10"
+                                : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300"
                             }`}
                           >
                             <span className="text-[10px] uppercase font-bold tracking-wider">{d.dayName}</span>
@@ -569,7 +569,7 @@ export default function HireLawyer() {
 
                   {/* Time */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700">
+                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
                       Select Available Time
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -582,8 +582,8 @@ export default function HireLawyer() {
                             onClick={() => setSelectedTime(time)}
                             className={`py-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
                               isSelected
-                                ? "bg-slate-900 border-slate-900 text-white shadow-md shadow-slate-900/10"
-                                : "bg-white border-slate-200 hover:border-slate-300 text-slate-600"
+                                ? "bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10"
+                                : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300"
                             }`}
                           >
                             {time}
@@ -595,14 +595,16 @@ export default function HireLawyer() {
 
                   {/* Attach context */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700">
+                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
                       Legal Context
                     </label>
                     <div
                       onClick={() => setAttachDocument(!attachDocument)}
                       className={`p-3.5 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
-                        attachDocument ? "bg-blue-50/50 border-blue-200 shadow-sm" : "bg-white border-slate-200 hover:border-slate-300"
-                      }`}
+                        attachDocument
+                          ? "bg-blue-50/50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 shadow-sm"
+                          : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/30"
+                        }`}
                     >
                       <div
                         className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center border shrink-0 transition-colors ${
@@ -614,9 +616,9 @@ export default function HireLawyer() {
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                           <FileText className={`w-4 h-4 ${attachDocument ? "text-blue-600" : "text-slate-400"}`} />
-                          <h5 className="text-xs font-bold text-slate-800">Attach Document Analysis</h5>
+                          <h5 className="text-xs font-bold text-slate-800 dark:text-white">Attach Document Analysis</h5>
                         </div>
-                        <p className="text-[11px] text-slate-500 font-semibold mt-1">
+                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-1">
                           Share your active analyzed legal document automatically with {selectedLawyer.name} for instant briefing.
                         </p>
                       </div>
@@ -625,7 +627,7 @@ export default function HireLawyer() {
 
                   {/* Case summary */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700">
+                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
                       Case Summary or Questions
                     </label>
                     <textarea
@@ -633,13 +635,13 @@ export default function HireLawyer() {
                       value={caseDescription}
                       onChange={(e) => setCaseDescription(e.target.value)}
                       rows={3}
-                      className="w-full p-3 text-xs font-medium border bg-slate-50 border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white"
+                      className="w-full p-3 text-xs font-medium border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-900"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full bg-slate-900 hover:bg-blue-600 text-white font-bold py-3.5 px-4 rounded-xl transition-all shadow-md flex items-center justify-center gap-2"
+                    className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-nyaya-500 to-blue-600 hover:from-nyaya-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:scale-[1.01] flex items-center justify-center gap-2 cursor-pointer"
                   >
                     Confirm Consultation Booking
                   </button>
