@@ -14,6 +14,12 @@ class ChatRequest(BaseModel):
 class ChatResponse(BaseModel):
     response: str
 
+class ContactRequest(BaseModel):
+    name: str
+    email: str
+    subject: str
+    message: str
+
 class DocumentGenerationRequest(BaseModel):
     party_one_name: str
     party_two_name: str

@@ -29,9 +29,9 @@ from services.ocr_service import extract_document
 from services.rag_service import retrieve_relevant_laws
 from services.gemini_service import analyze_document_with_gemini, generate_chat_response, stream_chat_response
 from services.search_service import search_documents, index_document, remove_document_from_index
-from models.schemas import ChatRequest, ChatResponse
+from models.schemas import ChatRequest, ChatResponse, ContactRequest
 from services.confidence_service import ConfidenceService
-from config.rate_limits import UPLOAD_RATE_LIMIT
+from config.rate_limits import CONTACT_RATE_LIMIT, UPLOAD_RATE_LIMIT
 logger = logging.getLogger(__name__)
 
 api_router = APIRouter()
@@ -80,6 +80,23 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
     if record.get("session_id") != session_id:
         raise HTTPException(status_code=403, detail="Access denied for this document")
     return record
+
+
+@api_router.post("/contact")
+@limiter.limit(CONTACT_RATE_LIMIT)
+async def contact_us(request: Request, body: ContactRequest):
+    """Receive contact form submissions with IP-based rate limiting."""
+    logger.info(
+        "Contact submission from %s: name=%s email=%s subject=%s",
+        request.client.host if request.client else "unknown",
+        body.name,
+        body.email,
+        body.subject,
+    )
+    return {
+        "status": "ok",
+        "message": "Thank you for reaching out. We will get back to you shortly."
+    }
 
 
 @api_router.get("/session")
