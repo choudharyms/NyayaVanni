@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+﻿import React, { useState } from 'react';
 import { Search, X } from 'lucide-react';
 
 export default function SearchBar({ onSearch, placeholder = 'Search conversations...' }) {
@@ -19,7 +19,7 @@ export default function SearchBar({ onSearch, placeholder = 'Search conversation
   return (
     <div className="relative">
       <div
-        className={`relative flex items-center gap-2 px-3 py-2 rounded-lg border transition-colors ${
+        className={`relative flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
           isFocused
             ? 'border-nyaya-500 bg-white dark:bg-slate-800'
             : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900'
@@ -39,7 +39,7 @@ export default function SearchBar({ onSearch, placeholder = 'Search conversation
         {query && (
           <button
             onClick={handleClear}
-            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
             aria-label="Clear search"
             title="Clear search"
           >
@@ -50,3 +50,4 @@ export default function SearchBar({ onSearch, placeholder = 'Search conversation
     </div>
   );
 }
+

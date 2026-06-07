@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+﻿import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Bot, User, Send, ArrowLeft, Scale, Download } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -261,7 +261,7 @@ export default function GeneralChat() {
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate("/")}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
               aria-label="Go back home"
             >
               <ArrowLeft className="w-5 h-5" />
@@ -276,7 +276,7 @@ export default function GeneralChat() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleDownload}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-full transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
               title="Download Chat History"
             >
               <Download className="w-5 h-5" />
@@ -394,7 +394,7 @@ export default function GeneralChat() {
                     focus:bg-white dark:focus:bg-slate-950
                     focus:border-nyaya-500
                     focus:ring-4 focus:ring-nyaya-500/10
-                    rounded-3xl
+                    rounded-xl
                     px-5 sm:px-6
                     py-3
                     outline-none
@@ -407,7 +407,7 @@ export default function GeneralChat() {
                 <button
                   type="submit"
                   disabled={chatLoading || !chatInput.trim()}
-                  className="bg-nyaya-600 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center hover:bg-nyaya-500 hover:shadow-lg transition-all disabled:opacity-40 disabled:hover:shadow-none shrink-0 cursor-pointer"
+                  className="bg-nyaya-600 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center hover:bg-nyaya-500 hover:shadow-lg transition-all disabled:opacity-40 disabled:hover:shadow-none shrink-0 cursor-pointer"
                 >
                   <Send className="text-center w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
@@ -423,3 +423,4 @@ export default function GeneralChat() {
     </div>
   );
 }
+
