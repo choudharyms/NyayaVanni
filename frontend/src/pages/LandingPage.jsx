@@ -1,5 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare } from 'lucide-react';
+import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare,ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
@@ -84,8 +84,11 @@ export default function LandingPage() {
       setTimeout(() => {
         navigate(`/dashboard/demo-doc-123`, { state: { file } });
       }, 1500);
-    }
+    } 
   };
+//  Shared hover styles for footer navigation links
+  const footerLinkClass =
+  " group text-left transition-all duration-300 ease-out hover:text-nyaya-400  hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(45,212,191,0.4)]";
 
   return (
     <div className="relative flex flex-col items-center min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
@@ -378,13 +381,24 @@ export default function LandingPage() {
             {/* Links */}
             <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
               <div>
-                <p className="mb-3 text-sm font-semibold text-white">Product</p>    
+                <p className="mb-3 text-sm font-semibold text-slate-800  dark:text-white">Product</p>    
                 <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
-                  <button onClick={() => navigate('/chat')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Chat with AI</button>
-                  <button onClick={() => navigate('/document-generator')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Generate NDA</button>
-                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })} className="text-left transition hover:text-slate-900 dark:hover:text-white">Upload Document</button>
-                  <button onClick={() => navigate('/lawyers')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Hire a Lawyer</button>
-                  <button onClick={() => navigate('/version-diff')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Version Diff</button>
+                  <button onClick={() => navigate('/chat')}  className={`${footerLinkClass} flex items-center gap-1`}
+>Chat with AI<ChevronRight className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
+
+                  <button onClick={() => navigate('/document-generator')}  className={`${footerLinkClass} flex items-center gap-1`}>Generate NDA <ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
+                  <button onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}  className={`${footerLinkClass} flex items-center gap-1`}>Upload Document <ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
+                  <button onClick={() => navigate('/lawyers')} className={`${footerLinkClass} flex items-center gap-1`}>Hire a Lawyer<ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
+                  <button onClick={() => navigate('/version-diff')}  className={`${footerLinkClass} flex items-center gap-1`}>Version Diff<ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
                 </div>
               </div>
 
@@ -393,19 +407,25 @@ export default function LandingPage() {
                 <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
                 <button
                   onClick={() => navigate('/faq')}
-                  className="text-left transition hover:text-slate-900 dark:hover:text-white"
+                  className={`${footerLinkClass} flex items-center gap-1`}
                 >
-                  FAQ
+                  FAQ<ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  />
                 </button>
-                  <button onClick={() => navigate('/privacy-policy')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Privacy Policy</button>
-                  <button onClick={() => navigate('/terms')} className="text-left transition hover:text-slate-900 dark:hover:text-white">Terms of Service</button>
+                  <button onClick={() => navigate('/privacy-policy')}className={`${footerLinkClass} flex items-center gap-1`}>Privacy Policy  <ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
+                  <button onClick={() => navigate('/terms')}   className={`${footerLinkClass} flex items-center gap-1`}>Terms of Service  <ChevronRight
+    className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"
+  /></button>
                 </div>
               </div>
 
               <div>
                 <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">Contact</p>
                 <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
-                  <a href="mailto:support@nyayavanni.com" className="transition hover:text-slate-900 dark:hover:text-white">support@nyayavanni.com</a>
+                  <a href="mailto:support@nyayavanni.com" className="transition-all duration-300 ease-out hover:text-nyaya-400 hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(45,212,191,0.4)]">support@nyayavanni.com</a>
                   <span className="text-sm text-slate-600 dark:text-slate-500">Mon–Fri, 10AM–6PM</span>
                 </div>
               </div>
