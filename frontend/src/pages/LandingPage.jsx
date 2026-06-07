@@ -72,7 +72,7 @@ export default function LandingPage() {
       // Navigate to Dashboard with the document ID
       navigate(`/dashboard/${data.documentId}`, { state: { file } }); // Pass file for MVP purely to avoid re-downloading if needed
     } catch (error) {
-      console.error(error);
+      //console.error(error);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       
       // Check if we're in production but still pointing to localhost

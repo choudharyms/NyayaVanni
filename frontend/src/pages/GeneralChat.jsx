@@ -173,7 +173,7 @@ export default function GeneralChat() {
         }
       }
     } catch (err) {
-      console.error(err);
+      //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
       let errorMessage =
         "I'm having trouble connecting to the server. Please try again later.";

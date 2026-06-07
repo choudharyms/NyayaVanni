@@ -11,7 +11,7 @@ const PRECACHE_ASSETS = [
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME).then((cache) => {
-      console.log('[Service Worker] Precaching app shell');
+      //console.log('[Service Worker] Precaching app shell');
       return cache.addAll(PRECACHE_ASSETS).catch(err => console.warn('Some precache assets failed:', err));
     })
   );
@@ -25,7 +25,7 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((name) => {
           if (name !== CACHE_NAME) {
-            console.log('[Service Worker] Deleting old cache:', name);
+            //console.log('[Service Worker] Deleting old cache:', name);
             return caches.delete(name);
           }
         })
