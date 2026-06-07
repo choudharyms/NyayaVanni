@@ -435,9 +435,9 @@ export default function ScamDetector() {
         </div>
       </main>
 
-      <section className="z-10 w-full px-6 mx-auto max-w-7xl">
+      <div className="max-w-7xl mx-auto px-6">
         <Footer />
-      </section>
+      </div>
     </div>
   );
 }

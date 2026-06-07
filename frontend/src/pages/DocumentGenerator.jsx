@@ -102,6 +102,7 @@ export default function DocumentGenerator() {
       const response = await fetch(`${apiUrl}/api/generate-document`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify(formData),
       });
 

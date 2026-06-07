@@ -9,7 +9,7 @@ def test_general_chat_returns_200(test_client, monkeypatch):
     without a real GEMINI_API_KEY and without any external API calls.
     """
     monkeypatch.setattr(
-        "api.routes.generate_chat_response",
+        "backend.api.routes.generate_chat_response",
         lambda *_args, **_kwargs: "You have the right to consult a lawyer.",
     )
 
@@ -70,7 +70,7 @@ def test_general_chat_hindi_language(test_client, monkeypatch):
         captured["language"] = args[3] if len(args) > 3 else kwargs.get("language")
         return "आपको एक वकील से परामर्श करने का अधिकार है।"
 
-    monkeypatch.setattr("api.routes.generate_chat_response", mock_generate)
+    monkeypatch.setattr("backend.api.routes.generate_chat_response", mock_generate)
 
     response = test_client.post(
         "/api/chat/general",
@@ -92,7 +92,7 @@ def test_general_chat_with_history(test_client, monkeypatch):
     Verifies multi-turn conversation input is accepted.
     """
     monkeypatch.setattr(
-        "api.routes.generate_chat_response",
+        "backend.api.routes.generate_chat_response",
         lambda *_args, **_kwargs: "Based on the context, you should respond within 30 days.",
     )
 
