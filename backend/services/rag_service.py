@@ -4,20 +4,19 @@ import google.generativeai as genai
 import json
 import os
 import logging
+from dotenv import load_dotenv
 
+load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
 # Configure API key only if available
 api_key = os.getenv("GEMINI_API_KEY")
 if not api_key or not api_key.strip():
- main
     logger.warning(
         "GEMINI_API_KEY environment variable is not set or empty. "
         "RAG features will be unavailable until configured."
     )
 
-    logger.warning("GEMINI_API_KEY environment variable is not set or empty. RAG and document analysis features will fail.")
- main
 else:
     genai.configure(api_key=api_key)
 
@@ -88,7 +87,21 @@ def build_index():
     index.add(corpus_embeddings)
 
 # Build immediately on module import (MVP approach)
-build_index()
+
+INDEX_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'faiss_index.bin')
+
+def init_index():
+    global index
+    if os.path.exists(INDEX_PATH):
+        logger.info("Loading cached FAISS index from disk...")
+        index = faiss.read_index(INDEX_PATH)
+    else:
+        logger.info("No cache found. Building FAISS index from Gemini API...")
+        build_index()
+        if index is not None:
+            faiss.write_index(index, INDEX_PATH)
+
+init_index()
 
 def retrieve_relevant_laws(query_text: str, k=2) -> list:
     """Search FAISS for the most relevant laws given the document's extracted text or sections"""
