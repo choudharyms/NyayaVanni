@@ -31,7 +31,7 @@ export default function HireLawyer() {
   useEffect(() => {
     const timer = setTimeout(() => {
       setLoading(false);
-    }, 20git 00);
+    }, 2000);
 
     return () => clearTimeout(timer);
   }, []);
