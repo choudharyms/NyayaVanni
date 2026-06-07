@@ -226,7 +226,16 @@ const [selectedType, setSelectedType] = useState('all');
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
-  const messagesEndRef = React.useRef(null);
+  const [confidence, setConfidence] = useState(null);
+  const messagesEndRef = useRef(null);
+
+  useEffect(() => {
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  }, [file]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -240,7 +249,8 @@ const [selectedType, setSelectedType] = useState('all');
         const sessionId = await ensureSessionId(apiUrl);
         const response = await fetch(`${apiUrl}/api/analyze/${documentId}?language=${language}`, {
           method: 'POST',
-          headers: { 'X-Session-Id': sessionId }
+          headers: { 'X-Session-Id': sessionId },
+          credentials: 'include'
         });
         
         if (!response.ok) {
@@ -252,6 +262,8 @@ const [selectedType, setSelectedType] = useState('all');
         setClassification(data.classification);
         setKnowledgeGraph(data.knowledge_graph);
         setExtractedText(data.extracted_text);
+        setConfidence(data.confidence);
+        
         saveToHistory({
           documentId,
           fileName: file?.name || 'Unknown Document',
@@ -295,6 +307,7 @@ const [selectedType, setSelectedType] = useState('all');
       const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
+        credentials: 'include',
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: chatHistory,
@@ -527,19 +540,127 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
           </button>
         </div>
 
-        <div className={`${BORDER_BASE} rounded-xl p-4 h-[400px] overflow-auto bg-slate-50 dark:bg-slate-950`}>
+        <div className="grid items-start grid-cols-1 gap-6 lg:grid-cols-12">
+          <div className="space-y-6 lg:col-span-5">
+            <div className="p-8 transition-all duration-300 transform bg-white border shadow-sm rounded-2xl dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md">
+              <div className="flex items-start justify-between mb-6">
+                <div>
+                  <span className="block mb-1 text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400">{t("dashboard.doctype")}</span>
+                  <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{analysis?.document_type || "Unknown Document"}</h1>
+                  {classification && (
+                    <div className="p-3 mt-3 border rounded-xl bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40 text-blue-850 dark:text-blue-200">
+                      <div className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                        Detected Type: {classification.predicted_type}
+                      </div>
+                      <div className="mt-1 text-xs text-slate-650 dark:text-slate-400">
+                        Confidence: {(classification.confidence * 100).toFixed(1)}%
+                      </div>
+                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                        Alternatives:
+                        <ul className="ml-5 mt-1 list-disc">
+                          {classification.alternatives?.map((alt, i) => (
+                            <li key={i}>{alt.type} → {(alt.score * 100).toFixed(0)}%</li>
+                          ))}
+                        </ul>
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div className={`px-4 py-2 rounded-xl flex items-center gap-2 border font-bold ${getRiskColor(analysis?.risk_level)}`}>
+                  <AlertTriangle className="w-5 h-5" />
+                  {analysis?.risk_level} {t("dashboard.risk")}
+                </div>
+              </div>
+              {/* AI Confidence Meter */}
+{confidence && (
+  <>
+    <div className="flex items-center gap-2 mb-4">
+      <span
+        className={`px-3 py-1 rounded-full text-sm font-semibold ${
+          confidence.level === "High"
+            ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
+            : confidence.level === "Medium"
+            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400"
+            : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
+        }`}
+      >
+        {confidence.level === "High" && "🟢"}
+        {confidence.level === "Medium" && "🟡"}
+        {confidence.level === "Low" && "🔴"}
 
-          <pre className={TEXTAREA_PRE}>
-            {extractedText?.trim()
-              ? extractedText
-              : "OCR text could not be extracted from this document."}
-          </pre>
+        {" "}
+        {confidence.level} Confidence ({confidence.score}%)
+      </span>
+    </div>
+
+    {confidence.score < 60 && (
+      <div className="p-4 mb-4 border rounded-xl bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300">
+        ⚠️ This analysis has low confidence. Please verify the document manually before relying on the generated legal insights.
+      </div>
+    )}
+  </>
+)}
+
+{/* Summary */}
+<p className="mb-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+  {analysis?.summary}
+</p>
+
+{/* Confidence Metrics */}
+{confidence && (
+  <div className="grid grid-cols-2 gap-3 mb-6">
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Coverage
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.coverage}%
+      </div>
+    </div>
+
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Similarity
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.similarity}%
+      </div>
+    </div>
+
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Evidence
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.evidence_score}%
+      </div>
+    </div>
+
+    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+        Supported Chunks
+      </div>
+      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+        {confidence.matched_chunks}/{confidence.total_chunks}
+      </div>
+    </div>
+  </div>
+)}
 
         </div>
       </div>
 
+      {/* OCR Extracted Text Display */}
+      <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+        <pre className={TEXTAREA_PRE}>
+          {extractedText || "No text extracted."}
+        </pre>
+      </div>
+
     </div>
   </div>
+</div>
+</div>
 
   {/* Main Dashboard Grid */}
   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
