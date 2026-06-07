@@ -1,24 +1,70 @@
-## Description
-<!-- Please provide a brief overview of the pull request and the problem it solves. -->
+## 📋 Summary
+Briefly describe what this PR does and why.
 
-**Related Issue:** Closes #
+---
 
-## Changes Made
-<!-- List the specific changes made in this PR. -->
+## 🔗 Related Issue
+Closes #
+
+---
+
+## 🔄 Type of Change
+
+- [ ] Bug fix
+- [ ] New feature
+- [ ] Documentation update
+- [ ] Style / UI improvement
+- [ ] Refactor
+- [ ] Test
+- [ ] Chore / dependency update
+
+---
+
+## 🛠️ What Was Changed
+
+- 
+- 
 - 
 
-## Areas Affected
-<!-- Which parts of the codebase or application are impacted by these changes? -->
-- 
+---
 
-## Screenshots (Optional)
-<!-- If this PR includes UI changes, please provide screenshots or GIFs to demonstrate them. -->
+## 🧪 How Has This Been Tested?
 
-## Checklist
-- [ ] I have linked the issue this PR addresses (e.g., Closes #123).
-- [ ] I have tested these changes locally.
-- [ ] I have updated the documentation (if applicable).
-- [ ] I have verified that there are no breaking changes.
+Describe how you tested your changes locally.
 
-## Additional Context/Notes
-<!-- Add any other relevant information or notes for the maintainer. -->
+- [ ] Tested backend API endpoints manually
+- [ ] Ran frontend locally with `npm run dev`
+- [ ] Ran `npm run lint` — no errors
+- [ ] Ran `npm run build` — no errors
+- [ ] Uploaded a test document and verified output
+- [ ] Tested on mobile view
+
+---
+
+## 📸 Screenshots (if applicable)
+
+If your PR includes UI changes, attach before and after screenshots here.
+
+| Before | After |
+|--------|-------|
+|        |       |
+
+---
+
+## ✅ Self-Review Checklist
+
+- [ ] My branch name follows the convention (`feat/`, `fix/`, `docs/`)
+- [ ] My commit messages follow the convention (`feat:`, `fix:`, `docs:`)
+- [ ] I have linked the related issue (`Closes #IssueNumber`)
+- [ ] I have tested my changes locally
+- [ ] I have added screenshots for UI changes
+- [ ] My changes do not break existing functionality
+- [ ] I have not pushed any `.env` file or API keys
+- [ ] My PR contains only changes related to the linked issue
+
+---
+
+## 📋 Additional Notes
+
+Any additional information for the reviewer.
+
