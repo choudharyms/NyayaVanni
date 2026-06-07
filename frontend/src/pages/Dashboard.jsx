@@ -249,7 +249,8 @@ const [selectedType, setSelectedType] = useState('all');
         const sessionId = await ensureSessionId(apiUrl);
         const response = await fetch(`${apiUrl}/api/analyze/${documentId}?language=${language}`, {
           method: 'POST',
-          headers: { 'X-Session-Id': sessionId }
+          headers: { 'X-Session-Id': sessionId },
+          credentials: 'include'
         });
         
         if (!response.ok) {
@@ -306,6 +307,7 @@ const [selectedType, setSelectedType] = useState('all');
       const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
+        credentials: 'include',
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: chatHistory,
@@ -648,8 +650,17 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
         </div>
       </div>
 
+      {/* OCR Extracted Text Display */}
+      <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+        <pre className={TEXTAREA_PRE}>
+          {extractedText || "No text extracted."}
+        </pre>
+      </div>
+
     </div>
   </div>
+</div>
+</div>
 
   {/* Main Dashboard Grid */}
   <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">

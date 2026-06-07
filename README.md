@@ -34,6 +34,7 @@
 - [🔒 Security & Disclaimer](#-security--disclaimer)
 - [🗺️ Future Roadmap](#️-future-roadmap)
 - [🐛 Troubleshooting](#-troubleshooting)
+- [❤️ Contributors](#-contributors)
 - [📄 License](#-license)
 
 ---
@@ -639,14 +640,14 @@ Proudly contributing to:
 ---
 
 # 👨‍💻 Contributors
+Heartiest thanks to all the brilliant minds helping shape NyayaVanni!  Open source is all about collaboration, and this project wouldn't be where it is today without your invaluable contributions.
 
-Thanks to all contributors helping improve NyayaVanni.
+Big or small, your pull requests, issue reports, and feedback make a world of difference. Thank you for being a part of this journey! 💖
 
-```html
+
 <a href="https://github.com/your-username/NyayaVanni/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=your-username/NyayaVanni" />
 </a>
-```
 
 ---
 
