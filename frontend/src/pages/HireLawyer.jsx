@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
 import ThemeToggle from "../components/ThemeToggle";
+import Breadcrumb from "../components/Breadcrumb";
 import Footer from "../components/Footer";
 
 export default function HireLawyer() {
@@ -256,6 +257,9 @@ export default function HireLawyer() {
             </div>
             <ThemeToggle />
           </div>
+        </div>
+        <div className="px-6 py-2 mx-auto max-w-7xl border-t border-slate-100 dark:border-white/5">
+          <Breadcrumb />
         </div>
       </nav>
 

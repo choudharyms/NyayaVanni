@@ -5,13 +5,14 @@ import ReactFlow, {
 } from 'reactflow';
 
 import 'reactflow/dist/style.css';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
+import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
@@ -216,8 +217,8 @@ export default function Dashboard() {
   const [extractedText, setExtractedText] = useState('');
   const [knowledgeGraph, setKnowledgeGraph] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
-const [searchTerm, setSearchTerm] = useState('');
-const [selectedType, setSelectedType] = useState('all');
+const [searchTerm, _setSearchTerm] = useState('');
+const [selectedType, _setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [classification, setClassification] = useState(null);
@@ -289,6 +290,7 @@ const [selectedType, setSelectedType] = useState('all');
     };
 
     fetchAnalysis();
+// eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, file, language]);
 
   const handleChat = async (e) => {
@@ -475,6 +477,9 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
             </div>
             <ThemeToggle />
           </div>
+        </div>
+        <div className="max-w-7xl mx-auto px-6 py-2 border-t border-slate-200 dark:border-slate-800">
+          <Breadcrumb />
         </div>
       </nav>
 
