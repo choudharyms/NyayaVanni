@@ -245,7 +245,7 @@ export default function LandingPage() {
  
               <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">Scam Detector</h3>
               <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
-                Analyze suspicious legal SMS, WhatsApp, or email text and get a risk score with reasons.
+                Analyze suspicious legal SMS, WhatsApp, or email text and get a risk score with clear explanations.
               </p>
  
               <button
@@ -271,7 +271,7 @@ export default function LandingPage() {
 
               <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">Version Diff Analysis</h3>
               <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
-                Compare two versions of a document. Spot added obligations, higher penalties, reduced rights, and hidden changes.
+                Compare two document versions. Spot added obligations, higher penalties, reduced rights, and hidden changes.
               </p>
 
               <button

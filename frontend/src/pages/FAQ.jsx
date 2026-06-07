@@ -7,7 +7,7 @@ import Footer from "../components/Footer";
 
 export default function FAQ() {
   const navigate = useNavigate();
-  const { t } = useLanguage();
+  const { t, language } = useLanguage();
 
   // Build faqs using translation keys so text updates reactively when language changes
   const faqs = [
