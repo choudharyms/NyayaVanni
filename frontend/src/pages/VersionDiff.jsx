@@ -1,5 +1,5 @@
 import React, { useState, useRef, useCallback } from 'react';
-import { GitCompare, Upload, FileText, ArrowRight, Loader2, AlertCircle, X, ChevronLeft, ShieldAlert, TrendingUp, UserMinus, Eye, CheckCircle2, Scale, Plus, Minus } from 'lucide-react';
+import { GitCompare, Upload, FileText, ArrowRight, ArrowLeft, Loader2, AlertCircle, X, ShieldAlert, TrendingUp, UserMinus, Eye, CheckCircle2, Scale, Plus, Minus } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -301,26 +301,35 @@ export default function VersionDiff() {
   return (
     <div className="min-h-screen font-sans bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-nyaya-500 selection:text-white relative transition-colors duration-300">
 
-      <header className="sticky top-0 z-10 backdrop-blur-md bg-white/80 dark:bg-slate-950/80 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex items-center gap-4 transition-colors duration-300">
-        <button
-          onClick={() => navigate('/')}
-          className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition-colors"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <div className="flex items-center gap-3">
-          <div className="flex items-center justify-center w-9 h-9 rounded-2xl bg-linear-to-br from-blue-500 to-violet-600 shadow-lg">
-            <GitCompare className="w-5 h-5 text-white" />
+      <nav className="sticky top-0 z-30 border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => navigate(-1)}
+              className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5" />
+            </button>
+            <div
+              className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer"
+              onClick={() => navigate("/")}
+            >
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
+                <Scale className="text-nyaya-600 dark:text-nyaya-400 w-5 h-5" />
+              </span>
+              <span>Nyaya<span className="text-nyaya-600 dark:text-nyaya-400">Vanni</span></span>
+            </div>
           </div>
-          <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-white leading-none">Version Difference Analysis</h1>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Compare two document versions for legal changes</p>
+          <div className="flex items-center gap-3">
+            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-250 text-sm">
+              <GitCompare className="w-4 h-4 text-nyaya-600 dark:text-nyaya-300" />
+              Version Diff
+            </div>
+            <ThemeToggle />
           </div>
         </div>
-        <div className="ml-auto">
-          <ThemeToggle />
-        </div>
-      </header>
+      </nav>
 
       <main className="max-w-4xl mx-auto px-4 py-10 space-y-8">
 

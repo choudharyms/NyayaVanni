@@ -266,8 +266,14 @@ export default function GeneralChat() {
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-850 dark:text-white">
-              <Scale className="text-nyaya-500 w-6 h-6" /> NyayaVanni{" "}
+            <div
+              className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-850 dark:text-white cursor-pointer"
+              onClick={() => navigate("/")}
+            >
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
+                <Scale className="text-nyaya-500 w-5 h-5" />
+              </span>
+              <span>Nyaya<span className="text-nyaya-500">Vanni</span></span>
               <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">
                 | Assistant
               </span>
