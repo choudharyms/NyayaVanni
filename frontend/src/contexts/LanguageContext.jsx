@@ -79,14 +79,14 @@ export const LanguageProvider = ({ children }) => {
       // FAQ translations
       "faq.title": "FAQ",
       "faq.desc": "Common questions about NyayaVanni.",
-      "faq.q1": "What file formats are supported?",
-      "faq.a1": "PDF, PNG, and JPG are supported.",
-      "faq.q2": "Is NyayaVanni legal advice?",
-      "faq.a2": "No. It provides simplified explanations. Consult a lawyer for critical decisions.",
-      "faq.q3": "How does it work?",
-      "faq.a3": "We extract text and use AI to summarize, detect risks, and answer questions.",
-      "faq.q4": "Is my data secure?",
-      "faq.a4": "We follow standard security practices, but no system is fully risk-free."
+      "faq.q1": "What file types are supported?",
+      "faq.a1": "You can upload PDF, Word document (.docx), PNG, and JPG files. For best results, use clear scans with readable text.",
+      "faq.q2": "Is my document stored permanently?",
+      "faq.a2": "By default, documents are processed for analysis. If storage is enabled, you may see history features; otherwise, files are handled temporarily.",
+      "faq.q3": "Can I trust the output as legal advice?",
+      "faq.a3": "NyayaVanni simplifies and explains. For critical decisions, consult a licensed lawyer.",
+      "faq.q4": "What if the upload fails?",
+      "faq.a4": "Check your internet connection and try a smaller file. If the backend is offline, you’ll be redirected to a fallback demo."
     },
     hi: {
       "nav.hire": "वकील नियुक्त करें",

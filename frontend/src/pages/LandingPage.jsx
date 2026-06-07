@@ -245,7 +245,7 @@ export default function LandingPage() {
  
               <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">Scam Detector</h3>
               <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
-                Analyze suspicious legal SMS/WhatsApp/email text and get a risk score + reasons.
+                Analyze suspicious legal SMS, WhatsApp, or email text and get a risk score with reasons.
               </p>
  
               <button
@@ -371,7 +371,7 @@ export default function LandingPage() {
                 <span>Nyaya<span className="text-nyaya-400">Vanni</span></span>
               </div>
               <p className="mt-3 text-slate-600 dark:text-slate-400">
-                Understand Indian legal documents in simple language. Upload contracts/notices and get clearer insights fast.
+                Understand Indian legal documents in simple language. Upload contracts or notices and get clearer insights fast.
               </p>
             </div>
 
