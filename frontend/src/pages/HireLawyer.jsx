@@ -1,5 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
-import LawyerSkeleton from "../components/LawyerSkeleton";
+import React, { useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
@@ -19,24 +18,12 @@ import {
   BadgeCheck,
 } from "lucide-react";
 import { useLanguage } from "../contexts/LanguageContext";
-
 import ThemeToggle from "../components/ThemeToggle";
-import Breadcrumb from "../components/Breadcrumb";
 import Footer from "../components/Footer";
 
 export default function HireLawyer() {
   const { t } = useLanguage();
   const navigate = useNavigate();
-
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setLoading(false);
-    }, 2000);
-
-    return () => clearTimeout(timer);
-  }, []);
 
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState("");
@@ -189,41 +176,9 @@ export default function HireLawyer() {
     setIsModalOpen(true);
   };
 
-  const isPastTimeSlot = (date, time) => {
-    const now = new Date();
-
-    const [timePart, meridiem] = time.split(" ");
-    let [hours, minutes] = timePart.split(":").map(Number);
-
-    if (meridiem === "PM" && hours !== 12) hours += 12;
-    if (meridiem === "AM" && hours === 12) hours = 0;
-
-    const slotDateTime = new Date(date);
-    slotDateTime.setHours(hours, minutes, 0, 0);
-
-    return slotDateTime < now;
-  };
-
   const handleConfirmBooking = (e) => {
     e.preventDefault();
     if (!selectedLawyer || !selectedDate || !selectedTime) return;
-
-    if (isPastTimeSlot(selectedDate, selectedTime)) {
-      alert("Cannot book a consultation in the past.");
-      return;
-    }
-
-    const existingBooking = activeBookings.some(
-      (booking) =>
-        booking.lawyer.id === selectedLawyer.id &&
-        booking.rawDate === selectedDate &&
-        booking.time === selectedTime
-    );
-
-    if (existingBooking) {
-      alert("This lawyer is already booked for the selected date and time.");
-      return;
-    }
 
     const randomId = Math.floor(1000 + Math.random() * 9000);
     const meetingCode = `NV-${randomId}-${selectedLawyer.name
@@ -266,17 +221,8 @@ export default function HireLawyer() {
     }
   };
 
-  const isTimeSlotBooked = (date, time) => {
-  return activeBookings.some(
-    (booking) =>
-      booking.lawyer.id === selectedLawyer?.id &&
-      booking.rawDate === date &&
-      booking.time === time
-  );
-  };
-
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+    <div className="relative min-h-screen pb-16 overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
       {/* Background gradients (match LandingPage) */}
       <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-nyaya-500/10 dark:bg-nyaya-500/25 rounded-full blur-[140px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
       <div className="absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[160px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
@@ -288,7 +234,7 @@ export default function HireLawyer() {
             <button
               onClick={() => navigate(-1)}
               className="p-2 transition border rounded-full bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer"
-              aria-label={ARIA_LABELS.GO_BACK}
+              aria-label="Go back"
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
@@ -310,9 +256,6 @@ export default function HireLawyer() {
             </div>
             <ThemeToggle />
           </div>
-        </div>
-        <div className="px-6 py-2 mx-auto max-w-7xl border-t border-slate-100 dark:border-white/5">
-          <Breadcrumb />
         </div>
       </nav>
 
@@ -411,7 +354,7 @@ export default function HireLawyer() {
                   placeholder={t("lawyers.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full py-4 pl-12 pr-20 text-slate-900 dark:text-white transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+                  className="w-full py-4 pl-12 pr-20 text-slate-900 dark:text-white transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
                 />
               </div>
 
@@ -469,25 +412,37 @@ export default function HireLawyer() {
         </div>
 
         {/* Grid */}
-       {loading ? (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-    {Array.from({ length: 6 }).map((_, index) => (
-      <LawyerSkeleton key={index} />
-    ))}
-  </div>
-) : filteredLawyers.length === 0 ? (
+        {filteredLawyers.length === 0 ? (
           <div className="p-10 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
-            <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
-            <h3 className="text-xl font-bold text-slate-850 dark:text-white">No lawyers found</h3>
-            <p className="mt-2 text-slate-650 dark:text-slate-400">Try adjusting your search or filters.</p>
+            {/* Illustration */}
+            <div className="flex items-center justify-center mx-auto mb-6 w-24 h-24 rounded-full bg-nyaya-500/10 dark:bg-nyaya-500/20 ring-1 ring-nyaya-500/30 dark:ring-nyaya-500/50">
+              <Search className="w-10 h-10 text-nyaya-500 dark:text-nyaya-400" />
+            </div>
+            <h3 className="text-2xl font-bold text-slate-850 dark:text-white">No lawyers found</h3>
+            <p className="mt-3 text-base text-slate-500 dark:text-slate-400 max-w-sm mx-auto">
+              {searchTerm.trim().length > 0 ? (
+                <>No results for <span className="font-semibold text-slate-700 dark:text-slate-200">&ldquo;{searchTerm}&rdquo;</span>. Try a different name, specialty, or location.</>
+              ) : (
+                <>No lawyers match the selected filter. Try selecting a different practice area.</>
+              )}
+            </p>
+            {/* Suggestions */}
+            <div className="mt-6 flex flex-wrap justify-center gap-2">
+              {["Criminal Defense", "Family Law & Divorce", "Corporate & Business"].map((suggestion) => (
+                <button
+                  key={suggestion}
+                  onClick={() => { setFilterType(suggestion); setSearchTerm(""); }}
+                  className="px-4 py-2 text-sm font-semibold rounded-xl border border-nyaya-500/20 bg-nyaya-500/10 text-nyaya-600 dark:text-nyaya-300 hover:bg-nyaya-500/20 transition-all cursor-pointer"
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
             <button
-              onClick={() => {
-                setSearchTerm("");
-                setFilterType("All");
-              }}
-              className="inline-flex items-center justify-center px-6 py-3 mt-6 font-semibold text-slate-700 dark:text-white transition border rounded-full bg-slate-100 hover:bg-slate-150 border-slate-250 dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15 cursor-pointer shadow-xs"
+              onClick={() => { setSearchTerm(""); setFilterType("All"); }}
+              className="inline-flex items-center justify-center gap-2 px-6 py-3 mt-6 font-semibold text-white transition rounded-xl bg-gradient-to-r from-nyaya-500 to-blue-600 hover:from-nyaya-400 hover:to-blue-500 shadow-lg hover:scale-105 cursor-pointer"
             >
-              Reset Filters
+              <X className="w-4 h-4" /> Reset All Filters
             </button>
           </div>
         ) : (
@@ -554,7 +509,7 @@ export default function HireLawyer() {
         )}
       </main>
 
-      <section className="z-10 w-full">
+      <section className="z-10 w-full px-6 pb-16 mx-auto max-w-7xl">
         <Footer />
       </section>
 
@@ -637,24 +592,19 @@ export default function HireLawyer() {
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {timeSlots.map((time) => {
-                        const booked=isTimeSlotBooked(selectedDate,time);
                         const isSelected = selectedTime === time;
-                        const isPast = isPastTimeSlot(selectedDate, time);
                         return (
                           <button
                             key={time}
                             type="button"
-                            disabled={isPast || booked}
-                            onClick={() => !(isPast || booked) && setSelectedTime(time)}
+                            onClick={() => setSelectedTime(time)}
                             className={`py-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
-                              (isPast || booked)
-                                ? "opacity-50 cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400"
-                              : isSelected
+                              isSelected
                                 ? "bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10"
                                 : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300"
                             }`}
                           >
-                          {booked ? `${time} (Booked)` : time}
+                            {time}
                           </button>
                         );
                       })}
@@ -699,11 +649,11 @@ export default function HireLawyer() {
                       Case Summary or Questions
                     </label>
                     <textarea
-                      placeholder={PLACEHOLDERS.HIRE_LAWYER_CASE}
+                      placeholder="Briefly describe your case or outline the questions you want to ask..."
                       value={caseDescription}
                       onChange={(e) => setCaseDescription(e.target.value)}
                       rows={3}
-                      className="w-full p-3 text-xs font-medium border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-900"
+                      className="w-full p-3 text-xs font-medium border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-900"
                     />
                   </div>
 
@@ -823,5 +773,4 @@ export default function HireLawyer() {
     </div>
   );
 }
-
 
