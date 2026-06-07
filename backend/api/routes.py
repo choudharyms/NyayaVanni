@@ -1,4 +1,4 @@
-import os
+﻿import os
 import uuid
 import logging
 import io
@@ -38,7 +38,7 @@ api_router = APIRouter()
 graph_builder = LegalKnowledgeGraphBuilder()
 
 # ---------------------------------------------------------------------------
-# Rate limiter — keyed by client IP.
+# Rate limiter â€” keyed by client IP.
 # Override defaults via env vars:
 #   RATE_LIMIT_ANALYZE  (default: 10/minute)  heavy Gemini + OCR call
 #   RATE_LIMIT_CHAT     (default: 30/minute)  streaming chat call
@@ -241,10 +241,61 @@ def analyze_document(request: Request, document_id: str, language: str = "en", f
 
         raise HTTPException(status_code=500, detail="Document analysis failed")
 
+@api_router.get("/chat/stream")
+@limiter.limit(RATE_LIMIT_CHAT)
+def chat_stream_sse(
+    request: Request,
+    user_message: str,
+    language: str = "en",
+    document_id: str = None
+):
+    """
+    SSE endpoint for real-time token-by-token streaming.
+    Returns text/event-stream for EventSource-compatible clients.
+    Usage: GET /chat/stream?user_message=hello&language=en
+    """
+    import json as _json
+
+    if not user_message or not user_message.strip():
+        raise HTTPException(status_code=400, detail="Message cannot be empty")
+
+    analysis = {}
+    if document_id:
+        try:
+            session_id = require_session_id(request)
+            require_document_owner(document_id, session_id)
+            cached = get_cached_analysis(document_id, session_id, language)
+            if cached:
+                analysis = cached.get("analysis", {})
+        except HTTPException:
+            pass
+
+    def event_generator():
+        try:
+            for chunk in stream_chat_response(analysis, [], user_message, language):
+                # SSE format: data: <payload>\n\n
+                yield f"data: {_json.dumps({'text': chunk})}\n\n"
+            # Signal stream end
+            yield "data: [DONE]\n\n"
+        except Exception as e:
+            logger.error(f"SSE stream error: {e}")
+            yield f"data: {_json.dumps({'error': 'Stream failed'})}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "X-Accel-Buffering": "no",
+            "Connection": "keep-alive",
+        }
+    )
+
+
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_general(request: Request, chat_request: ChatRequest):
-    """General legal chat — no document context."""
+    """General legal chat â€” no document context."""
     try:
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
@@ -419,3 +470,4 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
