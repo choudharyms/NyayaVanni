@@ -377,6 +377,8 @@ Thank you to everyone contributing to NyayaVanni!
 - **Madhusudan** - GitHub: @choudharyms
 - **Siddhi Sharma** - GitHub: @sidbyte07
 
-**Recognition**
+## ✨ All Contributors
 
-All contributors helping improve NyayaVanni will be listed here. Thank you for supporting the project! 🚀
+This project is made possible by all the amazing people who contribute!
+
+[![NyayaVanni Contributors](https://contrib.rocks/image?repo=choudharyms/NyayaVanni)](https://github.com/choudharyms/NyayaVanni/graphs/contributors)
