@@ -303,31 +303,17 @@ export default function LandingPage() {
         >
           <div className="flex items-start justify-between gap-6 mb-8">
             <div>
-              <h2 className="text-3xl font-extrabold text-slate-850 dark:text-white md:text-4xl">FAQ</h2>
-              <p className="max-w-2xl mt-2 text-slate-600 dark:text-slate-400">
-                Quick answers about uploads, privacy, and how NyayaVanni helps you understand legal documents.
-              </p>
+              <h2 className="text-3xl font-extrabold text-slate-850 dark:text-white md:text-4xl">{t('faq.title')}</h2>
+              <p className="max-w-2xl mt-2 text-slate-600 dark:text-slate-400">{t('faq.desc')}</p>
             </div>
           </div>
 
           <div className="columns-1 md:columns-2 gap-4 space-y-4">
             {[
-              {
-                q: "What file types are supported?",
-                a: "You can upload PDF, Word Document (.docx), PNG, and JPG files. For best results, use clear scans and readable text."
-              },
-              {
-                q: "Is my document stored permanently?",
-                a: "By default, documents are processed for analysis. If storage is enabled, you may see history features; otherwise files are handled temporarily."
-              },
-              {
-                q: "Can I trust the output as legal advice?",
-                a: "NyayaVanni simplifies and explains. For critical decisions, consult a licensed lawyer."
-              },
-              {
-                q: "What if the upload fails?",
-                a: "Check your internet connection and try a smaller file. If the backend is offline, you'll see a fallback demo navigation."
-              },
+              { q: t('faq.q1'), a: t('faq.a1') },
+              { q: t('faq.q2'), a: t('faq.a2') },
+              { q: t('faq.q3'), a: t('faq.a3') },
+              { q: t('faq.q4'), a: t('faq.a4') },
             ].map((item, idx) => (
               <div
                 key={idx}

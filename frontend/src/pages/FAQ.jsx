@@ -7,13 +7,14 @@ import Footer from "../components/Footer";
 
 export default function FAQ() {
   const navigate = useNavigate();
-  const { language } = useLanguage();
+  const { t } = useLanguage();
 
+  // Build faqs using translation keys so text updates reactively when language changes
   const faqs = [
-    { q: "What file formats are supported?", a: "PDF, PNG, and JPG are supported." },
-    { q: "Is NyayaVanni legal advice?", a: "No. It provides simplified explanations. Consult a lawyer for critical decisions." },
-    { q: "How does it work?", a: "We extract text and use AI to summarize, detect risks, and answer questions." },
-    { q: "Is my data secure?", a: "We follow standard security practices, but no system is fully risk-free." },
+    { q: t('faq.q1'), a: t('faq.a1') },
+    { q: t('faq.q2'), a: t('faq.a2') },
+    { q: t('faq.q3'), a: t('faq.a3') },
+    { q: t('faq.q4'), a: t('faq.a4') },
   ];
 
   return (
@@ -33,8 +34,8 @@ export default function FAQ() {
 
         {/* Content */}
         <main className="flex-1">
-          <h1 className="text-4xl font-extrabold text-slate-850 dark:text-white">FAQ</h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-3">Common questions about NyayaVanni.</p>
+          <h1 className="text-4xl font-extrabold text-slate-850 dark:text-white">{t('faq.title')}</h1>
+          <p className="text-slate-600 dark:text-slate-400 mt-3">{t('faq.desc')}</p>
 
           <div className="mt-8 space-y-4">
             {faqs.map((item, idx) => (

@@ -75,7 +75,18 @@ export const LanguageProvider = ({ children }) => {
       "lawyers.title": "Find the Right Legal Expert",
       "lawyers.disclaimer": "This is an informational directory. BCI rules prohibit lawyer advertisements.",
       "lawyers.search": "Search by name, location, or specialty...",
-      "lawyers.book": "Request Consultation"
+      "lawyers.book": "Request Consultation",
+      // FAQ translations
+      "faq.title": "FAQ",
+      "faq.desc": "Common questions about NyayaVanni.",
+      "faq.q1": "What file formats are supported?",
+      "faq.a1": "PDF, PNG, and JPG are supported.",
+      "faq.q2": "Is NyayaVanni legal advice?",
+      "faq.a2": "No. It provides simplified explanations. Consult a lawyer for critical decisions.",
+      "faq.q3": "How does it work?",
+      "faq.a3": "We extract text and use AI to summarize, detect risks, and answer questions.",
+      "faq.q4": "Is my data secure?",
+      "faq.a4": "We follow standard security practices, but no system is fully risk-free."
     },
     hi: {
       "nav.hire": "वकील नियुक्त करें",
@@ -111,7 +122,18 @@ export const LanguageProvider = ({ children }) => {
       "lawyers.title": "सही कानूनी विशेषज्ञ खोजें",
       "lawyers.disclaimer": "यह एक सूचनात्मक निर्देशिका है। बीसीआई नियम वकील विज्ञापनों को प्रतिबंधित करते हैं।",
       "lawyers.search": "नाम, स्थान या विशेषज्ञता से खोजें...",
-      "lawyers.book": "परामर्श बुक करें"
+      "lawyers.book": "परामर्श बुक करें",
+      // FAQ translations
+      "faq.title": "प्रश्नोत्तरी (FAQ)",
+      "faq.desc": "NyayaVanni के बारे में सामान्य प्रश्न।",
+      "faq.q1": "कौन से फ़ाइल फ़ॉर्मेट समर्थित हैं?",
+      "faq.a1": "PDF, PNG और JPG समर्थित हैं।",
+      "faq.q2": "क्या NyayaVanni कानूनी सलाह है?",
+      "faq.a2": "नहीं। यह सरल व्याख्या प्रदान करता है। महत्वपूर्ण निर्णयों के लिए वकील से सलाह लें।",
+      "faq.q3": "यह कैसे काम करता है?",
+      "faq.a3": "हम टेक्स्ट निकालते हैं और AI की मदद से सारांश, जोखिम पहचान और प्रश्नों के उत्तर प्रदान करते हैं।",
+      "faq.q4": "क्या मेरा डेटा सुरक्षित है?",
+      "faq.a4": "हम मानक सुरक्षा प्रक्रियाओं का पालन करते हैं, लेकिन कोई भी प्रणाली पूरी तरह जोखिम-मुक्त नहीं होती।"
     }
   };
 
