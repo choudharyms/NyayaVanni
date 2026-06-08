@@ -88,33 +88,35 @@ export default function LandingPage() {
   };
 
   return (
-    <div className="relative flex flex-col items-center min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+    <div className="relative flex flex-col items-center min-h-screen overflow-x-clip bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
       {/* Background Gradients */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-nyaya-500/10 dark:bg-nyaya-500/30 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[150px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
 
-      <nav className="z-10 flex items-center justify-between w-full px-6 py-6 mx-auto max-w-7xl">
-        <div className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer" onClick={() => navigate('/')}>
-          <Scale className="w-8 h-8 text-nyaya-500" />
-          <span>Nyaya<span className="text-nyaya-500">Vanni</span></span>
-        </div>
-        <div className="flex items-center gap-4">
-          <button 
-            onClick={() => navigate('/lawyers')}
-            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
-          >
-            {t("nav.hire")}
-          </button>
-          <button 
-            onClick={() => navigate('/contact')}
-            className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
-          >
-            {t("nav.contact")}
-          </button>
-          <button className="px-5 py-2 font-medium text-slate-800 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/10 rounded-full backdrop-blur-md transition-all">
-            {t("nav.signin")}
-          </button>
-          <ThemeToggle />
+      <nav className="sticky top-0 z-30 w-full border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300">
+        <div className="flex items-center justify-between w-full px-6 py-6 mx-auto max-w-7xl">
+          <div className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer" onClick={() => navigate('/')}>
+            <Scale className="w-8 h-8 text-nyaya-500" />
+            <span>Nyaya<span className="text-nyaya-500">Vanni</span></span>
+          </div>
+          <div className="flex items-center gap-4">
+            <button 
+              onClick={() => navigate('/lawyers')}
+              className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+            >
+              {t("nav.hire")}
+            </button>
+            <button 
+              onClick={() => navigate('/contact')}
+              className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+            >
+              {t("nav.contact")}
+            </button>
+            <button className="px-5 py-2 font-medium text-slate-800 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/10 rounded-full backdrop-blur-md transition-all">
+              {t("nav.signin")}
+            </button>
+            <ThemeToggle />
+          </div>
         </div>
       </nav>
 
