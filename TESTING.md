@@ -10,11 +10,12 @@ A complete reference for running existing tests, understanding the test structur
 2. [Folder Structure](#2-folder-structure)
 3. [Prerequisites](#3-prerequisites)
 4. [Running the Test Suite](#4-running-the-test-suite)
-5. [Test File Overview](#5-test-file-overview)
-6. [How conftest.py Works](#6-how-conftestpy-works)
-7. [Writing New Tests](#7-writing-new-tests)
-8. [Known Issues & Import Gotchas](#8-known-issues--import-gotchas)
-9. [CI Testing Pipeline](#9-ci-testing-pipeline)
+5. [Frontend Validation](#5-frontend-validation)
+6. [Test File Overview](#6-test-file-overview)
+7. [How conftest.py Works](#7-how-conftestpy-works)
+8. [Writing New Tests](#8-writing-new-tests)
+9. [Known Issues & Import Gotchas](#9-known-issues--import-gotchas)
+10. [CI Testing Pipeline](#10-ci-testing-pipeline)
 
 ---
 
@@ -117,7 +118,42 @@ pytest -x
 
 ---
 
-## 5. Test File Overview
+## 5. Frontend Validation
+
+The frontend currently does not define a dedicated unit or integration test
+script. Use the available Vite/ESLint commands below to validate frontend
+changes before opening a PR.
+
+Run these commands from the project root:
+
+```bash
+cd frontend
+npm install
+npm run lint
+npm run build
+```
+
+To manually verify UI changes in a browser:
+
+```bash
+npm run dev
+```
+
+Then open the local URL printed by Vite, usually `http://localhost:5173`.
+
+For production-preview validation after a successful build:
+
+```bash
+npm run preview
+```
+
+If frontend unit or integration tests are added later, document the new
+`npm run test` command in this section and include the expected test location
+under `frontend/src`.
+
+---
+
+## 6. Test File Overview
 
 ### `test_chat.py`
 
@@ -155,7 +191,7 @@ Use this for quick local verification without needing the full test setup.
 
 ---
 
-## 6. How `conftest.py` Works
+## 7. How `conftest.py` Works
 
 `conftest.py` does two important things:
 
@@ -186,7 +222,7 @@ Both `client` and `test_client` are available in any test file — use whichever
 
 ---
 
-## 7. Writing New Tests
+## 8. Writing New Tests
 
 ### Basic test structure
 
@@ -228,7 +264,7 @@ your-new-package
 
 ---
 
-## 8. Known Issues & Import Gotchas
+## 9. Known Issues & Import Gotchas
 
 ### `ModuleNotFoundError: No module named 'backend'`
 
@@ -266,7 +302,7 @@ This is a warning, not an error. Tests still pass. Migration to `google.genai` i
 
 ---
 
-## 9. CI Testing Pipeline
+## 10. CI Testing Pipeline
 
 Tests run automatically on every push and pull request via GitHub Actions.
 
