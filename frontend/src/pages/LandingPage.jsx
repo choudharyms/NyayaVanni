@@ -295,7 +295,8 @@ export default function LandingPage() {
 
 
       {/* FAQ + Footer */}
-      <section className="z-10 w-full px-6 pb-16 mx-auto max-w-7xl">
+      <section className="z-10 w-full pb-0">
+        <div className="w-full px-6 mx-auto max-w-7xl">
         {/* FAQ */}
         <div
           id="faq"
@@ -358,9 +359,11 @@ export default function LandingPage() {
             ))}
           </div>
         </div>
+        </div>
 
         {/* Footer */}
-        <footer className="p-8 mt-10 border rounded-4xl border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/90 backdrop-blur-xl md:p-10 z-20">
+        <footer className="w-full mt-10 border-t border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/90 backdrop-blur-xl z-20">
+          <div className="mx-auto max-w-7xl px-6 py-8 md:px-10 md:py-10">
           <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
             {/* Brand */}
             <div className="max-w-md">
@@ -419,6 +422,7 @@ export default function LandingPage() {
             <p className="text-sm text-slate-600 dark:text-slate-500">
               Not legal advice. For professional help, consult a lawyer.
             </p>
+          </div>
           </div>
         </footer>
       </section>

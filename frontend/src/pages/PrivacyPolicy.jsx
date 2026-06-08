@@ -162,7 +162,7 @@ return ( <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-9
     </main>
   </div>
 
-  <section className="z-10 w-full px-6 pb-16 mx-auto max-w-7xl">
+  <section className="z-10 w-full">
     <Footer />
   </section>
 </div>

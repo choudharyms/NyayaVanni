@@ -24,7 +24,7 @@ const BG_SECONDARY = `absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%]
   mix-blend-multiply dark:mix-blend-screen pointer-events-none`;
 
 const MAIN_CONTAINER = `relative min-h-screen overflow-hidden bg-slate-50 
-  text-slate-900 dark:bg-slate-950 dark:text-slate-100 pb-16 transition-colors duration-300`;
+  text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300`;
 
 const NAV_BASE = `sticky top-0 z-30 border-b border-slate-200 dark:border-white/10 
   bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300`;
@@ -435,7 +435,7 @@ export default function ScamDetector() {
         </div>
       </main>
 
-      <div className="max-w-7xl mx-auto px-6">
+      <div className="w-full">
         <Footer />
       </div>
     </div>

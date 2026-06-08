@@ -16,7 +16,8 @@ export default function Footer() {
   };
 
   return (
-    <footer className="w-full mt-16 p-8 border rounded-4xl border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl md:p-10 transition-colors duration-300">
+    <footer className="w-full mt-16 border-t border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-900/60 backdrop-blur-xl transition-colors duration-300">
+      <div className="mx-auto max-w-7xl px-6 py-8 md:px-10 md:py-10">
       <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
         {/* Brand Section */}
         <div className="max-w-md">
@@ -97,6 +98,7 @@ export default function Footer() {
             ? 'Not legal advice. For professional help, consult a licensed lawyer.' 
             : 'यह कानूनी सलाह नहीं है। पेशेवर मदद के लिए, किसी लाइसेंस प्राप्त वकील से सलाह लें।'}
         </p>
+      </div>
       </div>
     </footer>
   );
