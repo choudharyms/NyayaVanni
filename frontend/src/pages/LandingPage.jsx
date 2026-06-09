@@ -73,18 +73,14 @@ export default function LandingPage() {
       // Navigate to Dashboard with the document ID
       navigate(`/dashboard/${data.documentId}`, { state: { file } }); // Pass file for MVP purely to avoid re-downloading if needed
     } catch (error) {
-      //console.error(error);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       
-      // Check if we're in production but still pointing to localhost
       if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
         alert("Configuration Error: The app is trying to connect to a local server (localhost) while deployed. Please set the VITE_API_URL environment variable in your Vercel dashboard.");
+      } else {
+        alert("Upload failed: " + (error.message || "Please check your connection and try again."));
       }
-      
-      // Fallback for MVP local test if API isn't up
-      setTimeout(() => {
-        navigate(`/dashboard/demo-doc-123`, { state: { file } });
-      }, 1500);
+      setLoading(false);
     } 
   };
 //  Shared hover styles for footer navigation links

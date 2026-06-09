@@ -8,6 +8,7 @@ response times from 5-10 seconds to under 500ms.
 
 import sqlite3
 import logging
+import re
 from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import hashlib
@@ -18,6 +19,13 @@ DB_PATH = None  # Set by init_search_service()
 
 # Search result cache expires after 1 hour
 CACHE_EXPIRY_SECONDS = 3600
+
+
+def _sanitize_fts_query(query: str) -> str:
+    """Strip FTS5 special characters to prevent syntax errors."""
+    sanitized = re.sub(r'["*(){}^:+\-]', ' ', query)
+    sanitized = re.sub(r'\s+', ' ', sanitized).strip()
+    return sanitized
 
 
 def init_search_service(db_path: str):
@@ -168,11 +176,15 @@ def search_documents(
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
+        safe_query = _sanitize_fts_query(query.strip())
+        if not safe_query:
+            return {"results": [], "total_count": 0, "from_cache": False}
+
         # Count total matching documents
         cursor.execute('''
             SELECT COUNT(*) as count FROM documents_fts
             WHERE documents_fts MATCH ?
-        ''', (query.strip(),))
+        ''', (safe_query,))
         total_count = cursor.fetchone()['count']
 
         # Fetch paginated results with relevance ranking
@@ -182,7 +194,7 @@ def search_documents(
             WHERE documents_fts MATCH ?
             ORDER BY rank
             LIMIT ? OFFSET ?
-        ''', (query.strip(), page_size, offset))
+        ''', (safe_query, page_size, offset))
 
         results = [dict(row) for row in cursor.fetchall()]
         conn.close()
