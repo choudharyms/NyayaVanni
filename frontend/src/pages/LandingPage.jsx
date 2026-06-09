@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare, Twitter, Github, Linkedin, Instagram } from 'lucide-react';
 import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare,ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -437,11 +438,28 @@ export default function LandingPage() {
             </div>
           </div>
 
-          <div className="flex flex-col items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-700/50 sm:flex-row sm:items-center">
-            <p className="text-sm text-slate-600 dark:text-slate-500">
+          <div className="flex flex-col items-center sm:items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-700/50 sm:flex-row">
+            <p className="text-sm text-slate-600 dark:text-slate-500 text-center sm:text-left mt-1">
               © {new Date().getFullYear()} NyayaVanni. All rights reserved.
             </p>
-            <p className="text-sm text-slate-600 dark:text-slate-500">
+
+            {/* Social Links */}
+            <div className="flex items-center gap-5">
+              <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="Twitter">
+                <Twitter className="w-5 h-5" />
+              </a>
+              <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="GitHub">
+                <Github className="w-5 h-5" />
+              </a>
+              <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="LinkedIn">
+                <Linkedin className="w-5 h-5" />
+              </a>
+              <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="Instagram">
+                <Instagram className="w-5 h-5" />
+              </a>
+            </div>
+
+            <p className="text-sm text-slate-600 dark:text-slate-500 text-center sm:text-right mt-1">
               Not legal advice. For professional help, consult a lawyer.
             </p>
           </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Scale, Mail } from 'lucide-react';
+import { Scale, Mail, Twitter, Github, Linkedin, Instagram } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 
 export default function Footer() {
@@ -87,13 +87,28 @@ export default function Footer() {
       </div>
 
       {/* Footer Bottom */}
-      <div className="flex flex-col items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-200 dark:border-slate-700 sm:flex-row sm:items-center">
-        {/* Fix: was text-slate-500 dark:text-slate-500 (identical in both modes, very low contrast in light); light mode now uses text-slate-600 */}
-        <p className="text-xs text-slate-600 dark:text-slate-500">
+      <div className="flex flex-col items-center sm:items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-200 dark:border-slate-700 sm:flex-row">
+        <p className="text-xs text-slate-600 dark:text-slate-500 text-center sm:text-left mt-1">
           © {new Date().getFullYear()} NyayaVanni. All rights reserved.
         </p>
-        {/* Fix: disclaimer was same faded slate-500 in both modes; improved for light mode readability */}
-        <p className="text-xs text-slate-600 dark:text-slate-500 italic">
+
+        {/* Social Links */}
+        <div className="flex items-center gap-5">
+          <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="Twitter">
+            <Twitter className="w-5 h-5" />
+          </a>
+          <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="GitHub">
+            <Github className="w-5 h-5" />
+          </a>
+          <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="LinkedIn">
+            <Linkedin className="w-5 h-5" />
+          </a>
+          <a href="#" className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110" aria-label="Instagram">
+            <Instagram className="w-5 h-5" />
+          </a>
+        </div>
+
+        <p className="text-xs text-slate-600 dark:text-slate-500 italic text-center sm:text-right mt-1">
           {language === 'en' 
             ? 'Not legal advice. For professional help, consult a licensed lawyer.' 
             : 'यह कानूनी सलाह नहीं है। पेशेवर मदद के लिए, किसी लाइसेंस प्राप्त वकील से सलाह लें।'}
