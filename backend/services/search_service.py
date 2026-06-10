@@ -12,12 +12,18 @@ from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 import hashlib
 
+from .database import connect_db
+
 logger = logging.getLogger(__name__)
 
 DB_PATH = None  # Set by init_search_service()
 
 # Search result cache expires after 1 hour
 CACHE_EXPIRY_SECONDS = 3600
+
+
+def _connect_db():
+    return connect_db(DB_PATH)
 
 
 def init_search_service(db_path: str):
@@ -40,7 +46,7 @@ def _create_fts_index():
         return
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
 
         # Create FTS5 virtual table for document indexing
@@ -93,7 +99,7 @@ def index_document(document_id: str, filename: str, content: str):
         return
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
 
         # Remove existing document index if present
@@ -164,7 +170,7 @@ def search_documents(
             return cached
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
@@ -216,7 +222,7 @@ def _get_cached_result(query_hash: str) -> Optional[Dict[str, Any]]:
         return None
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -265,7 +271,7 @@ def _cache_result(
 
     try:
         import json
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
 
         cursor.execute('''
@@ -294,7 +300,7 @@ def _delete_cache_entry(query_hash: str):
         return
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         cursor.execute('DELETE FROM search_cache WHERE query_hash = ?', (query_hash,))
         conn.commit()
@@ -309,7 +315,7 @@ def clear_expired_cache():
         return
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
 
         cutoff_time = (datetime.now() - timedelta(seconds=CACHE_EXPIRY_SECONDS)).isoformat()
@@ -334,7 +340,7 @@ def remove_document_from_index(document_id: str):
         return
 
     try:
-        conn = sqlite3.connect(DB_PATH)
+        conn = _connect_db()
         cursor = conn.cursor()
         cursor.execute(
             'DELETE FROM documents_fts WHERE document_id = ?',
