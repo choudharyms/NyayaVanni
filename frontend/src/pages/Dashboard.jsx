@@ -1,5 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Scale, AlertTriangle, ArrowLeft, Calendar, FileText,
+  Bot, Send, User, Users, AlertCircle, Briefcase, Search, Copy
+} from 'lucide-react';
 import DashboardSkeleton from "../components/DashboardSkeleton";
 import ReactFlow, {
   MiniMap,
@@ -812,6 +816,27 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
         {knowledgeGraph && (
           <div className={KG_SECTION}>
             
+            <div className="flex-1 p-4 space-y-4 overflow-y-auto bg-slate-50/50 dark:bg-slate-950/20">
+              {chatHistory.map((msg, idx) => (
+                <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                  <div className={`flex items-center justify-center shrink-0 w-8 h-8 rounded-full border ${msg.role === 'user' ? 'bg-nyaya-500 text-white dark:border-nyaya-600' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400 dark:border-slate-700'}`}>
+                    {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
+                  </div>
+                  <div className={`relative group p-4 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap shadow-sm border ${msg.role === 'user' ? 'bg-nyaya-900 text-white rounded-tr-sm border-nyaya-850' : 'bg-white dark:bg-slate-950 rounded-tl-sm text-slate-750 dark:text-slate-200 border-slate-200 dark:border-slate-800'}`}>
+                    {msg.role === 'assistant' ? (
+                      <>
+                        <div className="prose prose-sm max-w-none prose-li:my-0.5 prose-ul:my-1 prose-p:my-1 text-slate-700 dark:text-slate-200 prose-headings:text-slate-800 dark:prose-headings:text-white prose-strong:text-slate-900 dark:prose-strong:text-white prose-code:text-amber-600 dark:prose-code:text-amber-250">
+                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                        </div>
+                        <button
+                          onClick={() => navigator.clipboard.writeText(msg.message)}
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300"
+                          title="Copy to clipboard"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : msg.message}
             <div className="mb-6">
   <h2 className={KG_TITLE}>
     Legal Knowledge Graph
