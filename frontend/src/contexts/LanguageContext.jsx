@@ -3,15 +3,12 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 
 const LanguageContext = createContext();
 
-// Define supported languages to enable validation
-const SUPPORTED_LANGUAGES = ['en', 'hi'];
+const SUPPORTED_LANGUAGES = ['en', 'hi', 'ta'];
 const DEFAULT_LANGUAGE = 'en';
 
-// Validate and sanitize language value
 const isValidLanguage = (lang) => SUPPORTED_LANGUAGES.includes(lang);
 
 const getSafeLanguage = (storedValue) => {
-  // Fallback to default if invalid or missing
   return isValidLanguage(storedValue) ? storedValue : DEFAULT_LANGUAGE;
 };
 
@@ -19,10 +16,8 @@ export const useLanguage = () => useContext(LanguageContext);
 
 export const LanguageProvider = ({ children }) => {
   const [language, setLanguage] = useState(() => {
-    // Validate stored language value before using
     const stored = localStorage.getItem('nyaya_language');
     const safe = getSafeLanguage(stored);
-    // Clean up localStorage if it contained invalid value
     if (stored !== safe) {
       localStorage.setItem('nyaya_language', safe);
     }
@@ -30,16 +25,18 @@ export const LanguageProvider = ({ children }) => {
   });
 
   useEffect(() => {
-    // Always validate before persisting to localStorage
     const validLang = getSafeLanguage(language);
     localStorage.setItem('nyaya_language', validLang);
   }, [language]);
 
   const toggleLanguage = () => {
-    setLanguage(prev => prev === 'en' ? 'hi' : 'en');
+    setLanguage(prev => {
+      if (prev === 'en') return 'hi';
+      if (prev === 'hi') return 'ta';
+      return 'en';
+    });
   };
 
-  // Simple hardcoded translations for the MVP
   const translations = {
     en: {
       "nav.hire": "Hire a Lawyer",
@@ -76,7 +73,6 @@ export const LanguageProvider = ({ children }) => {
       "lawyers.disclaimer": "This is an informational directory. BCI rules prohibit lawyer advertisements.",
       "lawyers.search": "Search by name, location, or specialty...",
       "lawyers.book": "Request Consultation",
-      // FAQ translations
       "faq.title": "FAQ",
       "faq.desc": "Common questions about NyayaVanni.",
       "faq.q1": "What file types are supported?",
@@ -86,7 +82,7 @@ export const LanguageProvider = ({ children }) => {
       "faq.q3": "Can I trust the output as legal advice?",
       "faq.a3": "NyayaVanni provides simplified explanations and insights. For critical decisions, consult a licensed lawyer.",
       "faq.q4": "What if the upload fails?",
-      "faq.a4": "Check your internet connection and try uploading a smaller file. If the backend is offline, you’ll be redirected to a fallback demo."
+      "faq.a4": "Check your internet connection and try uploading a smaller file. If the backend is offline, you'll be redirected to a fallback demo."
     },
     hi: {
       "nav.hire": "वकील नियुक्त करें",
@@ -123,28 +119,72 @@ export const LanguageProvider = ({ children }) => {
       "lawyers.disclaimer": "यह एक सूचनात्मक निर्देशिका है। बीसीआई नियम वकील विज्ञापनों को प्रतिबंधित करते हैं।",
       "lawyers.search": "नाम, स्थान या विशेषज्ञता से खोजें...",
       "lawyers.book": "परामर्श बुक करें",
-      // FAQ translations
       "faq.title": "प्रश्नोत्तरी (FAQ)",
       "faq.desc": "NyayaVanni के बारे में सामान्य प्रश्न।",
       "faq.q1": "कौन से फ़ाइल फ़ॉर्मेट समर्थित हैं?",
-      "faq.a1": "PDF, Word दस्तावेज़ (.docx), PNG, या JPG फ़ाइलें अपलोड की जा सकती हैं। सबसे अच्छे परिणामों के लिए, साफ़ स्कैन का उपयोग करें।",
-      "faq.q2": "क्या NyayaVanni कानूनी सलाह है?",
-      "faq.a2": "डॉक्यूमेंट्स को पहले विश्लेषण के लिए संसाधित किया जाता है। अगर स्टोरेज सक्षम है, तो आपको हिस्ट्री फीचर्स दिख सकते हैं; अन्यथा फ़ाइलें केवल अस्थायी रूप से रखी जाती हैं।",
-      "faq.q3": "यह कैसे काम करता है?",
-      "faq.a3": "NyayaVanni सरल व्याख्या और इनसाइट्स प्रदान करता है। महत्वपूर्ण निर्णयों के लिए, लाइसेंस प्राप्त वकील से परामर्श करें।",
-      "faq.q4": "क्या मेरा डेटा सुरक्षित है?",
-      "faq.a4": "अपना इंटरनेट कनेक्शन जांचें और एक छोटी फ़ाइल अपलोड करने का प्रयास करें। यदि बैकएंड ऑफ़लाइन है, तो आपको एक फॉलबैक डेमो पर रीडायरेक्ट किया जाएगा।"
+      "faq.a1": "PDF, Word दस्तावेज़ (.docx), PNG, या JPG फ़ाइलें अपलोड की जा सकती हैं।",
+      "faq.q2": "क्या मेरा दस्तावेज़ स्थायी रूप से संग्रहीत है?",
+      "faq.a2": "डॉक्यूमेंट्स को पहले विश्लेषण के लिए संसाधित किया जाता है। फ़ाइलें केवल अस्थायी रूप से रखी जाती हैं।",
+      "faq.q3": "क्या मैं आउटपुट को कानूनी सलाह मान सकता हूँ?",
+      "faq.a3": "NyayaVanni सरल व्याख्या प्रदान करता है। महत्वपूर्ण निर्णयों के लिए वकील से परामर्श करें।",
+      "faq.q4": "अपलोड विफल हो जाए तो?",
+      "faq.a4": "अपना इंटरनेट कनेक्शन जांचें और छोटी फ़ाइल अपलोड करें।"
+    },
+    ta: {
+      "nav.hire": "வழக்கறிஞரை நியமிக்கவும்",
+      "nav.signin": "உள்நுழைக",
+      "nav.directory": "சட்ட நிபுணர் அடைவு",
+      "nav.contact": "தொடர்பு கொள்ளுங்கள்",
+      "landing.hero.title1": "இந்திய சட்ட ஆவணங்களை",
+      "landing.hero.title2": "புரிந்துகொள்ளுங்கள்",
+      "landing.hero.title3": "நொடிகளில்.",
+      "landing.hero.subtitle": "எந்த நோட்டீஸ், ஒப்பந்தம் அல்லது FIR ஐ பதிவேற்றவும். NyayaVanni சிக்கலான சட்ட வார்த்தைகளை புரிந்துகொள்ள உதவுகிறது.",
+      "landing.upload.title": "ஆவணத்தை பதிவேற்றவும்",
+      "landing.upload.desc": "உங்கள் PDF அல்லது படத்தை இங்கே இழுத்து விடுங்கள், அல்லது உலாவ கிளிக் செய்யுங்கள்.",
+      "landing.upload.btn": "கோப்பை தேர்ந்தெடுக்கவும்",
+      "landing.upload.analyze": "பகுப்பாய்வு செய்யவும்",
+      "landing.upload.analyzing": "பகுப்பாய்வு நடக்கிறது...",
+      "landing.upload.cancel": "ரத்து செய்யவும்",
+      "landing.chat.title": "AI உடன் அரட்டை",
+      "landing.chat.desc": "பொதுவான சட்ட கேள்விகளை கேளுங்கள், உங்கள் உரிமைகளை அறியுங்கள்.",
+      "landing.chat.btn": "அரட்டை தொடங்கவும்",
+      "landing.chat.draftNotice": "சட்ட நோட்டீஸ் வரைவு",
+      "landing.chat.replyNotice": "நோட்டீஸுக்கு பதில் வரைவு",
+      "dashboard.doctype": "ஆவண வகை",
+      "dashboard.risk": "அபாயம்",
+      "dashboard.status": "நிலை",
+      "dashboard.sections": "முக்கிய பிரிவுகள்",
+      "dashboard.parties": "சம்பந்தப்பட்ட தரப்பினர்",
+      "dashboard.consequences": "முக்கிய விளைவுகள்",
+      "dashboard.actions": "பரிந்துரைக்கப்பட்ட நடவடிக்கைகள்",
+      "dashboard.btn.detailed": "விரிவான பகுப்பாய்வு கோரவும்",
+      "dashboard.consult.title": "சட்ட ஆலோசனை பரிந்துரைக்கப்படுகிறது",
+      "dashboard.consult.btn": "வழக்கறிஞரை கண்டுபிடிக்கவும்",
+      "chat.placeholder": "சட்ட கேள்வி கேளுங்கள்...",
+      "lawyers.title": "சரியான சட்ட நிபுணரை கண்டுபிடிக்கவும்",
+      "lawyers.disclaimer": "இது ஒரு தகவல் அடைவு. BCI விதிகள் வழக்கறிஞர் விளம்பரங்களை தடைசெய்கின்றன.",
+      "lawyers.search": "பெயர், இடம் அல்லது நிபுணத்துவம் மூலம் தேடுங்கள்...",
+      "lawyers.book": "ஆலோசனை கோரவும்",
+      "faq.title": "அடிக்கடி கேட்கப்படும் கேள்விகள்",
+      "faq.desc": "NyayaVanni பற்றிய பொதுவான கேள்விகள்.",
+      "faq.q1": "எந்த கோப்பு வகைகள் ஆதரிக்கப்படுகின்றன?",
+      "faq.a1": "PDF, Word ஆவணம் (.docx), PNG, அல்லது JPG கோப்புகளை பதிவேற்றலாம்.",
+      "faq.q2": "என் ஆவணம் நிரந்தரமாக சேமிக்கப்படுமா?",
+      "faq.a2": "ஆவணங்கள் பகுப்பாய்வுக்காக மட்டுமே செயலாக்கப்படுகின்றன, தற்காலிகமாக மட்டுமே வைக்கப்படுகின்றன.",
+      "faq.q3": "வெளியீட்டை சட்ட ஆலோசனையாக நம்பலாமா?",
+      "faq.a3": "NyayaVanni எளிமையான விளக்கங்களை வழங்குகிறது. முக்கியமான முடிவுகளுக்கு வழக்கறிஞரை அணுகவும்.",
+      "faq.q4": "பதிவேற்றம் தோல்வியடைந்தால்?",
+      "faq.a4": "இணைய இணைப்பை சரிபார்த்து சிறிய கோப்பை பதிவேற்றவும்."
     }
   };
 
   const t = (key) => {
-    // Defensive: ensure language is valid before accessing translations
     const safeLang = getSafeLanguage(language);
     return translations[safeLang]?.[key] || translations[DEFAULT_LANGUAGE]?.[key] || key;
   };
 
   return (
-    <LanguageContext.Provider value={{ language, toggleLanguage, t }}>
+    <LanguageContext.Provider value={{ language, setLanguage, toggleLanguage, t }}>
       {children}
     </LanguageContext.Provider>
   );

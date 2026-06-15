@@ -612,11 +612,32 @@ uvicorn main:app --reload
 
 Install Tesseract OCR.
 
+### Ubuntu/Debian
+
+```bash
+sudo apt update
+sudo apt install tesseract-ocr
+```
+
+### macOS
+
+```bash
+brew install tesseract
+```
+
 ### Windows Download
 
 https://github.com/UB-Mannheim/tesseract/wiki
 
 After installation, add Tesseract to system PATH.
+
+### Verify Installation
+
+Ensure the `tesseract` executable is available in your system `PATH`, then run:
+
+```bash
+tesseract --version
+```
 
 ---
 

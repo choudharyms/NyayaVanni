@@ -7,6 +7,8 @@ from typing import Optional
 from datetime import datetime, timezone, timedelta
 import asyncio
 
+from .database import connect_db
+
 
 logger = logging.getLogger(__name__)
 
@@ -20,7 +22,7 @@ os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
 
 
 def _connect_db():
-    return sqlite3.connect(DB_PATH, uri=str(DB_PATH).startswith("file:"))
+    return connect_db(DB_PATH)
 
 
 def init_db(raise_on_error: bool = False):
@@ -162,6 +164,7 @@ def create_session_id() -> str:
 def save_document_record(session_id: str, doc_id: str, filename: str, local_path: str):
     """Save document metadata to SQLite"""
     timestamp = datetime.utcnow().isoformat()
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -170,25 +173,32 @@ def save_document_record(session_id: str, doc_id: str, filename: str, local_path
             (doc_id, session_id, None, filename, local_path, 'processing', timestamp)
         )
         conn.commit()
-        conn.close()
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.error(f"SQLite save failed: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 def get_document_record(doc_id: str) -> Optional[dict]:
     """Retrieve document metadata from SQLite"""
+    conn = None
     try:
         conn = _connect_db()
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute("SELECT * FROM documents WHERE document_id = ?", (doc_id,))
         row = cursor.fetchone()
-        conn.close()
         if row:
             return dict(row)
         return None
     except Exception as e:
         logger.error(f"SQLite retrieve failed: {e}")
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def delete_document_and_cache(doc_id: str) -> bool:
@@ -203,6 +213,7 @@ def delete_document_and_cache(doc_id: str) -> bool:
         except OSError as exc:
             logger.warning(f"Failed to delete local file {local_path}: {exc}")
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -215,14 +226,19 @@ def delete_document_and_cache(doc_id: str) -> bool:
             (doc_id,)
         )
         conn.commit()
-        conn.close()
         return True
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.error(f"SQLite delete failed: {e}")
         return False
+    finally:
+        if conn:
+            conn.close()
 
 def delete_document_history(session_id: str) -> int:
     """Delete all documents and their analyses for a specific session ID"""
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -245,48 +261,56 @@ def delete_document_history(session_id: str) -> int:
 
         deleted_count = cursor.rowcount
         conn.commit()
-        conn.close()
         return deleted_count
     except Exception as e:
+        if conn:
+            conn.rollback()
         logger.error(f"SQLite delete history failed: {e}")
         return 0
-
-async def cleanup_expired_documents():
-    """Background task to delete documents older than 24 hours to prevent storage exhaustion."""
-    while True:
-        try:
-            logger.info("Running expired documents cleanup task...")
-            # Calculate threshold: 24 hours ago
-            threshold = (datetime.utcnow() - timedelta(hours=24)).isoformat()
-
-            conn = sqlite3.connect(DB_PATH)
-            cursor = conn.cursor()
-
-            # Find expired documents
-            cursor.execute("SELECT document_id, local_path FROM documents WHERE uploaded_at < ?", (threshold,))
-            expired_docs = cursor.fetchall()
-
-            for doc_id, local_path in expired_docs:
-                logger.info(f"Deleting expired document: {doc_id}")
-                # Delete local file
-                if local_path and os.path.exists(local_path):
-                    try:
-                        os.remove(local_path)
-                    except OSError as exc:
-                        logger.warning(f"Failed to delete file {local_path}: {exc}")
-
-                # Delete from document_analysis_cache
-                cursor.execute("DELETE FROM document_analysis_cache WHERE document_id = ?", (doc_id,))
-
-                # Delete from documents table
-                cursor.execute("DELETE FROM documents WHERE document_id = ?", (doc_id,))
-
-            conn.commit()
+    finally:
+        if conn:
             conn.close()
 
-            if expired_docs:
-                logger.info(f"Cleaned up {len(expired_docs)} expired documents.")
+def cleanup_expired_documents_once() -> int:
+    """Delete expired documents in a synchronous pass owned by one worker thread."""
+    logger.info("Running expired documents cleanup task...")
+    threshold = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT document_id, local_path FROM documents WHERE uploaded_at < ?", (threshold,))
+        expired_docs = cursor.fetchall()
 
+        for doc_id, local_path in expired_docs:
+            logger.info(f"Deleting expired document: {doc_id}")
+            if local_path and os.path.exists(local_path):
+                try:
+                    os.remove(local_path)
+                except OSError as exc:
+                    logger.warning(f"Failed to delete file {local_path}: {exc}")
+
+            cursor.execute("DELETE FROM document_analysis_cache WHERE document_id = ?", (doc_id,))
+            cursor.execute("DELETE FROM documents WHERE document_id = ?", (doc_id,))
+
+        conn.commit()
+        if expired_docs:
+            logger.info(f"Cleaned up {len(expired_docs)} expired documents.")
+        return len(expired_docs)
+    except Exception:
+        if conn:
+            conn.rollback()
+        raise
+    finally:
+        if conn:
+            conn.close()
+
+
+async def cleanup_expired_documents():
+    """Periodically clean up expired documents without blocking the event loop."""
+    while True:
+        try:
+            await asyncio.to_thread(cleanup_expired_documents_once)
         except Exception as e:
             logger.error(f"Error during document cleanup: {e}")
 
