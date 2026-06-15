@@ -97,7 +97,7 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed md:relative left-0 top-16 md:top-0 z-40 h-[calc(100vh-4rem)] md:h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-lg md:shadow-none flex flex-col transform transition-transform duration-300 md:transform-none ${
+        className={`fixed md:relative left-0 top-16 md:top-0 h-[calc(100vh-4rem)] md:h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-lg md:shadow-none flex flex-col transform transition-transform duration-300 md:transform-none ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
