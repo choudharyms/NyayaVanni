@@ -20,22 +20,22 @@
 
 # 📑 Table of Contents
 
-- [✨ Features](#-features)
-- [🖼️ Screenshots](#️-screenshots)
-- [🛠️ Tech Stack](#️-tech-stack)
-- [📂 Project Structure](#-project-structure)
-- [⚙️ Installation & Setup](#️-installation--setup)
-- [🧪 Frontend Validation](#-frontend-validation)
-- [🔑 Environment Variables](#-environment-variables)
-- [📡 API Endpoints](#-api-endpoints)
-- [🔍 OCR Workflow](#-ocr-workflow)
-- [⚠️ OCR Failure Protection](#️-ocr-failure-protection)
-- [🤝 Contributing](#-contributing)
-- [🔒 Security & Disclaimer](#-security--disclaimer)
-- [🗺️ Future Roadmap](#️-future-roadmap)
-- [🐛 Troubleshooting](#-troubleshooting)
-- [❤️ Contributors](#-contributors)
-- [📄 License](#-license)
+- [✨ Features](#features)
+- [🖼️ Screenshots](#screenshots)
+- [🛠️ Tech Stack](#tech-stack)
+- [📂 Project Structure](#project-structure)
+- [⚙️ Installation & Setup](#installation--setup)
+- [🧪 Frontend Validation](#frontend-validation)
+- [🔑 Environment Variables](#environment-variables)
+- [📡 API Endpoints](#api-endpoints)
+- [🔍 OCR Workflow](#ocr-workflow)
+- [⚠️ OCR Failure Protection](#ocr-failure-protection)
+- [🤝 Contributing](#contributing)
+- [🔒 Security & Disclaimer](#security--disclaimer)
+- [🗺️ Future Roadmap](#future-roadmap)
+- [🐛 Troubleshooting](#troubleshooting)
+- [❤️ Contributors](#contributors)
+- [📄 License](#license)
 
 ---
 
