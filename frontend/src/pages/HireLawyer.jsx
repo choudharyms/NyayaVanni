@@ -1,4 +1,4 @@
-import React, { useMemo, useState, useEffect } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
 import LawyerSkeleton from "../components/LawyerSkeleton";
 import { useNavigate } from "react-router-dom";
 import {
@@ -23,6 +23,18 @@ import { useLanguage } from "../contexts/LanguageContext";
 import ThemeToggle from "../components/ThemeToggle";
 import Breadcrumb from "../components/Breadcrumb";
 import Footer from "../components/Footer";
+import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
+import SearchShortcutHint from "../components/SearchShortcutHint";
+
+// Placeholders constant
+const PLACEHOLDERS = {
+  HIRE_LAWYER_CASE: "Briefly describe your legal issue or questions for the lawyer...",
+};
+
+// ARIA Labels constant
+const ARIA_LABELS = {
+  GO_BACK: "Go back to previous page",
+};
 
 export default function HireLawyer() {
   const { t } = useLanguage();
@@ -41,6 +53,14 @@ export default function HireLawyer() {
   // Search and Filter State
   const [searchTerm, setSearchTerm] = useState("");
   const [filterType, setFilterType] = useState("All");
+
+  // Search input ref for keyboard shortcut
+  const searchInputRef = useRef(null);
+
+  // Ctrl+K / Cmd+K to focus search
+  useKeyboardShortcut('k', () => {
+    searchInputRef.current?.focus();
+  });
 
   // Modal / Booking State
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -72,7 +92,7 @@ export default function HireLawyer() {
         specialty: "Real Estate & Property",
         experience: "15 Years",
         location: "New Delhi, Delhi",
-        fee: "â‚¹2,000/Consultation",
+        fee: "₹2,000/Consultation",
         image:
           "https://images.unsplash.com/photo-1560250097-0b93528c311a?auto=format&fit=crop&q=80&w=256&h=256",
       },
@@ -82,7 +102,7 @@ export default function HireLawyer() {
         specialty: "Family Law & Divorce",
         experience: "12 Years",
         location: "Mumbai, Maharashtra",
-        fee: "â‚¹2,500/Consultation",
+        fee: "₹2,500/Consultation",
         image:
           "https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&q=80&w=256&h=256",
       },
@@ -92,7 +112,7 @@ export default function HireLawyer() {
         specialty: "Corporate & Business",
         experience: "20 Years",
         location: "Bengaluru, Karnataka",
-        fee: "â‚¹5,000/Consultation",
+        fee: "₹5,000/Consultation",
         image:
           "https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&q=80&w=256&h=256",
       },
@@ -102,7 +122,7 @@ export default function HireLawyer() {
         specialty: "Criminal Defense",
         experience: "8 Years",
         location: "Pune, Maharashtra",
-        fee: "â‚¹1,500/Consultation",
+        fee: "₹1,500/Consultation",
         image:
           "https://images.unsplash.com/photo-1580489944761-15a19d654956?auto=format&fit=crop&q=80&w=256&h=256",
       },
@@ -112,7 +132,7 @@ export default function HireLawyer() {
         specialty: "Civil Litigation",
         experience: "18 Years",
         location: "Chennai, Tamil Nadu",
-        fee: "â‚¹3,000/Consultation",
+        fee: "₹3,000/Consultation",
         image:
           "https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?auto=format&fit=crop&q=80&w=256&h=256",
       },
@@ -122,7 +142,7 @@ export default function HireLawyer() {
         specialty: "Intellectual Property",
         experience: "10 Years",
         location: "Hyderabad, Telangana",
-        fee: "â‚¹4,000/Consultation",
+        fee: "₹4,000/Consultation",
         image:
           "https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&q=80&w=256&h=256",
       },
@@ -267,12 +287,12 @@ export default function HireLawyer() {
   };
 
   const isTimeSlotBooked = (date, time) => {
-  return activeBookings.some(
-    (booking) =>
-      booking.lawyer.id === selectedLawyer?.id &&
-      booking.rawDate === date &&
-      booking.time === time
-  );
+    return activeBookings.some(
+      (booking) =>
+        booking.lawyer.id === selectedLawyer?.id &&
+        booking.rawDate === date &&
+        booking.time === time
+    );
   };
 
   return (
@@ -407,12 +427,18 @@ export default function HireLawyer() {
                 )}
 
                 <input
+                  ref={searchInputRef}
                   type="text"
                   placeholder={t("lawyers.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className="w-full py-4 pl-12 pr-20 text-slate-900 dark:text-white transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
                 />
+
+                {/* Keyboard shortcut hint */}
+                <div className="absolute inset-y-0 right-14 flex items-center pointer-events-none">
+                  <SearchShortcutHint />
+                </div>
               </div>
 
               {/* Filter */}
@@ -434,33 +460,33 @@ export default function HireLawyer() {
                 </select>
 
                 <div className="absolute inset-y-0 flex items-center pointer-events-none right-4 text-slate-400 dark:text-slate-500">
-                  â–¾
+                  ▼
                 </div>
               </div>
             </div>
 
             <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-500 dark:text-slate-400">
-<p>
-  {searchTerm.trim().length > 0 ? (
-    <>
-      Showing{" "}
-      <span className="font-semibold text-slate-800 dark:text-slate-200">
-        {filteredLawyers.length}
-      </span>{" "}
-      result(s)
-    </>
-  ) : (
-    <>
-      Showing all{" "}
-      <span className="font-semibold text-slate-800 dark:text-slate-200">
-        {filteredLawyers.length}
-      </span>{" "}
-      available lawyers
-    </>
-  )}
-       </p>
-       <p className="hidden sm:block">
-              Tip: Search by <span className="text-slate-800 dark:text-slate-200 font-semibold">name</span>,{" "}
+              <p>
+                {searchTerm.trim().length > 0 ? (
+                  <>
+                    Showing{" "}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {filteredLawyers.length}
+                    </span>{" "}
+                    result(s)
+                  </>
+                ) : (
+                  <>
+                    Showing all{" "}
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">
+                      {filteredLawyers.length}
+                    </span>{" "}
+                    available lawyers
+                  </>
+                )}
+              </p>
+              <p className="hidden sm:block">
+                Tip: Search by <span className="text-slate-800 dark:text-slate-200 font-semibold">name</span>,{" "}
                 <span className="text-slate-800 dark:text-slate-200 font-semibold">specialty</span>, or{" "}
                 <span className="text-slate-800 dark:text-slate-200 font-semibold">location</span>.
               </p>
@@ -469,13 +495,13 @@ export default function HireLawyer() {
         </div>
 
         {/* Grid */}
-       {loading ? (
-  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
-    {Array.from({ length: 6 }).map((_, index) => (
-      <LawyerSkeleton key={index} />
-    ))}
-  </div>
-) : filteredLawyers.length === 0 ? (
+        {loading ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+            {Array.from({ length: 6 }).map((_, index) => (
+              <LawyerSkeleton key={index} />
+            ))}
+          </div>
+        ) : filteredLawyers.length === 0 ? (
           <div className="p-10 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
             <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
             <h3 className="text-xl font-bold text-slate-850 dark:text-white">No lawyers found</h3>
@@ -637,7 +663,7 @@ export default function HireLawyer() {
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {timeSlots.map((time) => {
-                        const booked=isTimeSlotBooked(selectedDate,time);
+                        const booked = isTimeSlotBooked(selectedDate, time);
                         const isSelected = selectedTime === time;
                         const isPast = isPastTimeSlot(selectedDate, time);
                         return (
@@ -649,12 +675,12 @@ export default function HireLawyer() {
                             className={`py-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
                               (isPast || booked)
                                 ? "opacity-50 cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400"
-                              : isSelected
+                                : isSelected
                                 ? "bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10"
                                 : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300"
                             }`}
                           >
-                          {booked ? `${time} (Booked)` : time}
+                            {booked ? `${time} (Booked)` : time}
                           </button>
                         );
                       })}
@@ -672,7 +698,7 @@ export default function HireLawyer() {
                         attachDocument
                           ? "bg-blue-50/50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 shadow-sm"
                           : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/30"
-                        }`}
+                      }`}
                     >
                       <div
                         className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center border shrink-0 transition-colors ${
@@ -823,5 +849,3 @@ export default function HireLawyer() {
     </div>
   );
 }
-
-

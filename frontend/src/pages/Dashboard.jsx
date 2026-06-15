@@ -14,6 +14,8 @@ import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
+import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
+import SearchShortcutHint from "../components/SearchShortcutHint";
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -227,6 +229,14 @@ const [selectedType, _setSelectedType] = useState('all');
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
   const messagesEndRef = useRef(null);
+  
+  // Ref for Knowledge Graph search input
+  const kgSearchInputRef = useRef(null);
+
+  // Ctrl+K / Cmd+K to focus knowledge graph search
+  useKeyboardShortcut('k', () => {
+    kgSearchInputRef.current?.focus();
+  });
 
   useEffect(() => {
     if (file) {
@@ -810,22 +820,27 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
           <div className={KG_SECTION}>
             
             <div className="mb-6">
-  <h2 className={KG_TITLE}>
-    Legal Knowledge Graph
-  </h2>
+              <h2 className={KG_TITLE}>
+                Legal Knowledge Graph
+              </h2>
 
-  <p className={TEXT_MUTED + " mt-2"}>
-    Interactive visualization of clauses, obligations, parties, and relationships
-  </p>
+              <p className={TEXT_MUTED + " mt-2"}>
+                Interactive visualization of clauses, obligations, parties, and relationships
+              </p>
 
-  <div className="mt-4">
-    <input
-      type="text"
-      placeholder="Search nodes..."
-      className={SEARCH_INPUT}
-    />
-  </div>
-</div>
+              <div className="relative mt-4">
+                <input
+                  ref={kgSearchInputRef}
+                  type="text"
+                  placeholder="Search nodes... (Ctrl+K)"
+                  className={SEARCH_INPUT}
+                />
+                <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                  <SearchShortcutHint />
+                </div>
+              </div>
+            </div>
+
             <div className={KG_FLOW_CONTAINER}>
               <ReactFlow
                 nodes={graphNodes}
