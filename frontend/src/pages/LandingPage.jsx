@@ -1,6 +1,5 @@
 import React, { useState, useRef } from 'react';
-import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare, Twitter, Github, Linkedin, Instagram } from 'lucide-react';
-import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare,ChevronRight } from 'lucide-react';
+import { UploadCloud, ShieldCheck, Scale, FileText, ArrowRight, Loader2, Bot, MessageSquare, GitCompare, Twitter, Github, Linkedin, Instagram,ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
@@ -52,40 +51,40 @@ export default function LandingPage() {
   const handleAnalyze = async () => {
     if (!file) return;
     setLoading(true);
-    
+
     // Simulate MVP File Upload -> Fast API
     try {
       const formData = new FormData();
       formData.append('file', file);
-      
+
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       await ensureSessionId(apiUrl);
-      
+
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
         credentials: 'include',
         body: formData,
       });
-      
+
       if (!response.ok) throw new Error('Upload failed');
       const data = await response.json();
-      
+
       // Navigate to Dashboard with the document ID
       navigate(`/dashboard/${data.documentId}`, { state: { file } }); // Pass file for MVP purely to avoid re-downloading if needed
     } catch (error) {
       //console.error(error);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      
+
       // Check if we're in production but still pointing to localhost
       if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
         alert("Configuration Error: The app is trying to connect to a local server (localhost) while deployed. Please set the VITE_API_URL environment variable in your Vercel dashboard.");
       }
-      
+
       // Fallback for MVP local test if API isn't up
       setTimeout(() => {
         navigate(`/dashboard/demo-doc-123`, { state: { file } });
       }, 1500);
-    } 
+    }
   };
 //  Shared hover styles for footer navigation links
   const footerLinkClass =
@@ -104,13 +103,13 @@ export default function LandingPage() {
             <span>Nyaya<span className="text-nyaya-500">Vanni</span></span>
           </div>
           <div className="flex items-center gap-4">
-            <button 
+            <button
               onClick={() => navigate('/lawyers')}
               className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
             >
               {t("nav.hire")}
             </button>
-            <button 
+            <button
               onClick={() => navigate('/contact')}
               className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
             >
@@ -137,11 +136,11 @@ export default function LandingPage() {
 
         {/* Actions Area — 4-card grid */}
         <div className="relative z-10 grid justify-center w-full max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-          
+
           {/* Upload Document Card */}
           <div className="relative w-full animate-float group" style={{ animationDelay: '0s' }}>
             <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-nyaya-500/10 dark:from-nyaya-500/20 to-blue-500/10 dark:to-blue-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
-            <div 
+            <div
               className={`h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl p-10 border-2 transition-all duration-300 flex flex-col items-center justify-center min-h-90
                 ${dragActive ? 'border-nyaya-500 shadow-[0_0_30px_rgba(37,99,235,0.2)]' : 'border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:-translate-y-2 cursor-pointer'}`}
               onDragEnter={handleDrag}
@@ -149,12 +148,12 @@ export default function LandingPage() {
               onDragOver={handleDrag}
               onDrop={handleDrop}
             >
-              <input 
-                ref={inputRef} type="file" className="hidden" 
+              <input
+                ref={inputRef} type="file" className="hidden"
                 accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/png,image/jpeg"
-                onChange={handleChange} 
+                onChange={handleChange}
               />
-              
+
               {!file ? (
                 <>
                   <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
@@ -164,7 +163,7 @@ export default function LandingPage() {
                   <p className="flex-1 mb-8 text-base whitespace-pre-line text-slate-600 dark:text-slate-400">
                     {t("landing.upload.desc")}
                   </p>
-                  <button 
+                  <button
                     onClick={onButtonClick}
                     className="flex items-center justify-center w-full gap-2 px-8 py-3 font-semibold transition-all bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-full shadow-lg sm:w-auto hover:scale-105"
                   >
@@ -178,13 +177,13 @@ export default function LandingPage() {
                   </div>
                   <h3 className="mb-2 text-xl font-bold text-slate-850 dark:text-white truncate max-w-50" title={file.name}>{file.name}</h3>
                   <p className="mb-10 text-sm text-slate-500 dark:text-slate-400">{(file.size / 1024 / 1024).toFixed(2)} MB • Ready for analysis</p>
-                  
+
                   <div className="flex flex-col justify-center w-full gap-4 sm:flex-row">
                     <button onClick={(e) => { e.stopPropagation(); setFile(null); }} className="px-6 py-3 font-medium transition-colors rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300" disabled={loading}>
                       {t("landing.upload.cancel")}
                     </button>
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); handleAnalyze(); }} 
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleAnalyze(); }}
                       disabled={loading}
                       className="flex items-center justify-center gap-2 px-8 py-3 font-semibold text-white transition-all rounded-full shadow-lg bg-nyaya-500 hover:bg-nyaya-400 shadow-nyaya-500/15 dark:shadow-nyaya-500/25 disabled:opacity-70 hover:scale-105"
                     >
@@ -199,7 +198,7 @@ export default function LandingPage() {
               )}
             </div>
           </div>
- 
+
           {/* Chat with Bot Card */}
           <div className="relative w-full animate-float group" style={{ animationDelay: '0.2s' }}>
             <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-purple-500/10 dark:from-purple-500/20 to-pink-500/10 dark:to-pink-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
@@ -211,23 +210,23 @@ export default function LandingPage() {
               <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
                 {t("landing.chat.desc")}
               </p>
-              
+
               <div className="flex flex-col gap-3 w-full max-w-62.5 mb-8">
-                <button 
+                <button
                   onClick={(e) => { e.stopPropagation(); navigate('/chat', { state: { initialPrompt: "I need to draft a legal notice." } }); }}
                   className="flex items-center justify-between px-4 py-2 text-sm text-left transition-colors border rounded-lg bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-700/50 dark:border-slate-700 dark:text-slate-300 group/btn"
                 >
                   {t("landing.chat.draftNotice")} <ArrowRight className="w-4 h-4 transition-opacity opacity-0 group-hover/btn:opacity-100" />
                 </button>
-                <button 
+                <button
                   onClick={(e) => { e.stopPropagation(); navigate('/chat', { state: { initialPrompt: "I need to draft a reply to a legal notice." } }); }}
                   className="flex items-center justify-between px-4 py-2 text-sm text-left transition-colors border rounded-lg bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-700/50 dark:border-slate-700 dark:text-slate-300 group/btn"
                 >
                   {t("landing.chat.replyNotice")} <ArrowRight className="w-4 h-4 transition-opacity opacity-0 group-hover/btn:opacity-100" />
                 </button>
               </div>
- 
-              <button 
+
+              <button
                 onClick={(e) => { e.stopPropagation(); navigate('/chat'); }}
                 className="w-full sm:w-auto bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(168,85,247,0.15)] dark:shadow-[0_0_20px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2 hover:scale-105"
               >
@@ -235,12 +234,12 @@ export default function LandingPage() {
               </button>
             </div>
           </div>
- 
- 
+
+
           {/* Scam Detector Card */}
           <div className="relative w-full animate-float group" style={{ animationDelay: '0.4s' }}>
             <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-emerald-500/10 dark:from-emerald-500/20 to-cyan-500/10 dark:to-cyan-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
- 
+
             <div
               className="flex flex-col items-center justify-center h-full p-10 transition-all duration-300 border-2 cursor-pointer bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 min-h-90 hover:-translate-y-2"
               onClick={() => navigate('/scam-detector')}
@@ -248,12 +247,12 @@ export default function LandingPage() {
               <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
                 <ShieldCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-555 dark:group-hover:text-emerald-300" />
               </div>
- 
+
               <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">Scam Detector</h3>
               <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
                 Analyze suspicious legal SMS, WhatsApp, or email text and get a risk score with clear explanations.
               </p>
- 
+
               <button
                 onClick={(e) => { e.stopPropagation(); navigate('/scam-detector'); }}
                 className="w-full sm:w-auto bg-linear-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(16,185,129,0.15)] dark:shadow-[0_0_20px_rgba(16,185,129,0.25)] flex items-center justify-center gap-2 hover:scale-105"
@@ -387,7 +386,7 @@ export default function LandingPage() {
             {/* Links */}
             <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
               <div>
-                <p className="mb-3 text-sm font-semibold text-slate-800  dark:text-white">Product</p>    
+                <p className="mb-3 text-sm font-semibold text-slate-800  dark:text-white">Product</p>
                 <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
                   <button onClick={() => navigate('/chat')}  className={`${footerLinkClass} flex items-center gap-1`}
 >Chat with AI<ChevronRight className="w-3 h-3 opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:translate-x-1"

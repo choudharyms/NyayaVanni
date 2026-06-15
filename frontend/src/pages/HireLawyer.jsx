@@ -209,8 +209,20 @@ export default function HireLawyer() {
     if (!selectedLawyer || !selectedDate || !selectedTime) return;
 
     if (isPastTimeSlot(selectedDate, selectedTime)) {
-    alert("Cannot book a consultation in the past.");
-    return;
+      alert("Cannot book a consultation in the past.");
+      return;
+    }
+
+    const existingBooking = activeBookings.some(
+      (booking) =>
+        booking.lawyer.id === selectedLawyer.id &&
+        booking.rawDate === selectedDate &&
+        booking.time === selectedTime
+    );
+
+    if (existingBooking) {
+      alert("This lawyer is already booked for the selected date and time.");
+      return;
     }
 
     const randomId = Math.floor(1000 + Math.random() * 9000);
@@ -252,6 +264,15 @@ export default function HireLawyer() {
       setActiveBookings(next);
       localStorage.setItem("nyayavanni_consultations", JSON.stringify(next));
     }
+  };
+
+  const isTimeSlotBooked = (date, time) => {
+  return activeBookings.some(
+    (booking) =>
+      booking.lawyer.id === selectedLawyer?.id &&
+      booking.rawDate === date &&
+      booking.time === time
+  );
   };
 
   return (
@@ -616,23 +637,24 @@ export default function HireLawyer() {
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {timeSlots.map((time) => {
+                        const booked=isTimeSlotBooked(selectedDate,time);
                         const isSelected = selectedTime === time;
                         const isPast = isPastTimeSlot(selectedDate, time);
                         return (
                           <button
                             key={time}
                             type="button"
-                            disabled={isPast}
-                            onClick={() => !isPast && setSelectedTime(time)}
+                            disabled={isPast || booked}
+                            onClick={() => !(isPast || booked) && setSelectedTime(time)}
                             className={`py-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
-                              isPast
+                              (isPast || booked)
                                 ? "opacity-50 cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400"
                               : isSelected
                                 ? "bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10"
                                 : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300"
                             }`}
                           >
-                            {time}
+                          {booked ? `${time} (Booked)` : time}
                           </button>
                         );
                       })}
