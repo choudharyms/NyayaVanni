@@ -193,6 +193,18 @@ export default function HireLawyer() {
     e.preventDefault();
     if (!selectedLawyer || !selectedDate || !selectedTime) return;
 
+    const existingBooking = activeBookings.some(
+   (booking) =>
+    booking.lawyer.id === selectedLawyer.id &&
+    booking.rawDate === selectedDate &&
+    booking.time === selectedTime
+    );
+
+    if (existingBooking) {
+      alert("This lawyer is already booked for the selected date and time.");
+      return;
+    }
+
     const randomId = Math.floor(1000 + Math.random() * 9000);
     const meetingCode = `NV-${randomId}-${selectedLawyer.name
       .split(" ")
@@ -232,6 +244,15 @@ export default function HireLawyer() {
       setActiveBookings(next);
       localStorage.setItem("nyayavanni_consultations", JSON.stringify(next));
     }
+  };
+
+  const isTimeSlotBooked = (date, time) => {
+  return activeBookings.some(
+    (booking) =>
+      booking.lawyer.id === selectedLawyer?.id &&
+      booking.rawDate === date &&
+      booking.time === time
+  );
   };
 
   return (
@@ -596,19 +617,23 @@ export default function HireLawyer() {
                     </label>
                     <div className="grid grid-cols-3 gap-2">
                       {timeSlots.map((time) => {
+                        const booked=isTimeSlotBooked(selectedDate,time);
                         const isSelected = selectedTime === time;
                         return (
                           <button
                             key={time}
                             type="button"
+                            disabled={booked}
                             onClick={() => setSelectedTime(time)}
                             className={`py-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
-                              isSelected
+                              booked 
+                              ? "opacity-50 cursor-not-allowed"
+                              : isSelected
                                 ? "bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10"
                                 : "bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300"
                             }`}
                           >
-                            {time}
+                          {booked ? `${time} (Booked)` : time}
                           </button>
                         );
                       })}
