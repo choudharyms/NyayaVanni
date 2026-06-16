@@ -354,6 +354,7 @@ export default function HireLawyer() {
                   placeholder={t("lawyers.search")}
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  maxLength={100}
                   className="w-full py-4 pl-12 pr-20 text-slate-900 dark:text-white transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
                 />
               </div>
@@ -635,6 +636,7 @@ export default function HireLawyer() {
                       value={caseDescription}
                       onChange={(e) => setCaseDescription(e.target.value)}
                       rows={3}
+                      maxLength={1000}
                       className="w-full p-3 text-xs font-medium border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-900"
                     />
                   </div>

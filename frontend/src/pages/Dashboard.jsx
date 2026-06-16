@@ -813,6 +813,7 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
     <input
       type="text"
       placeholder="Search nodes..."
+      maxLength={100}
       className={SEARCH_INPUT}
     />
   </div>
@@ -945,6 +946,7 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
             <input 
               type="text" 
               value={chatInput}
+              maxLength={2000}
               onChange={(e) => setChatInput(e.target.value)}
               placeholder={t("chat.placeholder")}
               className={CHAT_INPUT}

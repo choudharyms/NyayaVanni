@@ -322,6 +322,7 @@ export default function ScamDetector() {
               value={text}
               onChange={(e) => setText(e.target.value)}
               rows={10}
+              maxLength={5000}
               placeholder="Paste the suspicious SMS/WhatsApp/email/legal notice text here…"
               className={TEXTAREA_BASE}
             />

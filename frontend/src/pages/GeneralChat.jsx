@@ -382,6 +382,7 @@ export default function GeneralChat() {
                   disabled={chatLoading}
                   rows={1}
                   autoFocus
+                  maxLength={2000}
                   className="
                     chat-textarea
                     flex-1

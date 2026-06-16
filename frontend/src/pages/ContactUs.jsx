@@ -7,7 +7,7 @@ import Footer from "../components/Footer";
 
 export default function ContactUs() {
   const navigate = useNavigate();
-  const { language, t } = useLanguage();
+  const { language } = useLanguage();
 
   const [formData, setFormData] = useState({
     name: "",
@@ -62,7 +62,7 @@ export default function ContactUs() {
       // Assume success
       setSubmitStatus("success");
       setFormData({ name: "", email: "", subject: "", message: "" });
-    } catch (error) {
+    } catch {
       setSubmitStatus("error");
     } finally {
       setIsSubmitting(false);
@@ -127,6 +127,7 @@ export default function ContactUs() {
                   <input
                     type="text"
                     id="name"
+                    maxLength={100}
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
@@ -143,6 +144,7 @@ export default function ContactUs() {
                   <input
                     type="email"
                     id="email"
+                    maxLength={254}
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
@@ -160,6 +162,7 @@ export default function ContactUs() {
                 <input
                   type="text"
                   id="subject"
+                  maxLength={150}
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
@@ -177,6 +180,7 @@ export default function ContactUs() {
                   id="message"
                   name="message"
                   rows="5"
+                  maxLength={500}
                   value={formData.message}
                   onChange={handleChange}
                   className={`px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all resize-none`}
