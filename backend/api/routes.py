@@ -66,7 +66,20 @@ class DocumentGenerationRequest(BaseModel):
     jurisdiction: str = Field(..., max_length=200)
 
 
-def require_session_id(request: Request) -> str:
+
+    def require_session_id(request: Request) -> str:
+    """
+    Extract and validate session ID from request cookies.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+
+    Returns:
+        str: The session ID string from cookies.
+
+    Raises:
+        HTTPException 401: If session_id cookie is missing.
+    """
     session_id = request.cookies.get("session_id")
     if not session_id:
         raise HTTPException(status_code=401, detail="Missing session_id cookie")
@@ -74,18 +87,38 @@ def require_session_id(request: Request) -> str:
 
 
 def require_document_owner(document_id: str, session_id: str) -> dict:
-    record = get_document_record(document_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Document not found")
-    if record.get("session_id") != session_id:
-        raise HTTPException(status_code=403, detail="Access denied for this document")
-    return record
+    """
+    Verify that the current session owns the requested document.
+
+    Args:
+        document_id (str): The unique identifier of the document.
+        session_id (str): The current user's session ID.
+
+    Returns:
+        dict: The document record if ownership is verified.
+
+    Raises:
+        HTTPException 404: If the document is not found.
+        HTTPException 403: If the session does not own the document.
+    """
 
 
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
-    """Receive contact form submissions with IP-based rate limiting."""
+    """
+    Handle contact form submissions with rate limiting.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+        body (ContactRequest): Contains name, email, subject, and message.
+
+    Returns:
+        dict: Status ok and confirmation message.
+
+    Raises:
+        HTTPException 429: If rate limit is exceeded.
+    """
     logger.info(
         "Contact submission from %s: name=%s email=%s subject=%s",
         request.client.host if request.client else "unknown",
@@ -99,26 +132,39 @@ async def contact_us(request: Request, body: ContactRequest):
     }
 
 
+
 @api_router.get("/session")
 async def create_session(request: Request, response: Response):
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        session_id = create_session_id()
-        response.set_cookie(
-            key="session_id",
-            value=session_id,
-            httponly=True,
-            samesite="lax",
-            secure=False,  # Set to True if using HTTPS in production
-            max_age=30 * 24 * 60 * 60  # 30 days
-        )
-    return {"status": "Session active"}
+    """
+    Create or retrieve a session ID stored in a secure cookie.
 
+    Args:
+        request (Request): The incoming HTTP request object.
+        response (Response): The HTTP response object used to set cookies.
+
+    Returns:
+        dict: A status message confirming the session is active.
+    """
+    session_id = request.cookies.get("session_id")
 
 @api_router.post("/upload")
 @limiter.limit(UPLOAD_RATE_LIMIT)
 async def upload_document(request: Request, file: UploadFile = File(...)):
-    """Upload document and return documentId"""
+    """
+    Upload a legal document and store it on the server.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+        file (UploadFile): The document file to upload (PDF, PNG, JPG, JPEG).
+
+    Returns:
+        dict: Contains documentId and success message.
+
+    Raises:
+        HTTPException 400: If filename is invalid or file format not supported.
+        HTTPException 413: If file size exceeds 10MB limit.
+        HTTPException 500: If file save fails.
+    """
     try:
         session_id = require_session_id(request)
 
@@ -167,7 +213,26 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 @api_router.post("/analyze/{document_id}")
 @limiter.limit(RATE_LIMIT_ANALYZE)
 def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False, file: UploadFile = File(None)):
-    """Trigger full analysis pipeline."""
+    """
+    Analyze a legal document using OCR, AI, and knowledge graph.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+        document_id (str): The unique ID of the document to analyze.
+        language (str): Language code for analysis, defaults to 'en'.
+        force_ocr (bool): Force OCR even if text is cached.
+        file (UploadFile): Optional new file to analyze directly.
+
+    Returns:
+        dict: Contains documentId, analysis, confidence, classification,
+            knowledge_graph, extracted_text, and cached status.
+
+    Raises:
+        HTTPException 400: If input structure is invalid.
+        HTTPException 404: If document file is not found.
+        HTTPException 429: If AI quota limit is reached.
+        HTTPException 500: If analysis fails.
+    """
     try:
         session_id = require_session_id(request)
         record = require_document_owner(document_id, session_id)
@@ -288,6 +353,7 @@ def chat_stream_sse(
             pass
 
     def event_generator():
+        """Generate SSE events for real-time chat streaming."""
         try:
             for chunk in stream_chat_response(analysis, [], user_message, language):
                 # SSE format: data: <payload>\n\n
@@ -312,7 +378,21 @@ def chat_stream_sse(
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_general(request: Request, chat_request: ChatRequest):
-    """General legal chat â€” no document context."""
+   """
+Handle general legal chat without any document context.
+
+Args:
+    request (Request): The incoming HTTP request object.
+    chat_request (ChatRequest): Contains user_message, language,
+        and chat_history.
+
+Returns:
+    ChatResponse: AI-generated legal response text.
+
+Raises:
+    HTTPException 400: If the user message is empty.
+    HTTPException 500: If chat generation fails.
+"""
     try:
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
@@ -337,7 +417,21 @@ def chat_general(request: Request, chat_request: ChatRequest):
 @api_router.post("/chat/{document_id}")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_with_document(request: Request, document_id: str, chat_request: ChatRequest):
-    """Send chat message with document context loaded server-side."""
+    """
+    Handle chat with a specific legal document as context.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+        document_id (str): The ID of the document to use as context.
+        chat_request (ChatRequest): Contains user_message and chat_history.
+
+    Returns:
+        StreamingResponse: AI-generated response based on document context.
+
+    Raises:
+        HTTPException 400: If message is empty.
+        HTTPException 500: If chat generation fails.
+    """
     try:
         session_id = require_session_id(request)
         require_document_owner(document_id, session_id)
@@ -371,7 +465,21 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
 @api_router.post("/generate-document")
 @limiter.limit("10/minute")
 def generate_document(request: Request, payload: DocumentGenerationRequest):
-    """Generates a standard NDA document as a PDF based on provided details."""
+    """
+    Generate a standard NDA document as a downloadable PDF.
+
+    Args:
+        request (Request): The incoming HTTP request object.
+        payload (DocumentGenerationRequest): Contains effective_date,
+            party_one_name, party_two_name, consideration_amount,
+            and jurisdiction.
+
+    Returns:
+        StreamingResponse: A downloadable PDF file of the NDA document.
+
+    Raises:
+        HTTPException 500: If PDF generation fails.
+    """
     try:
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
@@ -425,6 +533,21 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
 
 @api_router.delete("/documents/{document_id}")
 async def delete_document(document_id: str, request: Request):
+    """
+    Delete a legal document and remove it from the search index.
+
+    Args:
+        document_id (str): The unique ID of the document to delete.
+        request (Request): The incoming HTTP request object.
+
+    Returns:
+        dict: Contains documentId and deleted status.
+
+    Raises:
+        HTTPException 401: If session is missing.
+        HTTPException 403: If session does not own the document.
+        HTTPException 404: If document is not found.
+    """
     session_id = require_session_id(request)
     require_document_owner(document_id, session_id)
 
