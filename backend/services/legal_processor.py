@@ -6,6 +6,12 @@ class LegalQueryOptimizer:
     for accurate, citation-backed Indian legal responses using the Gemini API.
     """
     def __init__(self):
+        """Initialize the LegalQueryOptimizer with system prompt instructions.
+
+        Sets up the legal_instruction string that enforces citation-backed
+        responses under Indian law frameworks (BNS, IPC, CPC) when appended
+        to user queries sent to the Gemini API.
+        """
         # Strict guidelines to append to the system instructions
         self.legal_instruction = (
             "\n\n[SYSTEM INSTRUCTION: You must analyze the following user query strictly under "
@@ -16,9 +22,20 @@ class LegalQueryOptimizer:
         )
 
     def clean_and_expand_query(self, query: str) -> str:
-        """
-        Cleans input noise and expands conversational legal shortforms 
-        so the Gemini API models can parse key terminology accurately.
+       """Clean input noise and expand conversational legal shortforms.
+
+        Strips whitespace, expands common Indian legal abbreviations (e.g.
+        IPC → Indian Penal Code, BNS → Bharatiya Nyaya Sanhita, FIR → First
+        Information Report), and removes stray special characters so the
+        Gemini API models can parse key terminology accurately.
+
+        Args:
+            query: Raw user input string, possibly containing abbreviations
+                   or noisy punctuation.
+
+        Returns:
+            A cleaned and expanded query string, or an empty string if the
+            input is falsy.
         """
         if not query:
             return ""
@@ -44,8 +61,18 @@ class LegalQueryOptimizer:
         return cleaned
 
     def optimize_prompt(self, user_message: str) -> str:
-        """
-        Combines the cleaned query with structural system prompt constraints.
+        """Combine the cleaned query with structural system prompt constraints.
+
+        Passes the user message through clean_and_expand_query first, then
+        appends the legal_instruction to enforce citation-backed, disclaimer-
+        ended responses from the Gemini API.
+
+        Args:
+            user_message: Raw legal question from the user.
+
+        Returns:
+            A formatted string with the cleaned query followed by the system
+            instruction block, ready to be sent to the Gemini API.
         """
         processed_query = self.clean_and_expand_query(user_message)
         return f"{processed_query}{self.legal_instruction}"
