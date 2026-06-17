@@ -7,7 +7,7 @@ import ReactFlow, {
   Background
 } from 'reactflow'; 
 import 'reactflow/dist/style.css';
-import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search, Copy, Printer } from 'lucide-react';
+import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search, Copy, Printer, Share2 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
@@ -475,13 +475,24 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
              <div className={DOC_BADGE}>
                Doc ID: {documentId.substring(0, 8)}...
              </div>
-             <button
-               onClick={() => window.print()}
-               className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
-               aria-label="Print report"
-             >
-               <Printer className="w-4 h-4" />
-             </button>
+              <button
+                onClick={() => window.print()}
+                className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+                aria-label="Print report"
+              >
+                <Printer className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => {
+                  const risk = classification?.risk_level || analysis?.risk_level || 'N/A';
+                  const body = `Document Analysis Report\n\nDocument: ${file?.name || 'Document'}\nRisk Level: ${risk}\n\nView full analysis: ${window.location.href}`;
+                  window.location.href = `mailto:?subject=Legal Document Analysis&body=${encodeURIComponent(body)}`;
+                }}
+                className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+                aria-label="Share analysis via email"
+              >
+                <Share2 className="w-4 h-4" />
+              </button>
              <ThemeToggle />
            </div>
         </div>
