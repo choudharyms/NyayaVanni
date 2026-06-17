@@ -13,18 +13,40 @@ export default function LandingPage() {
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [dragError, setDragError] = useState(false);
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const { history, clearHistory } = useDocumentHistory();
   const [openFaq, setOpenFaq] = useState(0);
+
+  const ALLOWED_MIME = ["application/pdf", "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "image/png", "image/jpeg"];
+  const ALLOWED_EXT = [".pdf", ".docx", ".png", ".jpg", ".jpeg"];
+
+  const isFileAllowed = (file) => {
+    if (ALLOWED_MIME.includes(file.type)) return true;
+    const ext = "." + file.name.split(".").pop().toLowerCase();
+    return ALLOWED_EXT.includes(ext);
+  };
 
   const handleDrag = (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (e.type === "dragenter" || e.type === "dragover") {
       setDragActive(true);
+      const items = e.dataTransfer?.items;
+      if (items && items.length > 0) {
+        const item = items[0];
+        if (item.kind === "file") {
+          if (item.type && !ALLOWED_MIME.includes(item.type)) {
+            setDragError(true);
+          } else {
+            setDragError(false);
+          }
+        }
+      }
     } else if (e.type === "dragleave") {
       setDragActive(false);
+      setDragError(false);
     }
   };
 
@@ -32,8 +54,12 @@ export default function LandingPage() {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
+    setDragError(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+      const droppedFile = e.dataTransfer.files[0];
+      if (isFileAllowed(droppedFile)) {
+        setFile(droppedFile);
+      }
     }
   };
 
@@ -138,7 +164,7 @@ export default function LandingPage() {
             <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-nyaya-500/10 dark:from-nyaya-500/20 to-blue-500/10 dark:to-blue-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
             <div
               className={`h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl p-10 border-2 transition-all duration-300 flex flex-col items-center justify-center min-h-90
-                ${dragActive ? 'border-nyaya-500 shadow-[0_0_30px_rgba(37,99,235,0.2)]' : 'border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:-translate-y-2 cursor-pointer'}`}
+                ${dragError ? 'border-red-500 shadow-[0_0_30px_rgba(239,68,68,0.2)] bg-red-50 dark:bg-red-950/20' : dragActive ? 'border-nyaya-500 shadow-[0_0_30px_rgba(37,99,235,0.2)]' : 'border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:-translate-y-2 cursor-pointer'}`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
               onDragOver={handleDrag}
@@ -159,6 +185,11 @@ export default function LandingPage() {
                   <p className="flex-1 mb-8 text-base whitespace-pre-line text-slate-600 dark:text-slate-400">
                     {t("landing.upload.desc")}
                   </p>
+                  {dragError && (
+                    <p className="mb-4 text-sm font-medium text-red-600 dark:text-red-400">
+                      Unsupported file type. Please upload a PDF, DOCX, PNG, or JPG.
+                    </p>
+                  )}
                   <button
                     onClick={onButtonClick}
                     className="flex items-center justify-center w-full gap-2 px-8 py-3 font-semibold transition-all bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-full shadow-lg sm:w-auto hover:scale-105"
