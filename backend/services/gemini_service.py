@@ -37,13 +37,66 @@ query_optimizer = LegalQueryOptimizer()
 
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash-001")
 
+def _clean_schema(schema: dict) -> dict:
+    """
+    Fully dereference Pydantic's JSON schema (resolve $ref and $defs)
+    and clean unsupported keys (default, $defs, title, anyOf nullability)
+    to prevent Google GenAI SDK serialization crashes.
+    """
+    defs = schema.get("$defs", {})
+
+    def resolve_refs(node):
+        if isinstance(node, dict):
+            if "$ref" in node:
+                ref_path = node["$ref"]
+                ref_name = ref_path.split("/")[-1]
+                if ref_name in defs:
+                    resolved = resolve_refs(defs[ref_name].copy())
+                    desc = node.get("description")
+                    if desc:
+                        resolved["description"] = desc
+                    return resolved
+            return {k: resolve_refs(v) for k, v in node.items()}
+        elif isinstance(node, list):
+            return [resolve_refs(item) for item in node]
+        return node
+
+    # 1. Resolve all references recursively
+    derefed = resolve_refs(schema)
+
+    # 2. Clean fields recursively
+    def clean_fields(node):
+        if isinstance(node, dict):
+            node.pop("default", None)
+            node.pop("$defs", None)
+            node.pop("title", None)
+            
+            # Simplify Pydantic's 'anyOf': [{'type': 'X'}, {'type': 'null'}] to {'type': 'X'}
+            if "anyOf" in node:
+                non_null_types = [t for t in node["anyOf"] if isinstance(t, dict) and t.get("type") != "null"]
+                if non_null_types:
+                    node.update(clean_fields(non_null_types[0]))
+                node.pop("anyOf", None)
+                
+            for k, v in list(node.items()):
+                clean_fields(v)
+        elif isinstance(node, list):
+            for item in node:
+                clean_fields(item)
+        return node
+
+    clean_fields(derefed)
+    return derefed
+
+cleaned_schema = _clean_schema(DocumentAnalysis.model_json_schema())
+
 generation_config = {
     "temperature": 0.3,
     "top_p": 0.8,
     "top_k": 40,
     "max_output_tokens": 8192,
     "response_mime_type": "application/json",
-    "response_schema": DocumentAnalysis.model_json_schema(),
+    "response_schema": cleaned_schema,
 }
 
 chat_config = {
