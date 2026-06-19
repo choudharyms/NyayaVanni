@@ -53,6 +53,7 @@ def init_db(raise_on_error: bool = False):
         ''')
 
         _ensure_analysis_cache_table(cursor)
+        _ensure_sessions_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -140,6 +141,99 @@ def _ensure_analysis_cache_table(cursor):
             ''')
     cursor.execute(f"DROP TABLE {backup_table}")
 
+
+def _ensure_sessions_table(cursor):
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS sessions (
+            session_id TEXT PRIMARY KEY,
+            created_at TEXT NOT NULL,
+            last_used_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL
+        )
+    ''')
+
+
+SESSION_TTL = timedelta(days=30)
+
+
+def create_session_id() -> str:
+    session_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    expires_at = now + SESSION_TTL
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT OR IGNORE INTO sessions (session_id, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?)",
+            (session_id, now.isoformat(), now.isoformat(), expires_at.isoformat())
+        )
+        conn.commit()
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Session creation failed: {e}")
+    finally:
+        if conn:
+            conn.close()
+    return session_id
+
+
+def validate_session(session_id: str) -> bool:
+    if not session_id or not session_id.strip():
+        return False
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT expires_at FROM sessions WHERE session_id = ?",
+            (session_id,)
+        )
+        row = cursor.fetchone()
+        if not row:
+            return False
+        expires_at = datetime.fromisoformat(row[0])
+        if expires_at < datetime.now(timezone.utc):
+            logger.warning(f"Expired session attempted: {session_id}")
+            return False
+        now = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "UPDATE sessions SET last_used_at = ? WHERE session_id = ?",
+            (now, session_id)
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"Session validation failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def cleanup_expired_sessions_once() -> int:
+    now = datetime.now(timezone.utc).isoformat()
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE expires_at < ?", (now,))
+        deleted = cursor.rowcount
+        conn.commit()
+        if deleted:
+            logger.info(f"Cleaned up {deleted} expired sessions.")
+        return deleted
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Session cleanup failed: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+
 # Initialize tables
 init_db()
 
@@ -156,10 +250,6 @@ def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
     except Exception as e:
         logger.error(f"Local storage save failed: {e}")
         raise e
-
-def create_session_id() -> str:
-    return str(uuid.uuid4())
-
 
 def save_document_record(session_id: str, doc_id: str, filename: str, local_path: str):
     """Save document metadata to SQLite"""

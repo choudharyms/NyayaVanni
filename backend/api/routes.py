@@ -26,6 +26,7 @@ from ..services.storage_service import (
     save_cached_analysis,
     get_cached_analysis,
     create_session_id,
+    validate_session,
     delete_document_and_cache,
     UPLOAD_DIR
 )
@@ -75,6 +76,8 @@ def require_session_id(request: Request) -> str:
     session_id = request.cookies.get("session_id")
     if not session_id:
         raise HTTPException(status_code=401, detail="Missing session_id cookie")
+    if not validate_session(session_id):
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
     return session_id
 
 
@@ -108,7 +111,7 @@ async def contact_us(request: Request, body: ContactRequest):
 @limiter.limit("10/minute")
 async def create_session(request: Request, response: Response):
     session_id = request.cookies.get("session_id")
-    if not session_id:
+    if not session_id or not validate_session(session_id):
         session_id = create_session_id()
         response.set_cookie(
             key="session_id",
