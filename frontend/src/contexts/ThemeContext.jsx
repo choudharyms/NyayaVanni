@@ -26,9 +26,9 @@ export const ThemeProvider = ({ children }) => {
       return stored;
     }
 
-    const systemPrefersDark = window
-      .matchMedia('(prefers-color-scheme: dark)')
-      .matches;
+    const systemPrefersDark = window.matchMedia(
+      '(prefers-color-scheme: dark)'
+    ).matches;
 
     return systemPrefersDark ? 'dark' : 'light';
   });
@@ -48,9 +48,7 @@ export const ThemeProvider = ({ children }) => {
   }, [theme, hasManualPreference]);
 
   useEffect(() => {
-    const mediaQuery = window.matchMedia(
-      '(prefers-color-scheme: dark)'
-    );
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
     const handleChange = (event) => {
       if (!hasManualPreference) {
@@ -68,11 +66,7 @@ export const ThemeProvider = ({ children }) => {
   const toggleTheme = () => {
     setHasManualPreference(true);
 
-    setTheme((prev) =>
-      prev === 'light'
-        ? 'dark'
-        : 'light'
-    );
+    setTheme((prev) => (prev === 'light' ? 'dark' : 'light'));
   };
 
   return (

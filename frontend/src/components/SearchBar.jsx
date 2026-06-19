@@ -2,7 +2,10 @@
 import { Search, X } from 'lucide-react';
 import { ARIA_LABELS, TITLES, PLACEHOLDERS } from '../constants';
 
-export default function SearchBar({ onSearch, placeholder = PLACEHOLDERS.SEARCH_CONVERSATIONS }) {
+export default function SearchBar({
+  onSearch,
+  placeholder = PLACEHOLDERS.SEARCH_CONVERSATIONS,
+}) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -51,4 +54,3 @@ export default function SearchBar({ onSearch, placeholder = PLACEHOLDERS.SEARCH_
     </div>
   );
 }
-

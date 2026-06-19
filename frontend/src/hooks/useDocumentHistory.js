@@ -1,20 +1,17 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 
 const STORAGE_KEY = 'nyayavanni_doc_history';
 const MAX_ENTRIES = 5;
 
 export function useDocumentHistory() {
-  const [history, setHistory] = useState([]);
-
-  // Load from localStorage on mount
-  useEffect(() => {
+  const [history, setHistory] = useState(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) setHistory(JSON.parse(stored));
+      return stored ? JSON.parse(stored) : [];
     } catch {
-      setHistory([]);
+      return [];
     }
-  }, []);
+  });
 
   const saveToHistory = useCallback((entry) => {
     // entry: { documentId, fileName, fileType, riskLevel, analyzedAt }
@@ -23,7 +20,9 @@ export function useDocumentHistory() {
       const updated = [entry, ...filtered].slice(0, MAX_ENTRIES);
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch {
+        // ignore
+      }
       return updated;
     });
   }, []);

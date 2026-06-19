@@ -1,6 +1,15 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { Bot, User, Send, ArrowLeft, Scale, Download, Copy } from 'lucide-react';
+import {
+  Bot,
+  User,
+  Send,
+  ArrowLeft,
+  Scale,
+  Download,
+  Copy,
+  Trash2,
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
@@ -172,7 +181,7 @@ export default function GeneralChat() {
           });
         }
       }
-    } catch (err) {
+    } catch {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       let errorMessage =
@@ -237,20 +246,34 @@ export default function GeneralChat() {
   const handleDownload = () => {
     let content = 'NyayaVanni Legal Assistant - Consultation History\n';
     content += '=================================================\n\n';
+
     chatHistory.forEach((msg) => {
-      const role = msg.role === 'user' ? 'You' : 'NyayaVanni';
-      content += `[${role}]:\n${msg.message}\n\n`;
+      const role = msg.role === 'user' ? 'You' : 'Assistant';
+      content += `${role}:\n${msg.message}\n\n`;
     });
 
-    const blob = new Blob([content], { type: 'text/plain' });
+    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `NyayaVanni_Consultation_${new Date().toISOString().slice(0, 10)}.txt`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'nyaya-vanni-chat.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
     URL.revokeObjectURL(url);
+  };
+
+  const handleClearChat = () => {
+    if (window.confirm('Clear all messages in this conversation?')) {
+      setChatHistory([
+        {
+          role: 'assistant',
+          message:
+            'Hello! I am NyayaVanni Legal Assistant. How can I help you understand your legal rights today?',
+        },
+      ]);
+      setCurrentConversationId(null);
+    }
   };
 
   const chatContainerRef = useRef(null);
@@ -297,6 +320,13 @@ export default function GeneralChat() {
               title="Download Chat History"
             >
               <Download className="w-5 h-5" />
+            </button>
+            <button
+              onClick={handleClearChat}
+              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 cursor-pointer"
+              title="Clear Chat"
+            >
+              <Trash2 className="w-5 h-5" />
             </button>
             {isSaving && (
               <span className="text-xs text-slate-500 dark:text-slate-400">

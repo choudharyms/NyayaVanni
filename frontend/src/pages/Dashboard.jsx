@@ -1,13 +1,25 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
-import DashboardSkeleton from "../components/DashboardSkeleton";
-import ReactFlow, {
-  MiniMap,
-  Controls,
-  Background
-} from 'reactflow'; 
+import DashboardSkeleton from '../components/DashboardSkeleton';
+import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Scale, AlertTriangle, ArrowLeft, Calendar, FileText, Bot, Send, User, Users, AlertCircle, Briefcase, Search, Copy } from 'lucide-react';
+import {
+  Scale,
+  AlertTriangle,
+  ArrowLeft,
+  Calendar,
+  FileText,
+  Bot,
+  Send,
+  User,
+  Users,
+  AlertCircle,
+  Briefcase,
+  Search,
+  Copy,
+  Printer,
+  Share2,
+} from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
@@ -32,7 +44,8 @@ const NAV_BASE = `bg-white dark:bg-slate-900 border-b border-slate-200
   dark:border-slate-800 sticky top-0 z-20 shadow-sm 
   transition-colors duration-300`;
 
-const NAV_CONTAINER = "max-w-7xl mx-auto px-6 h-16 flex items-center justify-between";
+const NAV_CONTAINER =
+  'max-w-7xl mx-auto px-6 h-16 flex items-center justify-between';
 
 const NAV_BUTTON = `p-2 hover:bg-slate-100 dark:hover:bg-slate-800 
   rounded-full transition-colors text-slate-500 dark:text-slate-400 
@@ -50,21 +63,21 @@ const CARD_BASE = `bg-white dark:bg-slate-900 rounded-2xl shadow-sm
 const CARD_SUB = `bg-slate-50 dark:bg-slate-950 rounded-xl p-4 
   border border-slate-150 dark:border-slate-800`;
 
-const TEXT_PRIMARY = "text-slate-900 dark:text-white";
+const TEXT_PRIMARY = 'text-slate-900 dark:text-white';
 
-const TEXT_MUTED = "text-slate-600 dark:text-slate-400";
+const TEXT_MUTED = 'text-slate-600 dark:text-slate-400';
 
-const TEXT_SEMI = "font-semibold text-slate-800 dark:text-white";
+const TEXT_SEMI = 'font-semibold text-slate-800 dark:text-white';
 
-const BORDER_BASE = "border border-slate-200 dark:border-slate-800";
+const BORDER_BASE = 'border border-slate-200 dark:border-slate-800';
 
 const GO_BACK_BUTTON = `bg-slate-900 hover:bg-slate-850 dark:bg-white 
   dark:hover:bg-slate-100 text-white dark:text-slate-900 px-6 py-2 
   rounded-xl cursor-pointer`;
 
-const SECTION_TITLE = "text-2xl font-bold text-slate-900 dark:text-white";
+const SECTION_TITLE = 'text-2xl font-bold text-slate-900 dark:text-white';
 
-const SUBTITLE = "text-slate-600 dark:text-slate-400 mt-1";
+const SUBTITLE = 'text-slate-600 dark:text-slate-400 mt-1';
 
 const COPY_BUTTON = `text-xs px-3 py-1 rounded-lg bg-slate-200 
   dark:bg-slate-800 text-slate-800 dark:text-slate-200 
@@ -111,7 +124,8 @@ const KG_SECTION = `h-fit bg-white dark:bg-slate-900 rounded-2xl
   shadow-sm border border-slate-200 dark:border-slate-800 
   p-6 transition-colors duration-300`;
 
-const KG_TITLE = "text-3xl font-bold text-slate-900 dark:text-white leading-tight";
+const KG_TITLE =
+  'text-3xl font-bold text-slate-900 dark:text-white leading-tight';
 
 const SEARCH_INPUT = `w-full px-4 py-2 rounded-xl border 
   border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 
@@ -124,27 +138,30 @@ const KG_FLOW_CONTAINER = `h-[260px] rounded-xl overflow-hidden
 const NODE_DETAILS = `bg-slate-50 dark:bg-slate-950 
   border border-slate-200 dark:border-slate-800 rounded-xl p-4`;
 
-const NODE_INFO_LABEL = "font-semibold text-slate-650 dark:text-slate-400";
+const NODE_INFO_LABEL = 'font-semibold text-slate-650 dark:text-slate-400';
 
-const NODE_INFO_VALUE = "text-slate-800 dark:text-slate-200";
+const NODE_INFO_VALUE = 'text-slate-800 dark:text-slate-200';
 
 const KG_STAT_CARD = `bg-slate-50 dark:bg-slate-950 rounded-lg p-3 
   border border-slate-200 dark:border-slate-800 min-w-0 overflow-hidden`;
 
-const KG_STAT_LABEL = "font-semibold text-slate-900 dark:text-white";
+const KG_STAT_LABEL = 'font-semibold text-slate-900 dark:text-white';
 
-const KG_STAT_VALUE = "text-slate-600 dark:text-slate-400 font-medium";
+const KG_STAT_VALUE = 'text-slate-600 dark:text-slate-400 font-medium';
 
 const CHAT_PANEL = `lg:col-span-3 min-h-[400px] sticky top-24 
   flex flex-col bg-white dark:bg-slate-900 rounded-2xl shadow-lg 
   border border-slate-200 dark:border-slate-800 overflow-hidden 
   transition-colors duration-300`;
 
-const CHAT_HEADER = "bg-slate-900 dark:bg-slate-950 text-white p-4 flex items-center gap-3";
+const CHAT_HEADER =
+  'bg-slate-900 dark:bg-slate-950 text-white p-4 flex items-center gap-3';
 
-const CHAT_BODY = "flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-950/20";
+const CHAT_BODY =
+  'flex-1 overflow-y-auto p-4 space-y-4 bg-slate-50/50 dark:bg-slate-950/20';
 
-const USER_AVATAR = "w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-nyaya-500 text-white";
+const USER_AVATAR =
+  'w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-nyaya-500 text-white';
 
 const ASSISTANT_AVATAR = `w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800 
   text-slate-600 dark:text-slate-400 flex items-center justify-center 
@@ -153,7 +170,8 @@ const ASSISTANT_AVATAR = `w-8 h-8 rounded-full bg-slate-200 dark:bg-slate-800
 const USER_BUBBLE = `p-4 rounded-2xl max-w-[80%] text-sm whitespace-pre-wrap 
   bg-nyaya-900 text-white rounded-tr-sm shadow-md border border-nyaya-850`;
 
-const ASSISTANT_BUBBLE = "group relative p-3 rounded-2xl max-w-[85%] text-sm bg-white dark:bg-slate-950 rounded-tl-sm text-slate-750 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm";
+const ASSISTANT_BUBBLE =
+  'group relative p-3 rounded-2xl max-w-[85%] text-sm bg-white dark:bg-slate-950 rounded-tl-sm text-slate-750 dark:text-slate-200 border border-slate-200 dark:border-slate-800 shadow-sm';
 
 const PROSE = `prose prose-sm max-w-none prose-li:my-0.5 prose-ul:my-1 
   prose-p:my-1 text-slate-700 dark:text-slate-200 
@@ -165,7 +183,7 @@ const TYPING_INDICATOR = `p-4 rounded-2xl bg-white dark:bg-slate-950
   border border-slate-200 dark:border-slate-800 rounded-tl-sm 
   text-slate-750 dark:text-slate-200 shadow-sm flex gap-1 items-center`;
 
-const TYPING_DOT = "w-2 h-2 rounded-full bg-nyaya-500 animate-bounce";
+const TYPING_DOT = 'w-2 h-2 rounded-full bg-nyaya-500 animate-bounce';
 
 const CHAT_FORM = `p-4 bg-white dark:bg-slate-900 
   border-t border-slate-200 dark:border-slate-800 
@@ -188,11 +206,11 @@ const CLASSIFICATION_BOX = `mt-3 p-3 rounded-xl border
   border-blue-200 dark:border-blue-800/40 
   text-blue-850 dark:text-blue-200`;
 
-const DETECTED_TYPE = "text-sm font-bold text-blue-700 dark:text-blue-300";
+const DETECTED_TYPE = 'text-sm font-bold text-blue-700 dark:text-blue-300';
 
-const CONFIDENCE_TEXT = "text-xs text-slate-650 dark:text-slate-400 mt-1";
+const CONFIDENCE_TEXT = 'text-xs text-slate-650 dark:text-slate-400 mt-1';
 
-const ALTERNATIVES_TEXT = "mt-2 text-xs text-slate-500 dark:text-slate-400";
+const ALTERNATIVES_TEXT = 'mt-2 text-xs text-slate-500 dark:text-slate-400';
 
 export default function Dashboard() {
   const { t, language } = useLanguage();
@@ -202,26 +220,30 @@ export default function Dashboard() {
   const file = location.state?.file || null;
   const [previewUrl, setPreviewUrl] = useState(null);
   useEffect(() => {
-  if (file) {
-    const objectUrl = URL.createObjectURL(file);
-    setPreviewUrl(objectUrl);
+    if (file) {
+      const objectUrl = URL.createObjectURL(file);
+      setPreviewUrl(objectUrl);
 
-    return () => URL.revokeObjectURL(objectUrl);
-  }
-}, [file]);
+      return () => URL.revokeObjectURL(objectUrl);
+    }
+  }, [file]);
   const { saveToHistory } = useDocumentHistory();
 
   const [analysis, setAnalysis] = useState(null);
   const [extractedText, setExtractedText] = useState('');
   const [knowledgeGraph, setKnowledgeGraph] = useState(null);
   const [selectedNode, setSelectedNode] = useState(null);
-const [searchTerm, _setSearchTerm] = useState('');
-const [selectedType, _setSelectedType] = useState('all');
+  const [searchTerm, _setSearchTerm] = useState('');
+  const [selectedType, _setSelectedType] = useState('all');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [classification, setClassification] = useState(null);
   const [chatHistory, setChatHistory] = useState([
-    { role: 'assistant', message: 'I have analyzed your document. How can I help you understand it better?' }
+    {
+      role: 'assistant',
+      message:
+        'I have analyzed your document. How can I help you understand it better?',
+    },
   ]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
@@ -246,15 +268,18 @@ const [selectedType, _setSelectedType] = useState('all');
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
         const sessionId = await ensureSessionId(apiUrl);
-        const response = await fetch(`${apiUrl}/api/analyze/${documentId}?language=${language}`, {
-          method: 'POST',
-          headers: { 'X-Session-Id': sessionId },
-          credentials: 'include'
-        });
-        
+        const response = await fetch(
+          `${apiUrl}/api/analyze/${documentId}?language=${language}`,
+          {
+            method: 'POST',
+            headers: { 'X-Session-Id': sessionId },
+            credentials: 'include',
+          }
+        );
+
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.detail || "Analysis request failed");
+          throw new Error(errData.detail || 'Analysis request failed');
         }
         const data = await response.json();
         setAnalysis(data.analysis);
@@ -262,25 +287,38 @@ const [selectedType, _setSelectedType] = useState('all');
         setKnowledgeGraph(data.knowledge_graph);
         setExtractedText(data.extracted_text);
         setConfidence(data.confidence);
-        
+
         saveToHistory({
           documentId,
           fileName: file?.name || 'Unknown Document',
-          fileType: file?.type?.includes('pdf') ? 'PDF' : file?.type?.includes('image') ? 'Image' : 'Document',
-          riskLevel: data.analysis?.risk_level || data.classification?.risk_level || 'unknown',
+          fileType: file?.type?.includes('pdf')
+            ? 'PDF'
+            : file?.type?.includes('image')
+              ? 'Image'
+              : 'Document',
+          riskLevel:
+            data.analysis?.risk_level ||
+            data.classification?.risk_level ||
+            'unknown',
           analyzedAt: new Date().toISOString(),
         });
       } catch (err) {
         if (import.meta.env.DEV) {
           //console.error("Error:", error);
-          }
+        }
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        let msg = err.message !== "Failed to fetch" && err.message !== "Analysis request failed" 
-                   ? err.message 
-                   : "Analysis failed. Please try uploading the document again.";
-        
-        if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
-          msg = "Configuration Error: API URL is set to localhost in production. Please set VITE_API_URL in Vercel.";
+        let msg =
+          err.message !== 'Failed to fetch' &&
+          err.message !== 'Analysis request failed'
+            ? err.message
+            : 'Analysis failed. Please try uploading the document again.';
+
+        if (
+          apiUrl.includes('localhost') &&
+          window.location.hostname !== 'localhost'
+        ) {
+          msg =
+            'Configuration Error: API URL is set to localhost in production. Please set VITE_API_URL in Vercel.';
         }
         setError(msg);
       } finally {
@@ -289,7 +327,7 @@ const [selectedType, _setSelectedType] = useState('all');
     };
 
     fetchAnalysis();
-// eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, file, language]);
 
   const handleChat = async (e) => {
@@ -307,16 +345,19 @@ const [selectedType, _setSelectedType] = useState('all');
       const sessionId = await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Session-Id': sessionId,
+        },
         credentials: 'include',
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: chatHistory,
-          language: language
-        })
+          language: language,
+        }),
       });
 
-      if (!response.ok) throw new Error("Chat failed");
+      if (!response.ok) throw new Error('Chat failed');
 
       // Set up a stream reader to consume the plaintext chunks
       const reader = response.body.getReader();
@@ -334,23 +375,31 @@ const [selectedType, _setSelectedType] = useState('all');
         if (value) {
           const chunkValue = decoder.decode(value);
           assistantMsg += chunkValue;
-          
-          setChatHistory(prev => {
+
+          setChatHistory((prev) => {
             const updated = [...prev];
             if (updated.length > 0) {
-              updated[updated.length - 1] = { role: 'assistant', message: assistantMsg };
+              updated[updated.length - 1] = {
+                role: 'assistant',
+                message: assistantMsg,
+              };
             }
             return updated;
           });
         }
       }
-    } catch (err) {
+    } catch {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      let msg = "This is a fallback response. The backend might not be running correctly.";
-      
-      if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
-        msg = "Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.";
+      let msg =
+        'This is a fallback response. The backend might not be running correctly.';
+
+      if (
+        apiUrl.includes('localhost') &&
+        window.location.hostname !== 'localhost'
+      ) {
+        msg =
+          'Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.';
       }
 
       setChatHistory([...newHistory, { role: 'assistant', message: msg }]);
@@ -359,101 +408,104 @@ const [selectedType, _setSelectedType] = useState('all');
       setChatLoading(false);
     }
   };
- const filteredNodes = knowledgeGraph?.nodes?.filter((node) => {
+  const filteredNodes =
+    knowledgeGraph?.nodes?.filter((node) => {
+      const matchesSearch = node.label
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
 
-  const matchesSearch =
-    node.label.toLowerCase().includes(
-      searchTerm.toLowerCase()
-    );
+      const matchesType =
+        selectedType === 'all' ? true : node.type === selectedType;
 
-  const matchesType =
-    selectedType === 'all'
-      ? true
-      : node.type === selectedType;
+      return matchesSearch && matchesType;
+    }) || [];
 
-  return matchesSearch && matchesType;
+  const graphNodes = filteredNodes.map((node, index) => ({
+    id: node.id,
 
-}) || [];
+    data: {
+      label: node.label,
+      type: node.type,
+    },
 
-const graphNodes = filteredNodes.map((node, index) => ({
+    position: {
+      x: (index % 4) * 250,
+      y: Math.floor(index / 4) * 150,
+    },
 
-  id: node.id,
+    style: {
+      padding: 10,
+      borderRadius: 12,
+      border: '1px solid #cbd5e1',
+      background:
+        node.type === 'clauses'
+          ? '#dbeafe'
+          : node.type === 'obligations'
+            ? '#fef3c7'
+            : node.type === 'parties'
+              ? '#dcfce7'
+              : node.type === 'dates'
+                ? '#fee2e2'
+                : '#ffffff',
 
- data: {
-  label: node.label,
-  type: node.type
-},
+      width: 180,
+      fontSize: 12,
+    },
+  }));
 
-  position: {
-    x: (index % 4) * 250,
-    y: Math.floor(index / 4) * 150
-  },
+  const visibleNodeIds = new Set(graphNodes.map((node) => node.id));
 
-  style: {
-    padding: 10,
-    borderRadius: 12,
-    border: '1px solid #cbd5e1',
-    background:
-      node.type === 'clauses'
-        ? '#dbeafe'
-        : node.type === 'obligations'
-        ? '#fef3c7'
-        : node.type === 'parties'
-        ? '#dcfce7'
-        : node.type === 'dates'
-        ? '#fee2e2'
-        : '#ffffff',
+  const graphEdges =
+    knowledgeGraph?.edges
+      ?.filter((edge) => {
+        return (
+          visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+        );
+      })
+      .map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        animated: true,
+      })) || [];
 
-    width: 180,
-    fontSize: 12
+  if (loading) {
+    return <DashboardSkeleton />;
   }
-
-}));
-
-const visibleNodeIds = new Set(
-  graphNodes.map(node => node.id)
-);
-
-const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
-
-  return (
-    visibleNodeIds.has(edge.source) &&
-    visibleNodeIds.has(edge.target)
-  );
-
-}).map((edge) => ({
-
-  id: edge.id,
-  source: edge.source,
-  target: edge.target,
-  label: edge.label,
-  animated: true
-
-})) || [];
-
- if (loading) {
-  return <DashboardSkeleton />;
-}
 
   if (error) {
     return (
       <div className={ERROR_CONTAINER}>
         <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
-        <h2 className={TEXT_PRIMARY + " text-2xl font-bold"}>Something went wrong</h2>
-        <p className={TEXT_MUTED + " mt-2 mb-6"}>{error}</p>
-        <button onClick={() => navigate('/')} className={GO_BACK_BUTTON}>Go Back</button>
+        <h2 className={TEXT_PRIMARY + ' text-2xl font-bold'}>
+          Something went wrong
+        </h2>
+        <p className={TEXT_MUTED + ' mt-2 mb-6'}>{error}</p>
+        <button onClick={() => navigate('/')} className={GO_BACK_BUTTON}>
+          Go Back
+        </button>
       </div>
     );
   }
 
   const getRiskColor = (risk) => {
-    if (risk === "High") return "text-red-650 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40";
-    if (risk === "Medium") return "text-amber-650 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40";
-    return "text-green-650 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/40";
+    if (risk === 'High')
+      return 'text-red-650 dark:text-red-400 bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40';
+    if (risk === 'Medium')
+      return 'text-amber-650 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/20 border-amber-200 dark:border-amber-800/40';
+    return 'text-green-650 dark:text-green-400 bg-green-50 dark:bg-green-950/20 border-green-200 dark:border-green-800/40';
   };
 
   return (
     <div className={MAIN_CONTAINER}>
+      <style>{`
+        @media print {
+          nav, form, button, .no-print { display: none !important; }
+          body { background: white !important; color: black !important; }
+          main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+        }
+      `}</style>
       <nav className={NAV_BASE}>
         <div className={NAV_CONTAINER}>
           <div className="flex items-center gap-4">
@@ -468,6 +520,25 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
             <div className={DOC_BADGE}>
               Doc ID: {documentId.substring(0, 8)}...
             </div>
+            <button
+              onClick={() => window.print()}
+              className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+              aria-label="Print report"
+            >
+              <Printer className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => {
+                const risk =
+                  classification?.risk_level || analysis?.risk_level || 'N/A';
+                const body = `Document Analysis Report\n\nDocument: ${file?.name || 'Document'}\nRisk Level: ${risk}\n\nView full analysis: ${window.location.href}`;
+                window.location.href = `mailto:?subject=Legal Document Analysis&body=${encodeURIComponent(body)}`;
+              }}
+              className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+              aria-label="Share analysis via email"
+            >
+              <Share2 className="w-4 h-4" />
+            </button>
             <ThemeToggle />
           </div>
         </div>
@@ -476,508 +547,563 @@ const graphEdges = knowledgeGraph?.edges?.filter((edge) => {
         </div>
       </nav>
 
-     <main className="max-w-7xl mx-auto px-6 mt-8 space-y-8">
-  {/* OCR Verification Section */}
-  <div className={`${CARD_BASE} p-6`}>
+      <main className="max-w-7xl mx-auto px-6 mt-8 space-y-8">
+        {/* OCR Verification Section */}
+        <div className={`${CARD_BASE} p-6`}>
+          <div className="mb-6">
+            <h2 className={SECTION_TITLE}>OCR Verification</h2>
 
-    <div className="mb-6">
-      <h2 className={SECTION_TITLE}>
-        OCR Verification
-      </h2>
+            <p className={SUBTITLE}>
+              Compare uploaded document with extracted OCR text
+            </p>
+          </div>
 
-      <p className={SUBTITLE}>
-        Compare uploaded document with extracted OCR text
-      </p>
-    </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Uploaded Document */}
+            <div>
+              <h3 className={`${TEXT_SEMI} mb-3`}>Uploaded Document</h3>
 
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div
+                className={`${BORDER_BASE} rounded-xl overflow-hidden h-[400px] bg-slate-50 dark:bg-slate-950`}
+              >
+                {previewUrl ? (
+                  file?.type?.includes('pdf') ? (
+                    <iframe
+                      src={previewUrl}
+                      title="Document Preview"
+                      className="w-full h-full"
+                    />
+                  ) : (
+                    <img
+                      src={previewUrl}
+                      alt="Uploaded Document"
+                      className="w-full h-full object-contain bg-white"
+                    />
+                  )
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                    No document preview available
+                  </div>
+                )}
+              </div>
+            </div>
 
-      {/* Uploaded Document */}
-      <div>
-        <h3 className={`${TEXT_SEMI} mb-3`}>
-          Uploaded Document
-        </h3>
+            {/* OCR Text */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <h3 className={TEXT_SEMI}>Extracted OCR Text</h3>
 
-        <div className={`${BORDER_BASE} rounded-xl overflow-hidden h-[400px] bg-slate-50 dark:bg-slate-950`}>
+                <button
+                  onClick={() => navigator.clipboard.writeText(extractedText)}
+                  className={COPY_BUTTON}
+                >
+                  Copy Text
+                </button>
+              </div>
 
-          {previewUrl ? (
-            file?.type?.includes('pdf') ? (
-            <iframe
-            src={previewUrl}
-            title="Document Preview"
-            className="w-full h-full"
-            />
-          ) : (
-            <img
-          src={previewUrl}
-          alt="Uploaded Document"
-          className="w-full h-full object-contain bg-white"
-          />
-      )
-    ) : (
-  <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
-    No document preview available
-  </div>
-)}
- </div>
-      </div>
+              <div className="grid items-start grid-cols-1 gap-6 lg:grid-cols-12">
+                <div className="space-y-6 lg:col-span-5">
+                  <div className="p-8 transition-all duration-300 transform bg-white border shadow-sm rounded-2xl dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md">
+                    <div className="flex items-start justify-between mb-6">
+                      <div>
+                        <span className="block mb-1 text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400">
+                          {t('dashboard.doctype')}
+                        </span>
+                        <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                          {analysis?.document_type || 'Unknown Document'}
+                        </h1>
+                        {classification && (
+                          <div className="p-3 mt-3 border rounded-xl bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40 text-blue-850 dark:text-blue-200">
+                            <div className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                              Detected Type: {classification.predicted_type}
+                            </div>
+                            <div className="mt-1 text-xs text-slate-650 dark:text-slate-400">
+                              Confidence:{' '}
+                              {(classification.confidence * 100).toFixed(1)}%
+                            </div>
+                            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+                              Alternatives:
+                              <ul className="ml-5 mt-1 list-disc">
+                                {classification.alternatives?.map((alt, i) => (
+                                  <li key={i}>
+                                    {alt.type} → {(alt.score * 100).toFixed(0)}%
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div
+                        className={`px-4 py-2 rounded-xl flex items-center gap-2 border font-bold ${getRiskColor(analysis?.risk_level)}`}
+                      >
+                        <AlertTriangle className="w-5 h-5" />
+                        {analysis?.risk_level} {t('dashboard.risk')}
+                      </div>
+                    </div>
+                    {/* AI Confidence Meter */}
+                    {confidence && (
+                      <>
+                        <div className="flex items-center gap-2 mb-4">
+                          <span
+                            className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                              confidence.level === 'High'
+                                ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400'
+                                : confidence.level === 'Medium'
+                                  ? 'bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400'
+                                  : 'bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400'
+                            }`}
+                          >
+                            {confidence.level === 'High' && '🟢'}
+                            {confidence.level === 'Medium' && '🟡'}
+                            {confidence.level === 'Low' && '🔴'}{' '}
+                            {confidence.level} Confidence ({confidence.score}%)
+                          </span>
+                        </div>
 
-      {/* OCR Text */}
-      <div>
+                        {confidence.score < 60 && (
+                          <div className="p-4 mb-4 border rounded-xl bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300">
+                            ⚠️ This analysis has low confidence. Please verify
+                            the document manually before relying on the
+                            generated legal insights.
+                          </div>
+                        )}
+                      </>
+                    )}
 
-        <div className="flex items-center justify-between mb-3">
-          <h3 className={TEXT_SEMI}>
-            Extracted OCR Text
-          </h3>
+                    {/* Summary */}
+                    <p className="mb-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
+                      {analysis?.summary}
+                    </p>
 
-          <button
-            onClick={() => navigator.clipboard.writeText(extractedText)}
-            className={COPY_BUTTON}
-          >
-            Copy Text
-          </button>
+                    {/* Confidence Metrics */}
+                    {confidence && (
+                      <div className="grid grid-cols-2 gap-3 mb-6">
+                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                            Coverage
+                          </div>
+                          <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                            {confidence.coverage}%
+                          </div>
+                        </div>
+
+                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                            Similarity
+                          </div>
+                          <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                            {confidence.similarity}%
+                          </div>
+                        </div>
+
+                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                            Evidence
+                          </div>
+                          <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                            {confidence.evidence_score}%
+                          </div>
+                        </div>
+
+                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
+                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                            Supported Chunks
+                          </div>
+                          <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
+                            {confidence.matched_chunks}/
+                            {confidence.total_chunks}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* OCR Extracted Text Display */}
+                <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  <pre className={TEXTAREA_PRE}>
+                    {extractedText || 'No text extracted.'}
+                  </pre>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
 
-        <div className="grid items-start grid-cols-1 gap-6 lg:grid-cols-12">
-          <div className="space-y-6 lg:col-span-5">
-            <div className="p-8 transition-all duration-300 transform bg-white border shadow-sm rounded-2xl dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md">
-              <div className="flex items-start justify-between mb-6">
+        {/* Main Dashboard Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Column: Analysis Results */}
+          <div className="lg:col-span-5 space-y-6">
+            <div
+              className={`${CARD_BASE} p-8 transition-all hover:shadow-md transition-colors duration-300`}
+            >
+              <div className="flex justify-between items-start mb-6">
                 <div>
-                  <span className="block mb-1 text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400">{t("dashboard.doctype")}</span>
-                  <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{analysis?.document_type || "Unknown Document"}</h1>
+                  <span className="text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400 mb-1 block">
+                    {t('dashboard.doctype')}
+                  </span>
+                  <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
+                    {analysis?.document_type || 'Unknown Document'}
+                  </h1>
                   {classification && (
-                    <div className="p-3 mt-3 border rounded-xl bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40 text-blue-850 dark:text-blue-200">
-                      <div className="text-sm font-bold text-blue-700 dark:text-blue-300">
+                    <div className={CLASSIFICATION_BOX}>
+                      <div className={DETECTED_TYPE}>
                         Detected Type: {classification.predicted_type}
                       </div>
-                      <div className="mt-1 text-xs text-slate-650 dark:text-slate-400">
-                        Confidence: {(classification.confidence * 100).toFixed(1)}%
+
+                      <div className={CONFIDENCE_TEXT}>
+                        Confidence:{' '}
+                        {(classification.confidence * 100).toFixed(1)}%
                       </div>
-                      <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
+
+                      <div className={ALTERNATIVES_TEXT}>
                         Alternatives:
-                        <ul className="ml-5 mt-1 list-disc">
+                        <ul className="list-disc ml-5 mt-1">
                           {classification.alternatives?.map((alt, i) => (
-                            <li key={i}>{alt.type} → {(alt.score * 100).toFixed(0)}%</li>
+                            <li key={i}>
+                              {alt.type} → {(alt.score * 100).toFixed(0)}%
+                            </li>
                           ))}
                         </ul>
                       </div>
                     </div>
                   )}
                 </div>
-                <div className={`px-4 py-2 rounded-xl flex items-center gap-2 border font-bold ${getRiskColor(analysis?.risk_level)}`}>
+                <div
+                  className={`${RISK_BADGE} ${getRiskColor(analysis?.risk_level)}`}
+                >
                   <AlertTriangle className="w-5 h-5" />
-                  {analysis?.risk_level} {t("dashboard.risk")}
+                  {analysis?.risk_level} {t('dashboard.risk')}
                 </div>
               </div>
-              {/* AI Confidence Meter */}
-{confidence && (
-  <>
-    <div className="flex items-center gap-2 mb-4">
-      <span
-        className={`px-3 py-1 rounded-full text-sm font-semibold ${
-          confidence.level === "High"
-            ? "bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400"
-            : confidence.level === "Medium"
-            ? "bg-yellow-100 text-yellow-700 dark:bg-yellow-950/30 dark:text-yellow-400"
-            : "bg-red-100 text-red-700 dark:bg-red-950/30 dark:text-red-400"
-        }`}
-      >
-        {confidence.level === "High" && "🟢"}
-        {confidence.level === "Medium" && "🟡"}
-        {confidence.level === "Low" && "🔴"}
 
-        {" "}
-        {confidence.level} Confidence ({confidence.score}%)
-      </span>
-    </div>
+              <p className="text-lg text-slate-700 dark:text-slate-350 leading-relaxed mb-6">
+                {analysis?.summary}
+              </p>
 
-    {confidence.score < 60 && (
-      <div className="p-4 mb-4 border rounded-xl bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300">
-        ⚠️ This analysis has low confidence. Please verify the document manually before relying on the generated legal insights.
-      </div>
-    )}
-  </>
-)}
-
-{/* Summary */}
-<p className="mb-6 text-lg leading-relaxed text-slate-700 dark:text-slate-300">
-  {analysis?.summary}
-</p>
-
-{/* Confidence Metrics */}
-{confidence && (
-  <div className="grid grid-cols-2 gap-3 mb-6">
-    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-        Coverage
-      </div>
-      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-        {confidence.coverage}%
-      </div>
-    </div>
-
-    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-        Similarity
-      </div>
-      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-        {confidence.similarity}%
-      </div>
-    </div>
-
-    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-        Evidence
-      </div>
-      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-        {confidence.evidence_score}%
-      </div>
-    </div>
-
-    <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-      <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
-        Supported Chunks
-      </div>
-      <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-        {confidence.matched_chunks}/{confidence.total_chunks}
-      </div>
-    </div>
-  </div>
-)}
-
-        </div>
-      </div>
-
-      {/* OCR Extracted Text Display */}
-      <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
-        <pre className={TEXTAREA_PRE}>
-          {extractedText || "No text extracted."}
-        </pre>
-      </div>
-
-    </div>
-  </div>
-</div>
-</div>
-
-  {/* Main Dashboard Grid */}
-  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-
-    {/* Left Column: Analysis Results */}
-        <div className="lg:col-span-5 space-y-6">
-          <div className={`${CARD_BASE} p-8 transition-all hover:shadow-md transition-colors duration-300`}>
-            <div className="flex justify-between items-start mb-6">
-              <div>
-                <span className="text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400 mb-1 block">{t("dashboard.doctype")}</span>
-                <h1 className="text-3xl font-bold text-slate-900 dark:text-white">{analysis?.document_type || "Unknown Document"}</h1>
-                {classification && (
-                  <div className={CLASSIFICATION_BOX}>
-                    <div className={DETECTED_TYPE}>
-                      Detected Type: {classification.predicted_type}
+              <div className="grid grid-cols-2 gap-4 mb-8">
+                <div className={`${CARD_SUB} flex items-start gap-3`}>
+                  <Calendar className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400 mt-0.5" />
+                  <div>
+                    <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-450 mb-1">
+                      {t('dashboard.status')}
                     </div>
-
-                    <div className={CONFIDENCE_TEXT}>
-                      Confidence: {(classification.confidence * 100).toFixed(1)}%
+                    <div className="font-medium text-slate-900 dark:text-white">
+                      {analysis?.urgency}
                     </div>
-
-                    <div className={ALTERNATIVES_TEXT}>
-                      Alternatives:
-                      <ul className="list-disc ml-5 mt-1">
-                        {classification.alternatives?.map((alt, i) => (
-                          <li key={i}>
-                            {alt.type} → {(alt.score * 100).toFixed(0)}%
-                          </li>
-                        ))}
-                      </ul>
+                    {analysis?.deadline && (
+                      <div className="text-sm text-red-600 dark:text-red-400 mt-1 font-semibold">
+                        {analysis.deadline}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div className={`${CARD_SUB} flex items-start gap-3`}>
+                  <FileText className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400 mt-0.5" />
+                  <div>
+                    <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-450 mb-1">
+                      {t('dashboard.sections')}
                     </div>
+                    <div className="font-medium text-slate-900 dark:text-white leading-tight">
+                      {analysis?.sections?.join(', ') || 'None identified'}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+                {analysis?.parties && analysis.parties.length > 0 && (
+                  <div className={CARD_SUB}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <Users className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
+                      <h4 className="font-bold text-slate-900 dark:text-white">
+                        {t('dashboard.parties')}
+                      </h4>
+                    </div>
+                    <ul className="space-y-2">
+                      {analysis.parties.map((party, idx) => (
+                        <li
+                          key={idx}
+                          className="flex justify-between items-center text-sm"
+                        >
+                          <span className="font-medium text-slate-805 dark:text-slate-200">
+                            {party.name}
+                          </span>
+                          <span className={PARTY_ROLE}>{party.role}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {analysis?.consequences && analysis.consequences.length > 0 && (
+                  <div className={CARD_SUB}>
+                    <div className="flex items-center gap-2 mb-3">
+                      <AlertCircle className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
+                      <h4 className="font-bold text-slate-900 dark:text-white">
+                        {t('dashboard.consequences')}
+                      </h4>
+                    </div>
+                    <ul className="space-y-2 list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
+                      {analysis.consequences.map((cons, idx) => (
+                        <li key={idx}>{cons}</li>
+                      ))}
+                    </ul>
                   </div>
                 )}
               </div>
-              <div className={`${RISK_BADGE} ${getRiskColor(analysis?.risk_level)}`}>
-                <AlertTriangle className="w-5 h-5" />
-                {analysis?.risk_level} {t("dashboard.risk")}
-              </div>
-            </div>
 
-            <p className="text-lg text-slate-700 dark:text-slate-350 leading-relaxed mb-6">
-              {analysis?.summary}
-            </p>
-
-            <div className="grid grid-cols-2 gap-4 mb-8">
-              <div className={`${CARD_SUB} flex items-start gap-3`}>
-                <Calendar className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400 mt-0.5" />
-                <div>
-                  <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-450 mb-1">{t("dashboard.status")}</div>
-                  <div className="font-medium text-slate-900 dark:text-white">{analysis?.urgency}</div>
-                  {analysis?.deadline && <div className="text-sm text-red-600 dark:text-red-400 mt-1 font-semibold">{analysis.deadline}</div>}
-                </div>
-              </div>
-              <div className={`${CARD_SUB} flex items-start gap-3`}>
-                <FileText className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400 mt-0.5" />
-                <div>
-                  <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-450 mb-1">{t("dashboard.sections")}</div>
-                  <div className="font-medium text-slate-900 dark:text-white leading-tight">
-                    {analysis?.sections?.join(', ') || "None identified"}
+              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+                {t('dashboard.actions')}
+              </h3>
+              <div className="space-y-3">
+                {analysis?.actions?.map((action, idx) => (
+                  <div key={idx} className={ACTION_CARD}>
+                    <div className={ACTION_NUMBER}>{idx + 1}</div>
+                    <div>
+                      <h4 className="font-semibold text-slate-900 dark:text-white">
+                        {action.action}
+                      </h4>
+                      <p className="text-sm text-slate-650 dark:text-slate-400 mt-1">
+                        {action.timeline} • {action.why}
+                      </p>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-              {analysis?.parties && analysis.parties.length > 0 && (
-                <div className={CARD_SUB}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <Users className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
-                    <h4 className="font-bold text-slate-900 dark:text-white">{t("dashboard.parties")}</h4>
+              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => {
+                    setChatInput(
+                      'Please provide a detailed, paragraph-by-paragraph analysis of this document.'
+                    );
+                    document
+                      .querySelector('form')
+                      .dispatchEvent(
+                        new Event('submit', { cancelable: true, bubbles: true })
+                      );
+                  }}
+                  className={DETAILED_BUTTON}
+                >
+                  <Search className="w-5 h-5" /> {t('dashboard.btn.detailed')}
+                </button>
+              </div>
+
+              {(analysis?.risk_level === 'High' ||
+                analysis?.risk_level === 'Medium') && (
+                <div className={RISK_WARN_BOX}>
+                  <div className="flex items-start gap-4">
+                    <div className={RISK_WARN_ICON}>
+                      <Briefcase className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                        {t('dashboard.consult.title')}
+                      </h4>
+                      <p className="text-slate-700 dark:text-slate-350 mb-4 whitespace-pre-wrap text-sm leading-relaxed">
+                        Due to the {analysis?.risk_level?.toLowerCase()} risk
+                        nature of this {analysis?.document_type}, we strongly
+                        suggest consulting with a specialized lawyer to protect
+                        your interests.
+                      </p>
+                      <button
+                        onClick={() => navigate('/lawyers')}
+                        className={CONSULT_BUTTON}
+                      >
+                        {t('dashboard.consult.btn')}
+                      </button>
+                    </div>
                   </div>
-                  <ul className="space-y-2">
-                    {analysis.parties.map((party, idx) => (
-                      <li key={idx} className="flex justify-between items-center text-sm">
-                        <span className="font-medium text-slate-805 dark:text-slate-200">{party.name}</span>
-                        <span className={PARTY_ROLE}>{party.role}</span>
-                      </li>
-                    ))}
-                  </ul>
                 </div>
               )}
+            </div>
+            {knowledgeGraph && (
+              <div className={KG_SECTION}>
+                <div className="mb-6">
+                  <h2 className={KG_TITLE}>Legal Knowledge Graph</h2>
 
-              {analysis?.consequences && analysis.consequences.length > 0 && (
-                <div className={CARD_SUB}>
-                  <div className="flex items-center gap-2 mb-3">
-                    <AlertCircle className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
-                    <h4 className="font-bold text-slate-900 dark:text-white">{t("dashboard.consequences")}</h4>
+                  <p className={TEXT_MUTED + ' mt-2'}>
+                    Interactive visualization of clauses, obligations, parties,
+                    and relationships
+                  </p>
+
+                  <div className="mt-4">
+                    <input
+                      type="text"
+                      placeholder="Search nodes..."
+                      className={SEARCH_INPUT}
+                    />
                   </div>
-                  <ul className="space-y-2 list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
-                    {analysis.consequences.map((cons, idx) => (
-                      <li key={idx}>{cons}</li>
-                    ))}
-                  </ul>
                 </div>
-              )}
+                <div className={KG_FLOW_CONTAINER}>
+                  <ReactFlow
+                    nodes={graphNodes}
+                    edges={graphEdges}
+                    fitView
+                    onNodeClick={(event, node) => {
+                      setSelectedNode(node);
+                    }}
+                  >
+                    <MiniMap />
+                    <Controls />
+                    <Background />
+                  </ReactFlow>
+                </div>
+
+                {selectedNode && (
+                  <div className={NODE_DETAILS}>
+                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">
+                      Node Details
+                    </h3>
+
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <span className={NODE_INFO_LABEL}>Label:</span>{' '}
+                        <span className={NODE_INFO_VALUE}>
+                          {selectedNode.data.label}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className={NODE_INFO_LABEL}>Type:</span>{' '}
+                        <span className={NODE_INFO_VALUE}>
+                          {selectedNode.data.type}
+                        </span>
+                      </div>
+
+                      <div>
+                        <span className={NODE_INFO_LABEL}>Node ID:</span>{' '}
+                        <span className="text-slate-850 dark:text-slate-200 font-mono text-[10px]">
+                          {selectedNode.id}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
+                  <div className={KG_STAT_CARD}>
+                    <div className={KG_STAT_LABEL}>Nodes</div>
+                    <div className={KG_STAT_VALUE}>
+                      {knowledgeGraph.nodes?.length || 0}
+                    </div>
+                  </div>
+
+                  <div className={`${KG_STAT_CARD} min-w-0`}>
+                    <div className={KG_STAT_LABEL}>Relationships</div>
+                    <div className={KG_STAT_VALUE}>
+                      {knowledgeGraph.edges?.length || 0}
+                    </div>
+                  </div>
+
+                  <div className={`${KG_STAT_CARD} min-w-0`}>
+                    <div className={KG_STAT_LABEL}>Clauses</div>
+                    <div className={KG_STAT_VALUE}>
+                      {knowledgeGraph.nodes?.filter((n) => n.type === 'clauses')
+                        .length || 0}
+                    </div>
+                  </div>
+
+                  <div className={`${KG_STAT_CARD} min-w-0`}>
+                    <div className={KG_STAT_LABEL}>Obligations</div>
+                    <div className={KG_STAT_VALUE}>
+                      {knowledgeGraph.nodes?.filter(
+                        (n) => n.type === 'obligations'
+                      ).length || 0}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Right Column: AI Chat */}
+          <div className={CHAT_PANEL}>
+            <div className={CHAT_HEADER}>
+              <Bot className="w-6 h-6 text-nyaya-400" />
+              <h3 className="font-semibold text-lg">Nyaya Assistant</h3>
             </div>
 
-            <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">{t("dashboard.actions")}</h3>
-            <div className="space-y-3">
-              {analysis?.actions?.map((action, idx) => (
-                <div key={idx} className={ACTION_CARD}>
-                  <div className={ACTION_NUMBER}>
-                    {idx + 1}
+            <div className={CHAT_BODY}>
+              {chatHistory.map((msg, idx) => (
+                <div
+                  key={idx}
+                  className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}
+                >
+                  <div
+                    className={`${msg.role === 'user' ? USER_AVATAR : ASSISTANT_AVATAR}`}
+                  >
+                    {msg.role === 'user' ? (
+                      <User className="w-5 h-5" />
+                    ) : (
+                      <Bot className="w-5 h-5" />
+                    )}
                   </div>
-                  <div>
-                    <h4 className="font-semibold text-slate-900 dark:text-white">{action.action}</h4>
-                    <p className="text-sm text-slate-650 dark:text-slate-400 mt-1">{action.timeline} • {action.why}</p>
+                  <div
+                    className={`${msg.role === 'user' ? USER_BUBBLE : ASSISTANT_BUBBLE}`}
+                  >
+                    {msg.role === 'assistant' ? (
+                      <>
+                        <div className={PROSE}>
+                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                        </div>
+                        <button
+                          onClick={() =>
+                            navigator.clipboard.writeText(msg.message)
+                          }
+                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300"
+                          title="Copy to clipboard"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      </>
+                    ) : (
+                      msg.message
+                    )}
                   </div>
                 </div>
               ))}
+              {chatLoading && (
+                <div className="flex gap-3">
+                  <div className={ASSISTANT_AVATAR}>
+                    <Bot className="w-5 h-5" />
+                  </div>
+                  <div className={TYPING_INDICATOR}>
+                    <div className={TYPING_DOT}></div>
+                    <div
+                      className={TYPING_DOT}
+                      style={{ animationDelay: '0.1s' }}
+                    ></div>
+                    <div
+                      className={TYPING_DOT}
+                      style={{ animationDelay: '0.2s' }}
+                    ></div>
+                  </div>
+                </div>
+              )}
+              <div ref={messagesEndRef} />
             </div>
 
-            <div className="mt-8 flex flex-col sm:flex-row gap-4">
-              <button 
-                onClick={() => {
-                  setChatInput("Please provide a detailed, paragraph-by-paragraph analysis of this document.");
-                  document.querySelector('form').dispatchEvent(new Event('submit', { cancelable: true, bubbles: true }));
-                }}
-                className={DETAILED_BUTTON}
+            <form onSubmit={handleChat} className={CHAT_FORM}>
+              <input
+                type="text"
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                placeholder={t('chat.placeholder')}
+                className={CHAT_INPUT}
+              />
+              <button
+                type="submit"
+                disabled={chatLoading || !chatInput.trim()}
+                className={SEND_BUTTON}
               >
-                <Search className="w-5 h-5" /> {t("dashboard.btn.detailed")}
+                <Send className="w-5 h-5 pl-0.5" />
               </button>
-            </div>
-            
-            {(analysis?.risk_level === "High" || analysis?.risk_level === "Medium") && (
-              <div className={RISK_WARN_BOX}>
-                <div className="flex items-start gap-4">
-                  <div className={RISK_WARN_ICON}>
-                    <Briefcase className="w-6 h-6" />
-                  </div>
-                  <div>
-                    <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">{t("dashboard.consult.title")}</h4>
-                    <p className="text-slate-700 dark:text-slate-350 mb-4 whitespace-pre-wrap text-sm leading-relaxed">
-                      Due to the {analysis?.risk_level?.toLowerCase()} risk nature of this {analysis?.document_type}, we strongly suggest consulting with a specialized lawyer to protect your interests.
-                    </p>
-                    <button 
-                      onClick={() => navigate('/lawyers')}
-                      className={CONSULT_BUTTON}
-                    >
-                      {t("dashboard.consult.btn")}
-                    </button>
-                  </div>
-                </div>
-              </div>
-            )}
-            
+            </form>
           </div>
-        {knowledgeGraph && (
-          <div className={KG_SECTION}>
-            
-            <div className="mb-6">
-  <h2 className={KG_TITLE}>
-    Legal Knowledge Graph
-  </h2>
-
-  <p className={TEXT_MUTED + " mt-2"}>
-    Interactive visualization of clauses, obligations, parties, and relationships
-  </p>
-
-  <div className="mt-4">
-    <input
-      type="text"
-      placeholder="Search nodes..."
-      className={SEARCH_INPUT}
-    />
-  </div>
-</div>
-            <div className={KG_FLOW_CONTAINER}>
-              <ReactFlow
-                nodes={graphNodes}
-                edges={graphEdges}
-                fitView
-                onNodeClick={(event, node) => {
-                  setSelectedNode(node);
-                }}
-              >
-                <MiniMap />
-                <Controls />
-                <Background />
-              </ReactFlow>
-            </div>
-
-            {selectedNode && (
-              <div className={NODE_DETAILS}>
-                <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">
-                  Node Details
-                </h3>
-
-                <div className="space-y-2 text-sm">
-                  <div>
-                    <span className={NODE_INFO_LABEL}>
-                      Label:
-                    </span>{" "}
-                    <span className={NODE_INFO_VALUE}>{selectedNode.data.label}</span>
-                  </div>
-
-                  <div>
-                    <span className={NODE_INFO_LABEL}>
-                      Type:
-                    </span>{" "}
-                    <span className={NODE_INFO_VALUE}>{selectedNode.data.type}</span>
-                  </div>
-
-                  <div>
-                    <span className={NODE_INFO_LABEL}>
-                      Node ID:
-                    </span>{" "}
-                    <span className="text-slate-850 dark:text-slate-200 font-mono text-[10px]">{selectedNode.id}</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
-              <div className={KG_STAT_CARD}>
-                <div className={KG_STAT_LABEL}>Nodes</div>
-                <div className={KG_STAT_VALUE}>
-                  {knowledgeGraph.nodes?.length || 0}
-                </div>
-              </div>
-
-              <div className={`${KG_STAT_CARD} min-w-0`}>
-                <div className={KG_STAT_LABEL}>Relationships</div>
-                <div className={KG_STAT_VALUE}>
-                  {knowledgeGraph.edges?.length || 0}
-                </div>
-              </div>
-
-              <div className={`${KG_STAT_CARD} min-w-0`}>
-                <div className={KG_STAT_LABEL}>Clauses</div>
-                <div className={KG_STAT_VALUE}>
-                  {
-                    knowledgeGraph.nodes?.filter(
-                      n => n.type === "clauses"
-                    ).length || 0
-                  }
-                </div>
-              </div>
-
-              <div className={`${KG_STAT_CARD} min-w-0`}>
-                <div className={KG_STAT_LABEL}>Obligations</div>
-                <div className={KG_STAT_VALUE}>
-                  {
-                    knowledgeGraph.nodes?.filter(
-                      n => n.type === "obligations"
-                    ).length || 0
-                  }
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
         </div>
-
-        {/* Right Column: AI Chat */}
-        <div className={CHAT_PANEL}>
-          <div className={CHAT_HEADER}>
-            <Bot className="w-6 h-6 text-nyaya-400" />
-            <h3 className="font-semibold text-lg">Nyaya Assistant</h3>
-          </div>
-          
-          <div className={CHAT_BODY}>
-            {chatHistory.map((msg, idx) => (
-              <div key={idx} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-                <div className={`${msg.role === 'user' ? USER_AVATAR : ASSISTANT_AVATAR}`}>
-                  {msg.role === 'user' ? <User className="w-5 h-5" /> : <Bot className="w-5 h-5" />}
-                </div>
-                <div className={`${msg.role === 'user' ? USER_BUBBLE : ASSISTANT_BUBBLE}`}>
-                  {msg.role === 'assistant' ? (
-                    <>
-                      <div className={PROSE}>
-                        <ReactMarkdown>{msg.message}</ReactMarkdown>
-                      </div>
-                      <button
-                        onClick={() => navigator.clipboard.writeText(msg.message)}
-                        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300"
-                        title="Copy to clipboard"
-                      >
-                        <Copy className="w-3.5 h-3.5" />
-                      </button>
-                    </>
-                  ) : msg.message}
-                </div>
-              </div>
-            ))}
-            {chatLoading && (
-              <div className="flex gap-3">
-                <div className={ASSISTANT_AVATAR}>
-                  <Bot className="w-5 h-5" />
-                </div>
-                <div className={TYPING_INDICATOR}>
-                  <div className={TYPING_DOT}></div>
-                  <div className={TYPING_DOT} style={{animationDelay: '0.1s'}}></div>
-                  <div className={TYPING_DOT} style={{animationDelay: '0.2s'}}></div>
-                </div>
-              </div>
-            )}
-            <div ref={messagesEndRef} />
-          </div>
-
-          <form onSubmit={handleChat} className={CHAT_FORM}>
-            <input 
-              type="text" 
-              value={chatInput}
-              onChange={(e) => setChatInput(e.target.value)}
-              placeholder={t("chat.placeholder")}
-              className={CHAT_INPUT}
-            />
-            <button 
-              type="submit" 
-              disabled={chatLoading || !chatInput.trim()}
-              className={SEND_BUTTON}
-            >
-              <Send className="w-5 h-5 pl-0.5" />
-            </button>
-          </form>
-        </div>
-          </div>
-
       </main>
     </div>
   );

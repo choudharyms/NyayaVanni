@@ -11,8 +11,9 @@ LANGUAGES = {
     "tamil": "ta",
     "telugu": "te",
     "bengali": "bn",
-    "marathi": "mr"
+    "marathi": "mr",
 }
+
 
 def extract_text_from_pdf(pdf_path):
     text = ""
@@ -20,6 +21,7 @@ def extract_text_from_pdf(pdf_path):
         for page in pdf.pages:
             text += page.extract_text() or ""
     return text
+
 
 def summarize_legal_document(text):
     prompt = f"""
@@ -37,6 +39,7 @@ def summarize_legal_document(text):
     """
     response = model.generate_content(prompt)
     return response.text
+
 
 def translate_summary(summary, language):
     lang_code = LANGUAGES.get(language.lower(), "hi")

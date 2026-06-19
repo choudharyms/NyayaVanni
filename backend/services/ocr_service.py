@@ -1,12 +1,13 @@
+import io
+import logging
+import os
+import re
+import zipfile
+
+import docx
 import fitz  # PyMuPDF
 import pytesseract
 from PIL import Image
-import io
-import os
-import docx
-import re
-import logging
-import docx
 
 logger = logging.getLogger(__name__)
 
@@ -36,7 +37,7 @@ def is_invalid_extracted_text(text: str) -> bool:
         "Unable to extract",
         "unsupported format",
         "System cannot perform forced OCR",
-        "System cannot read image text"
+        "System cannot read image text",
     ]
 
     for pattern in blocked_patterns:
@@ -44,7 +45,7 @@ def is_invalid_extracted_text(text: str) -> bool:
             return True
 
     # Detect heavily garbled OCR text
-    special_chars = len(re.findall(r'[^a-zA-Z0-9\s]', cleaned))
+    special_chars = len(re.findall(r"[^a-zA-Z0-9\s]", cleaned))
 
     if len(cleaned) > 0 and (special_chars / len(cleaned)) > 0.40:
         return True
@@ -64,12 +65,14 @@ def preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
     img = img.resize((img.width * 2, img.height * 2))
 
     # Apply thresholding
-    img = img.point(lambda x: 0 if x < 140 else 255, '1')
+    img = img.point(lambda x: 0 if x < 140 else 255, "1")
 
     return img
 
 
-def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False, language: str = "en") -> str:
+def extract_text_from_pdf(
+    pdf_bytes: bytes, force_ocr: bool = False, language: str = "en"
+) -> str:
     """
     Extract text from PDF using PyMuPDF with OCR fallback.
     """
@@ -84,7 +87,10 @@ def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False, language: s
         except Exception as e:
             logger.error(f"Forced OCR extraction failed: {e}")
 
-            if getattr(e, "__class__", None) and "TesseractNotFoundError" in e.__class__.__name__:
+            if (
+                getattr(e, "__class__", None)
+                and "TesseractNotFoundError" in e.__class__.__name__
+            ):
                 return "[Error: OCR software is not installed. System cannot perform forced OCR.]"
 
             raise
@@ -120,7 +126,10 @@ def extract_text_from_pdf(pdf_bytes: bytes, force_ocr: bool = False, language: s
         except Exception as e:
             logger.error(f"OCR fallback failed: {e}")
 
-            if getattr(e, "__class__", None) and "TesseractNotFoundError" in e.__class__.__name__:
+            if (
+                getattr(e, "__class__", None)
+                and "TesseractNotFoundError" in e.__class__.__name__
+            ):
                 return ""
 
             return ""
@@ -136,7 +145,7 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> st
     doc = fitz.open(stream=pdf_bytes, filetype="pdf")
 
     text = ""
-    
+
     tesseract_lang = "hin+eng" if language == "hi" else "eng"
 
     for page in doc:
@@ -156,23 +165,6 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> st
     return text.strip()
 
 
-def extract_text_from_docx(docx_bytes: bytes) -> str:
-    """
-    Extract text from a Word document (.docx).
-    """
-    try:
-        doc = docx.Document(io.BytesIO(docx_bytes))
-        text = "\n".join([para.text for para in doc.paragraphs if para.text.strip()])
-        
-        if is_invalid_extracted_text(text):
-            logger.warning("Docx extraction produced invalid or empty text.")
-            return ""
-            
-        return text
-    except Exception as e:
-        logger.error(f"Docx extraction failed: {e}")
-        raise ValueError("Failed to parse the Word Document.")
-
 def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
     """
     Extract text from image using OCR.
@@ -189,18 +181,24 @@ def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
 
         # Validate OCR output
         if is_invalid_extracted_text(text):
-            raise ValueError(
-                "Unable to extract readable text from the uploaded image."
-            )
+            raise ValueError("Unable to extract readable text from the uploaded image.")
 
         return text
 
     except Exception as e:
 
-        if getattr(e, "__class__", None) and "TesseractNotFoundError" in e.__class__.__name__:
-            return "[Error: OCR software is not installed. System cannot read image text.]"
+        if (
+            getattr(e, "__class__", None)
+            and "TesseractNotFoundError" in e.__class__.__name__
+        ):
+            return (
+                "[Error: OCR software is not installed. System cannot read image text.]"
+            )
 
-        if getattr(e, "__class__", None) and "UnidentifiedImageError" in e.__class__.__name__:
+        if (
+            getattr(e, "__class__", None)
+            and "UnidentifiedImageError" in e.__class__.__name__
+        ):
             raise ValueError(
                 "The uploaded image is corrupted or in an unsupported format."
             )
@@ -217,62 +215,63 @@ def validate_docx_zip_bomb(file_bytes: bytes, max_uncompressed_size_mb: int = 50
         with zipfile.ZipFile(io.BytesIO(file_bytes)) as zf:
             total_uncompressed_size = sum(info.file_size for info in zf.infolist())
             max_bytes = max_uncompressed_size_mb * 1024 * 1024
-            
+
             if total_uncompressed_size > max_bytes:
-                logger.error(f"Zip bomb detected! Uncompressed size: {total_uncompressed_size} bytes")
-                raise ValueError("Security check failed: Document uncompressed size exceeds safe limits (Zip Bomb protection).")
+                logger.error(
+                    f"Zip bomb detected! Uncompressed size: {total_uncompressed_size} bytes"
+                )
+                raise ValueError(
+                    "Security check failed: Document uncompressed size exceeds safe limits (Zip Bomb protection)."
+                )
     except zipfile.BadZipFile:
         raise ValueError("The uploaded Word document is corrupted or invalid.")
+
 
 def extract_text_from_docx(file_bytes: bytes) -> str:
     """
     Securely extract text from a Word Document.
     """
     validate_docx_zip_bomb(file_bytes)
-    
+
     try:
         doc = docx.Document(io.BytesIO(file_bytes))
-        text = "\n".join([para.text for para in doc.paragraphs])
+        text = "\n".join([para.text for para in doc.paragraphs if para.text.strip()])
+
+        if is_invalid_extracted_text(text):
+            logger.warning("Docx extraction produced invalid or empty text.")
+            return ""
+
         return text
     except Exception as e:
         logger.error(f"DOCX extraction failed: {e}")
         raise ValueError("Failed to read text from the Word document.")
 
+
 def extract_document(
-    file_bytes: bytes,
-    filename: str,
-    force_ocr: bool = False,
-    language: str = "en"
+    file_bytes: bytes, filename: str, force_ocr: bool = False, language: str = "en"
 ) -> str:
     """
     Main router for text extraction based on file extension.
     """
 
-    ext = filename.lower().split('.')[-1]
+    ext = filename.lower().split(".")[-1]
 
     # PDF
-    if ext == 'pdf':
+    if ext == "pdf":
 
         extracted_text = extract_text_from_pdf(
-            file_bytes,
-            force_ocr=force_ocr,
-            language=language
+            file_bytes, force_ocr=force_ocr, language=language
         )
 
     # Word Documents
-    elif ext == 'docx':
-        
+    elif ext == "docx":
+
         extracted_text = extract_text_from_docx(file_bytes)
 
     # Images
-    elif ext in ['jpg', 'jpeg', 'png', 'tiff', 'bmp']:
+    elif ext in ["jpg", "jpeg", "png", "tiff", "bmp"]:
 
         extracted_text = extract_text_from_image(file_bytes, language=language)
-
-    # DOCX
-    elif ext == 'docx':
-
-        extracted_text = extract_text_from_docx(file_bytes)
 
     else:
         raise ValueError(f"Unsupported file format: {ext}")
@@ -280,9 +279,7 @@ def extract_document(
     # Final validation before AI pipeline
     if is_invalid_extracted_text(extracted_text):
 
-        logger.warning(
-            "OCR extraction failed or produced unreadable text."
-        )
+        logger.warning("OCR extraction failed or produced unreadable text.")
 
         raise ValueError(
             "Unable to extract readable text from the document. "

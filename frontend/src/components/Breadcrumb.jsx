@@ -1,31 +1,30 @@
-import React from "react";
-import { Link, useLocation } from "react-router-dom";
-import { ChevronRight, Home } from "lucide-react";
+import React from 'react';
+import { Link, useLocation } from 'react-router-dom';
+import { ChevronRight, Home } from 'lucide-react';
 
 const ROUTE_LABELS = {
-  dashboard: "Document Analysis",
-  chat: "General Chat",
-  lawyers: "Lawyer Directory",
-  faq: "FAQ",
-  "scam-detector": "Scam Detector",
-  "document-generator": "Document Generator",
-  contact: "Contact Us",
-  "privacy-policy": "Privacy Policy",
-  terms: "Terms of Service",
-  "version-diff": "Version Diff",
+  dashboard: 'Document Analysis',
+  chat: 'General Chat',
+  lawyers: 'Lawyer Directory',
+  faq: 'FAQ',
+  'scam-detector': 'Scam Detector',
+  'document-generator': 'Document Generator',
+  contact: 'Contact Us',
+  'privacy-policy': 'Privacy Policy',
+  terms: 'Terms of Service',
+  'version-diff': 'Version Diff',
 };
 
 export default function Breadcrumb() {
   const { pathname } = useLocation();
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = pathname.split('/').filter(Boolean);
 
   if (segments.length === 0) return null;
 
   const crumbs = segments.map((seg, idx) => {
-    const path = "/" + segments.slice(0, idx + 1).join("/");
+    const path = '/' + segments.slice(0, idx + 1).join('/');
     const label =
-      ROUTE_LABELS[seg] ||
-      (seg.length > 12 ? seg.substring(0, 8) + "…" : seg);
+      ROUTE_LABELS[seg] || (seg.length > 12 ? seg.substring(0, 8) + '…' : seg);
     const isLast = idx === segments.length - 1;
     return { path, label, isLast };
   });

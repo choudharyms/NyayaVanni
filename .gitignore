@@ -1,3 +1,41 @@
-.vscode/
+# Environment files - NEVER commit real secrets
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+venv/
+.venv/
+.virtualenv/
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+.pytest_cache/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+
+# Uploaded and generated data
+backend/uploads/
+backend/data/
+!backend/data/corpus_embeddings.npy
+!backend/data/faiss_index.bin
+
+# Build outputs
+dist/
+build/

@@ -81,7 +81,11 @@ class ConversationDB {
       request.onsuccess = () => {
         const conversations = request.result || [];
         // Sort by timestamp descending (newest first)
-        resolve(conversations.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp)));
+        resolve(
+          conversations.sort(
+            (a, b) => new Date(b.timestamp) - new Date(a.timestamp)
+          )
+        );
       };
     });
   }

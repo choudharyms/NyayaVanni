@@ -1,9 +1,10 @@
-import faiss
-import numpy as np
-import google.generativeai as genai
 import json
-import os
 import logging
+import os
+
+import faiss
+import google.generativeai as genai
+import numpy as np
 from dotenv import load_dotenv
 
 load_dotenv(override=True)
@@ -21,11 +22,11 @@ else:
     genai.configure(api_key=api_key)
 
 # Load Legal Corpus
-CORPUS_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'legal_corpus.json')
+CORPUS_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "legal_corpus.json")
 legal_corpus = []
 
 try:
-    with open(CORPUS_PATH, 'r') as f:
+    with open(CORPUS_PATH, "r") as f:
         legal_corpus = json.load(f)
 
     if not legal_corpus:
@@ -41,13 +42,12 @@ except FileNotFoundError:
     )
 
 except Exception as e:
-    logger.error(
-        f"RAG system degraded: failed to load corpus: {e}"
-    )
+    logger.error(f"RAG system degraded: failed to load corpus: {e}")
 
 # Initialize FAISS Index
 index = None
 corpus_embeddings = None
+
 
 def get_embeddings(texts: list) -> np.ndarray:
     try:
@@ -58,18 +58,17 @@ def get_embeddings(texts: list) -> np.ndarray:
             content=texts,
             task_type="retrieval_document",
         )
-        return np.array(result['embedding'], dtype=np.float32)
+        return np.array(result["embedding"], dtype=np.float32)
     except Exception as e:
         logger.error(f"Embedding generation failed: {e}")
         return np.array([])
+
 
 def build_index():
     global corpus_embeddings, index
 
     if not legal_corpus:
-        logger.warning(
-            "RAG system degraded: skipping FAISS build (empty corpus)."
-        )
+        logger.warning("RAG system degraded: skipping FAISS build (empty corpus).")
         return
 
     logger.info("Building FAISS index...")
@@ -77,18 +76,18 @@ def build_index():
     corpus_embeddings = get_embeddings(legal_corpus)
 
     if corpus_embeddings is None or corpus_embeddings.size == 0:
-        logger.warning(
-            "RAG system degraded: embedding generation failed."
-        )
+        logger.warning("RAG system degraded: embedding generation failed.")
         return
 
     d = corpus_embeddings.shape[1]
     index = faiss.IndexFlatL2(d)
     index.add(corpus_embeddings)
 
+
 # Build immediately on module import (MVP approach)
 
-INDEX_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'faiss_index.bin')
+INDEX_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "faiss_index.bin")
+
 
 def init_index():
     global index
@@ -101,7 +100,9 @@ def init_index():
         if index is not None:
             faiss.write_index(index, INDEX_PATH)
 
+
 init_index()
+
 
 def retrieve_relevant_laws(query_text: str, k=2) -> list:
     """Search FAISS for the most relevant laws given the document's extracted text or sections"""
@@ -123,20 +124,14 @@ def retrieve_relevant_laws(query_text: str, k=2) -> list:
         distances, indices = index.search(query_vec, k)
 
         results = [
-            legal_corpus[i]
-            for i in indices[0]
-            if i != -1 and i < len(legal_corpus)
+            legal_corpus[i] for i in indices[0] if i != -1 and i < len(legal_corpus)
         ]
 
         if len(results) == 0:
-            logger.warning(
-                "RAG system degraded: no retrieval results for query."
-            )
+            logger.warning("RAG system degraded: no retrieval results for query.")
 
         return results
 
     except Exception as e:
-        logger.error(
-            f"RAG system degraded: retrieval failed: {e}"
-        )
+        logger.error(f"RAG system degraded: retrieval failed: {e}")
         return []

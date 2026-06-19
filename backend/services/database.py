@@ -1,6 +1,5 @@
 import sqlite3
 
-
 SQLITE_TIMEOUT_SECONDS = 30
 
 
