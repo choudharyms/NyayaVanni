@@ -37,6 +37,7 @@ from ..services.storage_service import (UPLOAD_DIR, create_session_id,
                                         save_cached_analysis,
                                         save_document_record, upload_to_local,
                                         validate_session)
+from ..services.forensic_audit_service import run_forensic_audit_pipeline
 
 logger = logging.getLogger(__name__)
 
@@ -49,7 +50,7 @@ graph_builder = LegalKnowledgeGraphBuilder()
 #   RATE_LIMIT_ANALYZE  (default: 10/minute)  heavy Gemini + OCR call
 #   RATE_LIMIT_CHAT     (default: 30/minute)  streaming chat call
 # ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
+from ..middleware.rate_limit import limiter
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 
@@ -198,7 +199,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
 @api_router.post("/analyze/{document_id}")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-def analyze_document(
+async def analyze_document(
     request: Request,
     document_id: str,
     language: str = "en",
@@ -264,11 +265,16 @@ def analyze_document(
         index_document(document_id, filename, text)
 
         relevant_laws = retrieve_relevant_laws(text, k=3)
-        analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+        
+        try:
+            analysis_result = await run_forensic_audit_pipeline(text, relevant_laws, language)
+        except Exception as e:
+            logger.error(f"Multi-agent forensic audit failed, falling back to single-agent: {e}")
+            analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+
         confidence = ConfidenceService.generate(
             document_text=text,
-            summary=analysis_result.get("summary", ""),
-            relevant_laws=relevant_laws,
+            summary=analysis_result.get("summary", "")
         )
         classification = classify_document(text)
         knowledge_graph = graph_builder.generate_graph(text)
