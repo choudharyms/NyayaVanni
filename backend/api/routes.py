@@ -91,6 +91,7 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
     """Receive contact form submissions with IP-based rate limiting."""
+    require_session_id(request)
     logger.info(
         "Contact submission from %s: name=%s email=%s subject=%s",
         request.client.host if request.client else "unknown",
@@ -349,7 +350,7 @@ def chat_stream_sse(
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_general(request: Request, chat_request: ChatRequest):
-    """General legal chat - no document context.
+    """General legal chat with session-based access control.
 
     Args:
         request: The incoming HTTP request.
@@ -363,6 +364,7 @@ def chat_general(request: Request, chat_request: ChatRequest):
         HTTPException 500: If chat generation fails.
     """
     try:
+        require_session_id(request)
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
@@ -437,6 +439,7 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
 def diff_analysis(request: Request, old_document: UploadFile = File(...), new_document: UploadFile = File(...)):
     """Compare two document versions and return a structured difference analysis."""
     try:
+        require_session_id(request)
         old_contents = old_document.file.read()
         new_contents = new_document.file.read()
 
@@ -507,6 +510,7 @@ Provide a JSON response matching this exact schema:
 def generate_document(request: Request, payload: DocumentGenerationRequest):
     """Generates a standard NDA document as a PDF based on provided details."""
     try:
+        require_session_id(request)
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
@@ -574,6 +578,7 @@ async def delete_document(document_id: str, request: Request):
 
 @api_router.get("/search")
 def search_documents_endpoint(
+    request: Request,
     q: str,
     page: int = 1,
     page_size: int = 10
@@ -598,6 +603,7 @@ def search_documents_endpoint(
         - from_cache: Whether results came from cache
     """
     try:
+        require_session_id(request)
         if not q or len(q.strip()) < 2:
             raise HTTPException(
                 status_code=400,
