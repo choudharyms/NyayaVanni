@@ -578,12 +578,15 @@ async def delete_document(document_id: str, request: Request):
 
 @api_router.get("/search")
 def search_documents_endpoint(
+    request: Request,
     q: str,
     page: int = 1,
     page_size: int = 10
 ):
     """
     Search indexed documents using full-text search.
+
+    Requires a valid session_id cookie for authentication.
 
     Fast document search with results cached for 1 hour. Queries return
     in under 500ms using SQLite FTS5 full-text indexing instead of slow
@@ -602,6 +605,8 @@ def search_documents_endpoint(
         - from_cache: Whether results came from cache
     """
     try:
+        session_id = require_session_id(request)
+
         if not q or len(q.strip()) < 2:
             raise HTTPException(
                 status_code=400,
