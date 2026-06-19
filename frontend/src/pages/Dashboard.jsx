@@ -922,8 +922,6 @@ export default function Dashboard() {
                 </div>
               )}
             </div>
-          )}
-        </div>
 
         {analysis?.forensic_audit && (
           <div className={`${CARD_BASE} p-6 border-nyaya-500/25 dark:border-nyaya-800/40 shadow-md`}>
@@ -1261,6 +1259,7 @@ export default function Dashboard() {
                 <Send className="w-5 h-5 pl-0.5" />
               </button>
             </form>
+          </div>
         </div>
       </main>
     </div>
