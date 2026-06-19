@@ -34,13 +34,15 @@ else:
 # Instantiate the optimizer module globally
 query_optimizer = LegalQueryOptimizer()
 
+GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash-001")
+
 generation_config = {
   "temperature": 0.3,
   "top_p": 0.8,
   "top_k": 40,
   "max_output_tokens": 8192,
   "response_mime_type": "application/json",
-  "response_schema": DocumentAnalysis ,
+  "response_schema": DocumentAnalysis.model_json_schema(),
 }
 
 chat_config = {
@@ -51,7 +53,7 @@ chat_config = {
 
 def _create_model(system_instruction: str = ""):
     return genai.GenerativeModel(
-        model_name="gemini-3.1-flash-lite-preview",
+        model_name=GEMINI_MODEL_NAME,
         generation_config=generation_config,
         system_instruction=system_instruction,
     )
@@ -59,7 +61,7 @@ def _create_model(system_instruction: str = ""):
 
 def _create_chat_model(system_instruction: str = ""):
     return genai.GenerativeModel(
-        model_name="gemini-3.1-flash-lite-preview",
+        model_name=GEMINI_MODEL_NAME,
         generation_config=chat_config,
         system_instruction=system_instruction,
     )
@@ -176,7 +178,11 @@ Extract and structure the output strictly in JSON format matching this schema:
         parsed = _parse_structured_response(response)
         return parsed
     except Exception as e:
-        logger.error(f"Gemini Analysis Failed: {e}")
+        logger.error(f"Gemini Analysis Failed (model={GEMINI_MODEL_NAME}): {e}")
+        if "not found" in str(e).lower() or "not supported" in str(e).lower():
+            raise RuntimeError(
+                f"Gemini model '{GEMINI_MODEL_NAME}' not found. Check GEMINI_MODEL_NAME environment variable."
+            )
         raise
 
 
@@ -229,7 +235,9 @@ Example Structure:
         return response.text
 
     except Exception as e:
-        logger.error(f"Gemini Chat Failed: {e}")
+        logger.error(f"Gemini Chat Failed (model={GEMINI_MODEL_NAME}): {e}")
+        if "not found" in str(e).lower() or "not supported" in str(e).lower():
+            return f"AI service configuration error: Gemini model '{GEMINI_MODEL_NAME}' is not available. Please contact the administrator."
         return "AI service is currently unavailable. Please contact the administrator."
 def stream_chat_response(document_analysis: dict, chat_history: list, user_message: str, language: str = "en"):
     """
@@ -283,5 +291,7 @@ Example Structure:
                 yield chunk.text
 
     except Exception as e:
-        logger.error(f"Gemini Chat Stream Failed: {e}")
+        logger.error(f"Gemini Chat Stream Failed (model={GEMINI_MODEL_NAME}): {e}")
+        if "not found" in str(e).lower() or "not supported" in str(e).lower():
+            yield "AI service configuration error: The configured Gemini model is not available. Please contact the administrator."
         yield "AI service is currently unavailable. Please contact the administrator."
