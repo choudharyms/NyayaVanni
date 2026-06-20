@@ -1,18 +1,16 @@
-import { Link } from "react-router-dom";
-import { Scale, ArrowLeft, Home } from "lucide-react";
-import ThemeToggle from "../components/ThemeToggle";
+import { Link } from 'react-router-dom';
+import { Scale, ArrowLeft, Home } from 'lucide-react';
+import ThemeToggle from '../components/ThemeToggle';
 
 export default function NotFound() {
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 flex flex-col transition-colors duration-300">
-      
       <header className="w-full max-w-7xl mx-auto px-6 py-6 flex justify-end">
         <ThemeToggle />
       </header>
 
       <main className="flex-1 flex items-center justify-center px-6">
         <div className="max-w-2xl w-full text-center">
-
           <div className="flex justify-center mb-8">
             <div className="w-24 h-24 rounded-full bg-nyaya-500/10 flex items-center justify-center">
               <Scale className="w-12 h-12 text-nyaya-600 dark:text-nyaya-400" />
@@ -28,8 +26,8 @@ export default function NotFound() {
           </h2>
 
           <p className="mt-4 text-lg text-slate-600 dark:text-slate-400 leading-relaxed">
-            The page you're looking for doesn't exist, has been moved,
-            or the URL may be incorrect.
+            The page you're looking for doesn't exist, has been moved, or the
+            URL may be incorrect.
           </p>
 
           <p className="mt-2 text-slate-500 dark:text-slate-500">
@@ -57,11 +55,10 @@ export default function NotFound() {
           <div className="mt-12 p-6 rounded-3xl bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl border border-slate-200 dark:border-slate-800">
             <p className="text-sm text-slate-600 dark:text-slate-400">
               Need assistance? Visit the homepage to explore legal resources,
-              AI-powered guidance, and support services available through
-              Nyaya Vanni.
+              AI-powered guidance, and support services available through Nyaya
+              Vanni.
             </p>
           </div>
-
         </div>
       </main>
     </div>
