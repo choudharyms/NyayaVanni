@@ -14,5 +14,7 @@ pydantic-settings
 python-dotenv
 gunicorn
 reportlab
+python-docx
 slowapi
+reportlab
 python-docx

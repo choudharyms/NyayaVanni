@@ -231,7 +231,6 @@
 
 /* Mobile Responsiveness */
 @media screen and (max-width: 768px) {
-
   .navbar {
     flex-direction: column;
     align-items: center;
@@ -251,7 +250,6 @@
 
 /* Small Mobile Devices */
 @media screen and (max-width: 480px) {
-
   .navbar {
     padding: 0.8rem;
   }
@@ -267,4 +265,3 @@
     padding: 0.5rem 0;
   }
 }
-

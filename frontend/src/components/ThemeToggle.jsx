@@ -1,16 +1,16 @@
 import React from 'react';
 import { Sun, Moon } from 'lucide-react';
 import { useTheme } from '../contexts/ThemeContext';
+import { ARIA_LABELS, TITLES } from '../constants';
 
 export default function ThemeToggle() {
   const { theme, toggleTheme } = useTheme();
-
   return (
     <button
       onClick={toggleTheme}
       className="relative p-2.5 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-700 dark:border-slate-800 dark:hover:bg-slate-900 dark:text-slate-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-nyaya-500/50 cursor-pointer overflow-hidden group shadow-sm bg-white dark:bg-slate-950"
-      title={theme === 'light' ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-      aria-label="Toggle theme"
+      title={theme === 'light' ? TITLES.SWITCH_TO_LIGHT : TITLES.SWITCH_TO_DARK}
+      aria-label={ARIA_LABELS.TOGGLE_THEME}
     >
       <div className="relative w-5 h-5 flex items-center justify-center">
         {theme === 'light' ? (

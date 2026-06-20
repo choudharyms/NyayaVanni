@@ -1,6 +1,6 @@
-from typing import List, Dict
-import uuid
 import re
+import uuid
+from typing import Dict, List
 
 
 class LegalKnowledgeGraphBuilder:
@@ -23,7 +23,7 @@ class LegalKnowledgeGraphBuilder:
             "obligations": [],
             "clauses": [],
             "legal_terms": [],
-            "financial_terms": []
+            "financial_terms": [],
         }
 
         # -------------------------
@@ -37,7 +37,7 @@ class LegalKnowledgeGraphBuilder:
             r"lessor",
             r"lessee",
             r"buyer",
-            r"seller"
+            r"seller",
         ]
 
         for pattern in party_patterns:
@@ -64,10 +64,10 @@ class LegalKnowledgeGraphBuilder:
             "must",
             "required to",
             "obligated to",
-            "agrees to"
+            "agrees to",
         ]
 
-        sentences = re.split(r'(?<=[.!?])\s+', text)
+        sentences = re.split(r"(?<=[.!?])\s+", text)
 
         for sentence in sentences:
             for keyword in obligation_keywords:
@@ -91,7 +91,7 @@ class LegalKnowledgeGraphBuilder:
             "termination",
             "jurisdiction",
             "arbitration",
-            "breach"
+            "breach",
         ]
 
         for term in legal_terms:
@@ -106,11 +106,15 @@ class LegalKnowledgeGraphBuilder:
 
         # Remove duplicates
         for key in entities:
-            entities[key] = list(set([
-                item.strip()
-                for item in entities[key]
-                if item and isinstance(item, str)
-            ]))
+            entities[key] = list(
+                set(
+                    [
+                        item.strip()
+                        for item in entities[key]
+                        if item and isinstance(item, str)
+                    ]
+                )
+            )
 
         return entities
 
@@ -124,29 +128,35 @@ class LegalKnowledgeGraphBuilder:
         # Clause -> Obligation
         for clause in entities["clauses"]:
             for obligation in entities["obligations"]:
-                relationships.append({
-                    "source_label": clause,
-                    "target_label": obligation,
-                    "relationship": "contains obligation"
-                })
+                relationships.append(
+                    {
+                        "source_label": clause,
+                        "target_label": obligation,
+                        "relationship": "contains obligation",
+                    }
+                )
 
         # Obligation -> Deadline
         for obligation in entities["obligations"]:
             for date in entities["dates"]:
-                relationships.append({
-                    "source_label": obligation,
-                    "target_label": date,
-                    "relationship": "has deadline"
-                })
+                relationships.append(
+                    {
+                        "source_label": obligation,
+                        "target_label": date,
+                        "relationship": "has deadline",
+                    }
+                )
 
         # Party -> Obligation
         for party in entities["parties"]:
             for obligation in entities["obligations"]:
-                relationships.append({
-                    "source_label": party,
-                    "target_label": obligation,
-                    "relationship": "responsible for"
-                })
+                relationships.append(
+                    {
+                        "source_label": party,
+                        "target_label": obligation,
+                        "relationship": "responsible for",
+                    }
+                )
 
         return relationships
 
@@ -170,11 +180,7 @@ class LegalKnowledgeGraphBuilder:
             for value in values:
                 node_id = str(uuid.uuid4())
 
-                node = {
-                    "id": node_id,
-                    "label": value,
-                    "type": entity_type
-                }
+                node = {"id": node_id, "label": value, "type": entity_type}
 
                 nodes.append(node)
                 node_map[value] = node_id
@@ -188,14 +194,13 @@ class LegalKnowledgeGraphBuilder:
             target_id = node_map.get(relation["target_label"])
 
             if source_id and target_id:
-                edges.append({
-                    "id": str(uuid.uuid4()),
-                    "source": source_id,
-                    "target": target_id,
-                    "label": relation["relationship"]
-                })
+                edges.append(
+                    {
+                        "id": str(uuid.uuid4()),
+                        "source": source_id,
+                        "target": target_id,
+                        "label": relation["relationship"],
+                    }
+                )
 
-        return {
-            "nodes": nodes,
-            "edges": edges
-        }
+        return {"nodes": nodes, "edges": edges}

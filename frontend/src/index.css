@@ -1,4 +1,4 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -13,7 +13,7 @@
   --color-nyaya-700: #0f766e;
   --color-nyaya-800: #115e59;
   --color-nyaya-900: #134e4a;
-  --font-sans: "Inter", "Roboto", sans-serif;
+  --font-sans: 'Inter', 'Roboto', sans-serif;
 }
 
 @layer base {
@@ -24,9 +24,29 @@
   a {
     @apply transition-colors duration-300 ease-in-out cursor-pointer;
   }
-  
+
   /* Smooth transitions for theme colors */
-  html, body, div, section, nav, header, main, footer, p, span, h1, h2, h3, h4, h5, h6, button, a, input, select, textarea {
+  html,
+  body,
+  div,
+  section,
+  nav,
+  header,
+  main,
+  footer,
+  p,
+  span,
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6,
+  button,
+  a,
+  input,
+  select,
+  textarea {
     @apply transition-colors duration-300 ease-in-out;
   }
 }
@@ -80,7 +100,7 @@
   padding-right: 14px;
 
   scrollbar-width: thin;
-  scrollbar-color: rgba(148,163,184,.4) transparent;
+  scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
 }
 
 .chat-textarea::-webkit-scrollbar {
@@ -92,6 +112,6 @@
 }
 
 .chat-textarea::-webkit-scrollbar-thumb {
-  background: rgba(148,163,184,.4);
+  background: rgba(148, 163, 184, 0.4);
   border-radius: 999px;
 }

@@ -1,7 +1,11 @@
 ﻿import React, { useState } from 'react';
 import { Search, X } from 'lucide-react';
+import { ARIA_LABELS, TITLES, PLACEHOLDERS } from '../constants';
 
-export default function SearchBar({ onSearch, placeholder = 'Search conversations...' }) {
+export default function SearchBar({
+  onSearch,
+  placeholder = PLACEHOLDERS.SEARCH_CONVERSATIONS,
+}) {
   const [query, setQuery] = useState('');
   const [isFocused, setIsFocused] = useState(false);
 
@@ -34,14 +38,14 @@ export default function SearchBar({ onSearch, placeholder = 'Search conversation
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
           className="flex-1 bg-transparent outline-none text-sm text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400"
-          aria-label="Search conversations"
+          aria-label={ARIA_LABELS.SEARCH_CONVERSATIONS}
         />
         {query && (
           <button
             onClick={handleClear}
             className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
-            aria-label="Clear search"
-            title="Clear search"
+            aria-label={ARIA_LABELS.CLEAR_SEARCH}
+            title={TITLES.CLEAR_SEARCH}
           >
             <X className="w-4 h-4" />
           </button>
@@ -50,4 +54,3 @@ export default function SearchBar({ onSearch, placeholder = 'Search conversation
     </div>
   );
 }
-

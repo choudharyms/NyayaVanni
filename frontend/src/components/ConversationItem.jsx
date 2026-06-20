@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Trash2, ChevronRight } from 'lucide-react';
+import { ARIA_LABELS, TITLES, MESSAGES } from '../constants';
 
 export default function ConversationItem({
   conversation,
@@ -14,7 +15,6 @@ export default function ConversationItem({
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-
     if (date.toDateString() === today.toDateString()) {
       return date.toLocaleTimeString('en-US', {
         hour: 'numeric',
@@ -22,7 +22,7 @@ export default function ConversationItem({
         hour12: true,
       });
     } else if (date.toDateString() === yesterday.toDateString()) {
-      return 'Yesterday';
+      return MESSAGES.YESTERDAY;
     } else if (date.getFullYear() === today.getFullYear()) {
       return date.toLocaleDateString('en-US', {
         month: 'short',
@@ -40,9 +40,7 @@ export default function ConversationItem({
   const handleDelete = (e) => {
     e.stopPropagation();
     if (
-      window.confirm(
-        `Are you sure you want to delete "${conversation.title}"?`
-      )
+      window.confirm(`Are you sure you want to delete "${conversation.title}"?`)
     ) {
       onDelete(conversation.id);
     }
@@ -72,14 +70,13 @@ export default function ConversationItem({
           {formatDate(conversation.updatedAt || conversation.timestamp)}
         </p>
       </div>
-
       <div className="flex items-center gap-1 ml-2">
         {isHovering ? (
           <button
             onClick={handleDelete}
             className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
-            aria-label="Delete conversation"
-            title="Delete conversation"
+            aria-label={ARIA_LABELS.DELETE_CONVERSATION}
+            title={TITLES.DELETE_CONVERSATION}
           >
             <Trash2 className="w-4 h-4" />
           </button>

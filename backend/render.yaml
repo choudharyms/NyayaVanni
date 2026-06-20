@@ -10,5 +10,7 @@ services:
         value: 3.10.x
       - key: GEMINI_API_KEY
         sync: false # Set this in the Render dashboard
+      - key: FRONTEND_URL
+        sync: false # Set this to your deployed frontend URL (e.g. https://nyayavanni.vercel.app)
       - key: PORT
         value: 8000

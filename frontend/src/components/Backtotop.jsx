@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { ChevronUp } from "lucide-react";
+import { useEffect, useState } from 'react';
+import { ChevronUp } from 'lucide-react';
 
 export default function BackToTop() {
   const [show, setShow] = useState(false);
@@ -9,17 +9,17 @@ export default function BackToTop() {
       setShow(window.scrollY > 500);
     };
 
-    window.addEventListener("scroll", handleScroll);
+    window.addEventListener('scroll', handleScroll);
 
     return () => {
-      window.removeEventListener("scroll", handleScroll);
+      window.removeEventListener('scroll', handleScroll);
     };
   }, []);
 
   const scrollToTop = () => {
     window.scrollTo({
       top: 0,
-      behavior: "smooth",
+      behavior: 'smooth',
     });
   };
 
@@ -35,8 +35,8 @@ export default function BackToTop() {
 
         ${
           show
-            ? "translate-y-0 opacity-100"
-            : "translate-y-4 opacity-0 pointer-events-none"
+            ? 'translate-y-0 opacity-100'
+            : 'translate-y-4 opacity-0 pointer-events-none'
         }
 
         bg-white/80 dark:bg-slate-900/80

@@ -1,9 +1,13 @@
 import re
 
+MAX_QUERY_LENGTH = 4000
+
+
 class LegalQueryOptimizer:
     """
-    Handles preprocessing of user queries and applies strict system prompts 
-    for accurate, citation-backed Indian legal responses using the Gemini API.
+    Handles preprocessing of user queries for accurate Indian legal responses.
+    System instructions are provided separately (not appended to user input)
+    to prevent prompt injection via user-crafted input.
     """
     def __init__(self):
         """Initialize the LegalQueryOptimizer with system prompt instructions.
@@ -40,8 +44,7 @@ class LegalQueryOptimizer:
         if not query:
             return ""
 
-        # Normalize text casing
-        cleaned = query.strip()
+        cleaned = query.strip()[:MAX_QUERY_LENGTH]
 
         # Map common legal abbreviations to their full expansions
         abbreviations = {
@@ -50,14 +53,14 @@ class LegalQueryOptimizer:
             r"\b[bB][nN][sS]\b": "Bharatiya Nyaya Sanhita",
             r"\b[cC][pP][cC]\b": "Code of Civil Procedure",
             r"\b[fF][iI][rR]\b": "First Information Report",
-            r"\b[rR][tT][iI]\b": "Right to Information Act"
+            r"\b[rR][tT][iI]\b": "Right to Information Act",
         }
 
         for pattern, replacement in abbreviations.items():
             cleaned = re.sub(pattern, replacement, cleaned)
 
-        # Basic stripping of unnecessary special character clutter
-        cleaned = re.sub(r"[^\w\s\-\.,\(\)]", "", cleaned)
+        # Strip characters commonly used in prompt injection attempts
+        cleaned = re.sub(r"[^\w\s\-\.,\(\)!?]", "", cleaned)
         return cleaned
 
     def optimize_prompt(self, user_message: str) -> str:
@@ -74,5 +77,4 @@ class LegalQueryOptimizer:
             A formatted string with the cleaned query followed by the system
             instruction block, ready to be sent to the Gemini API.
         """
-        processed_query = self.clean_and_expand_query(user_message)
-        return f"{processed_query}{self.legal_instruction}"
+        return self.clean_and_expand_query(user_message)

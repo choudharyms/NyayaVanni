@@ -1,55 +1,55 @@
-import React, { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { ArrowLeft, FileText, Loader2, Scale, Sparkles } from "lucide-react";
-import ThemeToggle from "../components/ThemeToggle";
+import React, { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { ArrowLeft, FileText, Loader2, Scale, Sparkles } from 'lucide-react';
+import ThemeToggle from '../components/ThemeToggle';
 
 const FIELD_CONFIG = [
   {
-    name: "party_one_name",
-    label: "Disclosing Party Name",
-    placeholder: "e.g., ABC Technologies Pvt. Ltd.",
-    type: "text",
+    name: 'party_one_name',
+    label: 'Disclosing Party Name',
+    placeholder: 'e.g., ABC Technologies Pvt. Ltd.',
+    type: 'text',
     required: true,
   },
   {
-    name: "party_two_name",
-    label: "Receiving Party Name",
-    placeholder: "e.g., John Doe",
-    type: "text",
+    name: 'party_two_name',
+    label: 'Receiving Party Name',
+    placeholder: 'e.g., John Doe',
+    type: 'text',
     required: true,
   },
   {
-    name: "effective_date",
-    label: "Effective Date",
-    placeholder: "",
-    type: "date",
+    name: 'effective_date',
+    label: 'Effective Date',
+    placeholder: '',
+    type: 'date',
     required: true,
   },
   {
-    name: "consideration_amount",
-    label: "Consideration Amount",
-    placeholder: "e.g., INR 50,000",
-    type: "text",
+    name: 'consideration_amount',
+    label: 'Consideration Amount',
+    placeholder: 'e.g., INR 50,000',
+    type: 'text',
     required: true,
   },
   {
-    name: "jurisdiction",
-    label: "Jurisdiction",
-    placeholder: "e.g., New Delhi, India",
-    type: "text",
+    name: 'jurisdiction',
+    label: 'Jurisdiction',
+    placeholder: 'e.g., New Delhi, India',
+    type: 'text',
     required: true,
   },
 ];
 
 const INITIAL_FORM = FIELD_CONFIG.reduce((acc, field) => {
-  acc[field.name] = "";
+  acc[field.name] = '';
   return acc;
 }, {});
 
 function getFilename(contentDispositionHeader) {
-  if (!contentDispositionHeader) return "NDA_Document.pdf";
+  if (!contentDispositionHeader) return 'NDA_Document.pdf';
   const match = contentDispositionHeader.match(/filename="?([^"]+)"?/i);
-  return match?.[1] || "NDA_Document.pdf";
+  return match?.[1] || 'NDA_Document.pdf';
 }
 
 export default function DocumentGenerator() {
@@ -57,16 +57,18 @@ export default function DocumentGenerator() {
   const [formData, setFormData] = useState(INITIAL_FORM);
   const [errors, setErrors] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
-  const [submitError, setSubmitError] = useState("");
+  const [submitError, setSubmitError] = useState('');
 
   const isFormComplete = useMemo(() => {
-    return FIELD_CONFIG.every((field) => formData[field.name].trim().length > 0);
+    return FIELD_CONFIG.every(
+      (field) => formData[field.name].trim().length > 0
+    );
   }, [formData]);
 
   const handleChange = (fieldName, value) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }));
-    setErrors((prev) => ({ ...prev, [fieldName]: "" }));
-    setSubmitError("");
+    setErrors((prev) => ({ ...prev, [fieldName]: '' }));
+    setSubmitError('');
   };
 
   const validate = () => {
@@ -82,9 +84,11 @@ export default function DocumentGenerator() {
     if (
       formData.party_one_name.trim() &&
       formData.party_two_name.trim() &&
-      formData.party_one_name.trim().toLowerCase() === formData.party_two_name.trim().toLowerCase()
+      formData.party_one_name.trim().toLowerCase() ===
+        formData.party_two_name.trim().toLowerCase()
     ) {
-      nextErrors.party_two_name = "Receiving Party must be different from Disclosing Party.";
+      nextErrors.party_two_name =
+        'Receiving Party must be different from Disclosing Party.';
     }
 
     setErrors(nextErrors);
@@ -96,27 +100,27 @@ export default function DocumentGenerator() {
     if (!validate()) return;
 
     setIsGenerating(true);
-    setSubmitError("");
+    setSubmitError('');
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL || "http://localhost:8000";
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const response = await fetch(`${apiUrl}/api/generate-document`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
         body: JSON.stringify(formData),
       });
 
       if (!response.ok) {
         const errorPayload = await response.json().catch(() => null);
-        throw new Error(errorPayload?.detail || "Failed to generate document.");
+        throw new Error(errorPayload?.detail || 'Failed to generate document.');
       }
 
       const pdfBlob = await response.blob();
       const downloadUrl = window.URL.createObjectURL(pdfBlob);
-      const filename = getFilename(response.headers.get("content-disposition"));
+      const filename = getFilename(response.headers.get('content-disposition'));
 
-      const link = document.createElement("a");
+      const link = document.createElement('a');
       link.href = downloadUrl;
       link.download = filename;
       document.body.appendChild(link);
@@ -124,7 +128,7 @@ export default function DocumentGenerator() {
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      setSubmitError(error.message || "An unexpected error occurred.");
+      setSubmitError(error.message || 'An unexpected error occurred.');
     } finally {
       setIsGenerating(false);
     }
@@ -146,14 +150,17 @@ export default function DocumentGenerator() {
               <ArrowLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
             </button>
             <button
-              onClick={() => navigate("/")}
+              onClick={() => navigate('/')}
               className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer"
             >
               <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
                 <Scale className="text-nyaya-600 dark:text-nyaya-400 w-5 h-5" />
               </span>
               <span>
-                Nyaya<span className="text-nyaya-600 dark:text-nyaya-400">Vanni</span>
+                Nyaya
+                <span className="text-nyaya-600 dark:text-nyaya-400">
+                  Vanni
+                </span>
               </span>
             </button>
           </div>
@@ -174,9 +181,12 @@ export default function DocumentGenerator() {
             <FileText className="w-4 h-4" />
             Generate legally structured documents
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-850 dark:text-white">NDA Document Generator</h1>
+          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-850 dark:text-white">
+            NDA Document Generator
+          </h1>
           <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-300">
-            Fill in the details below to generate a professional NDA PDF instantly.
+            Fill in the details below to generate a professional NDA PDF
+            instantly.
           </p>
         </div>
 
@@ -186,8 +196,14 @@ export default function DocumentGenerator() {
         >
           <div className="grid md:grid-cols-2 gap-5">
             {FIELD_CONFIG.map((field) => (
-              <div key={field.name} className={field.name === "jurisdiction" ? "md:col-span-2" : ""}>
-                <label htmlFor={field.name} className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+              <div
+                key={field.name}
+                className={field.name === 'jurisdiction' ? 'md:col-span-2' : ''}
+              >
+                <label
+                  htmlFor={field.name}
+                  className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2"
+                >
                   {field.label}
                 </label>
                 <input
@@ -200,11 +216,15 @@ export default function DocumentGenerator() {
                     focus:outline-none focus:ring-2 transition
                     ${
                       errors[field.name]
-                        ? "focus:ring-rose-400/50"
-                        : "focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+                        ? 'focus:ring-rose-400/50'
+                        : 'focus:ring-nyaya-500/70 focus:border-nyaya-500/50'
                     }`}
                 />
-                {errors[field.name] && <p className="mt-1.5 text-xs text-rose-300">{errors[field.name]}</p>}
+                {errors[field.name] && (
+                  <p className="mt-1.5 text-xs text-rose-300">
+                    {errors[field.name]}
+                  </p>
+                )}
               </div>
             ))}
           </div>
@@ -217,7 +237,8 @@ export default function DocumentGenerator() {
 
           <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <p className="text-xs text-slate-500 dark:text-slate-400">
-              Disclaimer: Generated by NyayaVanni for informational purposes only.
+              Disclaimer: Generated by NyayaVanni for informational purposes
+              only.
             </p>
             <button
               type="submit"
@@ -233,7 +254,7 @@ export default function DocumentGenerator() {
                   Generating PDF...
                 </>
               ) : (
-                "Generate Document"
+                'Generate Document'
               )}
             </button>
           </div>
