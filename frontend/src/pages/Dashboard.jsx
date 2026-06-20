@@ -21,6 +21,7 @@ import {
   Share2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
@@ -1047,7 +1048,7 @@ export default function Dashboard() {
                     {msg.role === 'assistant' ? (
                       <>
                         <div className={PROSE}>
-                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.message}</ReactMarkdown>
                         </div>
                         <button
                           onClick={() =>

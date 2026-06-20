@@ -11,6 +11,7 @@ import {
   Trash2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
 import ThemeToggle from '../components/ThemeToggle';
@@ -387,7 +388,7 @@ export default function GeneralChat() {
                     >
                       {msg.role === 'assistant' ? (
                         <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.message}</ReactMarkdown>
                         </div>
                       ) : (
                         msg.message

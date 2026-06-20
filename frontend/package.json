@@ -25,6 +25,7 @@
     "react-router-dom": "^7.13.1",
     "react-window": "^2.2.7",
     "reactflow": "^11.11.4",
+    "rehype-sanitize": "^6.0.0",
     "tailwindcss": "^4.2.2"
   },
   "devDependencies": {
