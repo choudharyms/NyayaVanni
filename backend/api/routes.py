@@ -21,6 +21,7 @@ from ..config.rate_limits import CONTACT_RATE_LIMIT, UPLOAD_RATE_LIMIT
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
+from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
 from ..services.gemini_service import (analyze_document_with_gemini,
                                        generate_chat_response,
                                        stream_chat_response)
@@ -151,30 +152,36 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 status_code=400, detail="Uploaded file must have a valid filename."
             )
         ext = filename.split(".")[-1].lower() if "." in filename else ""
-        if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
+        if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(
                 status_code=400,
-                detail="Unsupported file format or MIME type. Only PDF, PNG, JPG, and JPEG are allowed.",
+                detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+            )
+
+        raw_bytes = await file.read()
+        if len(raw_bytes) > MAX_FILE_SIZE:
+            raise HTTPException(
+                status_code=413,
+                detail="File size exceeds the maximum allowed limit of 10MB.",
+            )
+
+        if not validate_file_magic_bytes(raw_bytes, ext):
+            actual_mime = detect_actual_mime(raw_bytes)
+            logger.warning(
+                "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
+                file.content_type, actual_mime, ext,
+            )
+            raise HTTPException(
+                status_code=400,
+                detail="File content does not match the claimed file type. Upload rejected.",
             )
 
         doc_id = str(uuid.uuid4())
         local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
 
-        size = 0
         try:
             with open(local_path, "wb") as buffer:
-                while chunk := await file.read(1024 * 1024):
-                    size += len(chunk)
-                    if size > MAX_FILE_SIZE:
-                        raise HTTPException(
-                            status_code=413,
-                            detail="File size exceeds the maximum allowed limit of 10MB.",
-                        )
-                    buffer.write(chunk)
-        except HTTPException as http_exc:
-            if os.path.exists(local_path):
-                os.remove(local_path)
-            raise http_exc
+                buffer.write(raw_bytes)
         except Exception as e:
             if os.path.exists(local_path):
                 os.remove(local_path)
