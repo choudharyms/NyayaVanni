@@ -125,7 +125,31 @@ def _parse_structured_response(resp) -> dict:
     raise ValueError("Unable to parse structured JSON from model response")
 
 def analyze_document_with_gemini(document_text: str, retrieved_laws: list, language: str = "en") -> dict:
-    # Truncate document and laws to keep total prompt under model limits
+   """
+    Analyze a legal document using the Gemini generative model.
+
+    Truncates the document and retrieved laws to fit within model token
+    limits, constructs a structured prompt, and returns a parsed JSON
+    dictionary containing document type, parties, dates, risk level,
+    recommended actions, and other legal insights.
+
+    Args:
+        document_text: Raw text content of the legal document to analyze.
+        retrieved_laws: List of relevant law snippets retrieved via RAG
+            to provide legal context during analysis.
+        language: Language code for the response output. Defaults to
+            'en' (English). Use 'hi' for Hindi output.
+
+    Returns:
+        A dictionary containing structured legal analysis fields including
+        document_type, parties, dates, sections, clauses, summary,
+        risk_level, urgency, consequences, recommended_timeline,
+        and actions.
+
+    Raises:
+        Exception: If the Gemini API call fails or the response cannot
+            be parsed into a valid JSON structure.
+    """ # Truncate document and laws to keep total prompt under model limits
     document_text = document_text[:8000]
     retrieved_laws = [law[:500] for law in retrieved_laws[:3]]
     context = "\n".join(retrieved_laws)
@@ -181,8 +205,8 @@ def analyze_document_with_gemini(document_text: str, retrieved_laws: list, langu
 
 def generate_chat_response(document_analysis: dict, chat_history: list, user_message: str, language: str = "en") -> str:
     """
-    Generate a conversational response using the Gemini chat model.
-    """
+Generate a conversational response using the Gemini chat model.
+"""
     # Use the LegalQueryOptimizer here to preprocess and expand conversational query shortforms
     optimized_message = query_optimizer.optimize_prompt(user_message)
     
@@ -239,8 +263,29 @@ def generate_chat_response(document_analysis: dict, chat_history: list, user_mes
         return "AI service is currently unavailable. Please contact the administrator."
 def stream_chat_response(document_analysis: dict, chat_history: list, user_message: str, language: str = "en"):
     """
-    Generate a conversational response using the Gemini chat model and yield it as a stream.
-    """
+Stream a conversational legal response using the Gemini chat model.
+
+Optimizes the user message via LegalQueryOptimizer, constructs a
+context-aware prompt from document analysis and chat history, and
+yields response text in chunks for real-time streaming to the client.
+
+Args:
+    document_analysis: Dictionary containing prior document analysis
+        results, or an empty dict for general legal queries.
+    chat_history: List of previous conversation turns, each a dict
+        with 'role' and 'message' keys.
+    user_message: Raw legal question or statement from the user.
+    language: Language code for the response. Defaults to 'en'
+        (English). Use 'hi' for Hindi output.
+
+Yields:
+    str: Successive text chunks of the generated response as they
+        stream from the Gemini API.
+
+Raises:
+    ValueError: If GEMINI_API_KEY is not configured in the
+        environment.
+"""
     optimized_message = query_optimizer.optimize_prompt(user_message)
     
     history_str = "\n".join([f"{msg['role'].capitalize()}: {msg['message']}" for msg in chat_history])
