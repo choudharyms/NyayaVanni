@@ -110,7 +110,7 @@ export default function LandingPage() {
     ' group text-left transition-all duration-300 ease-out hover:text-nyaya-400  hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(45,212,191,0.4)]';
 
   return (
-    <div className="relative flex flex-col items-center min-h-screen overflow-x-clip bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+    <div className="relative flex flex-col items-center overflow-x-clip bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
       {/* Background Gradients */}
       <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-nyaya-500/10 dark:bg-nyaya-500/30 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
       <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[150px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
