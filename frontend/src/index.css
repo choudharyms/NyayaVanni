@@ -1,4 +1,4 @@
-@import 'tailwindcss';
+/* @import 'tailwindcss';
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
 
@@ -13,20 +13,20 @@
   --color-nyaya-700: #0f766e;
   --color-nyaya-800: #115e59;
   --color-nyaya-900: #134e4a;
-  --font-sans: 'Inter', 'Roboto', sans-serif;
-}
+  --font-sans: 'Inter', 'Roboto', sans-serif; */
+/* } */
 
-@layer base {
+/* @layer base {
   body {
     @apply font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300;
   }
   button,
   a {
     @apply transition-colors duration-300 ease-in-out cursor-pointer;
-  }
+  } */
 
   /* Smooth transitions for theme colors */
-  html,
+  /* html,
   body,
   div,
   section,
@@ -59,10 +59,10 @@
   .glass-dark {
     @apply border shadow-2xl bg-slate-900/80 backdrop-blur-xl border-slate-700/50;
   }
-}
+} */
 
 /* Custom Animations for Premium Feel */
-@keyframes float {
+/* @keyframes float {
   0% {
     transform: translateY(0px);
   }
@@ -72,8 +72,8 @@
   100% {
     transform: translateY(0px);
   }
-}
-
+} */
+/* 
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
@@ -86,24 +86,24 @@
   50% {
     opacity: 0.8;
   }
-}
-
+} */
+/* 
 .animate-pulse-soft {
   animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 .chat-textarea {
   resize: none;
-  overflow-y: auto;
+  overflow-y: auto; */
 
   /* Important */
-  padding-right: 14px;
+  /* padding-right: 14px;
 
   scrollbar-width: thin;
   scrollbar-color: rgba(148, 163, 184, 0.4) transparent;
-}
+} */
 
-.chat-textarea::-webkit-scrollbar {
+/* .chat-textarea::-webkit-scrollbar {
   width: 6px;
 }
 
@@ -113,5 +113,78 @@
 
 .chat-textarea::-webkit-scrollbar-thumb {
   background: rgba(148, 163, 184, 0.4);
+  border-radius: 999px;
+} */
+
+
+
+
+
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
+@theme {
+  --color-nyaya-50: #f0fdfa;
+  --color-nyaya-100: #ccfbf1;
+  --color-nyaya-200: #99f6e4;
+  --color-nyaya-300: #5eead4;
+  --color-nyaya-400: #2dd4bf;
+  --color-nyaya-500: #14b8a6;
+  --color-nyaya-600: #0d9488;
+  --color-nyaya-650: #0b8075;
+  --color-nyaya-700: #0f766e;
+  --color-nyaya-800: #115e59;
+  --color-nyaya-850: #0f5954;
+  --color-nyaya-900: #134e4a;
+  --color-nyaya-950: #0a3330;
+  --font-sans: "Inter", "Roboto", sans-serif;
+}
+@layer base {
+  body {
+    @apply font-sans antialiased bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300;
+  }
+  button,
+  a {
+    @apply transition-colors duration-300 ease-in-out cursor-pointer;
+  }
+}
+@layer utilities {
+  .glass {
+    @apply border shadow-xl bg-white/70 backdrop-blur-lg border-white/20;
+  }
+  .glass-dark {
+    @apply border shadow-2xl bg-slate-900/80 backdrop-blur-xl border-slate-700/50;
+  }
+}
+@keyframes float {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-10px); }
+  100% { transform: translateY(0px); }
+}
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+@keyframes pulse-soft {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.8; }
+}
+.animate-pulse-soft {
+  animation: pulse-soft 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+.chat-textarea {
+  resize: none;
+  overflow-y: auto;
+  padding-right: 14px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(148,163,184,.4) transparent;
+}
+.chat-textarea::-webkit-scrollbar {
+  width: 6px;
+}
+.chat-textarea::-webkit-scrollbar-track {
+  background: transparent;
+}
+.chat-textarea::-webkit-scrollbar-thumb {
+  background: rgba(148,163,184,.4);
   border-radius: 999px;
 }
