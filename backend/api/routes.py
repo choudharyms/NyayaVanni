@@ -65,11 +65,13 @@ ALLOWED_MIME_TYPES = {
 
 
 class DocumentGenerationRequest(BaseModel):
+    template_type: str = Field("NDA", max_length=50)
     effective_date: str = Field(..., max_length=100)
     party_one_name: str = Field(..., max_length=500)
     party_two_name: str = Field(..., max_length=500)
     consideration_amount: str = Field(..., max_length=500)
     jurisdiction: str = Field(..., max_length=200)
+    extra_field_1: str = Field(None, max_length=500)
 
 
 def require_session_id(request: Request) -> str:
@@ -546,7 +548,7 @@ Provide a JSON response matching this exact schema:
 @api_router.post("/generate-document")
 @limiter.limit("10/minute")
 def generate_document(request: Request, payload: DocumentGenerationRequest):
-    """Generates a standard NDA document as a PDF based on provided details."""
+    """Generates a standard legal document (NDA or Rent Agreement) as a PDF based on provided details."""
     try:
         session_id = require_session_id(request)
 
@@ -554,23 +556,39 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
         c = canvas.Canvas(buffer, pagesize=letter)
         width, height = letter
 
+        title = "NON-DISCLOSURE AGREEMENT" if payload.template_type.upper() == "NDA" else "RENT AGREEMENT"
         c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2.0, height - 50, "NON-DISCLOSURE AGREEMENT")
+        c.drawCentredString(width / 2.0, height - 50, title)
 
         c.setFont("Helvetica", 12)
         text = c.beginText(50, height - 100)
 
-        template_text = (
-            f'This Non-Disclosure Agreement (the "Agreement") is entered into on {payload.effective_date} '
-            f'by and between {payload.party_one_name} ("Disclosing Party") and {payload.party_two_name} '
-            f'("Receiving Party").\n\n'
-            f"1. Confidential Information: The Receiving Party agrees to keep confidential any proprietary "
-            f"information disclosed by the Disclosing Party.\n\n"
-            f"2. Consideration: In consideration for the obligations set forth herein, the parties acknowledge "
-            f"the receipt and sufficiency of {payload.consideration_amount}.\n\n"
-            f"3. Jurisdiction: This Agreement shall be governed by the laws of {payload.jurisdiction}.\n\n"
-            f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
-        )
+        if payload.template_type.upper() == "NDA":
+            template_text = (
+                f'This Non-Disclosure Agreement (the "Agreement") is entered into on {payload.effective_date} '
+                f'by and between {payload.party_one_name} ("Disclosing Party") and {payload.party_two_name} '
+                f'("Receiving Party").\n\n'
+                f"1. Confidential Information: The Receiving Party agrees to keep confidential any proprietary "
+                f"information disclosed by the Disclosing Party.\n\n"
+                f"2. Consideration: In consideration for the obligations set forth herein, the parties acknowledge "
+                f"the receipt and sufficiency of {payload.consideration_amount}.\n\n"
+                f"3. Jurisdiction: This Agreement shall be governed by the laws of {payload.jurisdiction}.\n\n"
+                f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
+            )
+        else:
+            deposit_val = payload.extra_field_1 or "N/A"
+            template_text = (
+                f'This Rent Agreement (the "Agreement") is entered into on {payload.effective_date} '
+                f'by and between {payload.party_one_name} ("Landlord") and {payload.party_two_name} '
+                f'("Tenant").\n\n'
+                f"1. Lease Term: The Landlord hereby leases the premises located in {payload.jurisdiction} to "
+                f"the Tenant.\n\n"
+                f"2. Monthly Rent: The Tenant agrees to pay a monthly rent of {payload.consideration_amount} to "
+                f"the Landlord.\n\n"
+                f"3. Security Deposit: The Tenant agrees to pay a security deposit of {deposit_val} on or before "
+                f"the execution of this Agreement.\n\n"
+                f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
+            )
 
         lines = template_text.split("\n")
         for line in lines:
@@ -595,10 +613,11 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
         c.save()
         buffer.seek(0)
 
+        filename = "NDA_Document.pdf" if payload.template_type.upper() == "NDA" else "Rent_Agreement.pdf"
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
-            headers={"Content-Disposition": 'attachment; filename="NDA_Document.pdf"'},
+            headers={"Content-Disposition": f'attachment; filename="{filename}"'},
         )
     except Exception as e:
         logger.error(f"Failed to generate document: {e}")

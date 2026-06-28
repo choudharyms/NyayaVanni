@@ -3,48 +3,15 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Loader2, Scale, Sparkles } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 
-const FIELD_CONFIG = [
-  {
-    name: 'party_one_name',
-    label: 'Disclosing Party Name',
-    placeholder: 'e.g., ABC Technologies Pvt. Ltd.',
-    type: 'text',
-    required: true,
-  },
-  {
-    name: 'party_two_name',
-    label: 'Receiving Party Name',
-    placeholder: 'e.g., John Doe',
-    type: 'text',
-    required: true,
-  },
-  {
-    name: 'effective_date',
-    label: 'Effective Date',
-    placeholder: '',
-    type: 'date',
-    required: true,
-  },
-  {
-    name: 'consideration_amount',
-    label: 'Consideration Amount',
-    placeholder: 'e.g., INR 50,000',
-    type: 'text',
-    required: true,
-  },
-  {
-    name: 'jurisdiction',
-    label: 'Jurisdiction',
-    placeholder: 'e.g., New Delhi, India',
-    type: 'text',
-    required: true,
-  },
-];
-
-const INITIAL_FORM = FIELD_CONFIG.reduce((acc, field) => {
-  acc[field.name] = '';
-  return acc;
-}, {});
+const INITIAL_FORM = {
+  template_type: 'NDA',
+  party_one_name: '',
+  party_two_name: '',
+  effective_date: '',
+  consideration_amount: '',
+  jurisdiction: '',
+  extra_field_1: '',
+};
 
 function getFilename(contentDispositionHeader) {
   if (!contentDispositionHeader) return 'NDA_Document.pdf';
@@ -58,12 +25,100 @@ export default function DocumentGenerator() {
   const [errors, setErrors] = useState({});
   const [isGenerating, setIsGenerating] = useState(false);
   const [submitError, setSubmitError] = useState('');
+  const [templateType, setTemplateType] = useState('NDA');
+
+  const fields = useMemo(() => {
+    if (templateType === 'NDA') {
+      return [
+        {
+          name: 'party_one_name',
+          label: 'Disclosing Party Name',
+          placeholder: 'e.g., ABC Technologies Pvt. Ltd.',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'party_two_name',
+          label: 'Receiving Party Name',
+          placeholder: 'e.g., John Doe',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'effective_date',
+          label: 'Effective Date',
+          placeholder: '',
+          type: 'date',
+          required: true,
+        },
+        {
+          name: 'consideration_amount',
+          label: 'Consideration Amount',
+          placeholder: 'e.g., INR 50,000',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'jurisdiction',
+          label: 'Jurisdiction',
+          placeholder: 'e.g., New Delhi, India',
+          type: 'text',
+          required: true,
+        },
+      ];
+    } else {
+      return [
+        {
+          name: 'party_one_name',
+          label: 'Landlord Name',
+          placeholder: 'e.g., Rajesh Kumar',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'party_two_name',
+          label: 'Tenant Name',
+          placeholder: 'e.g., Vikram Singh',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'effective_date',
+          label: 'Agreement Start Date',
+          placeholder: '',
+          type: 'date',
+          required: true,
+        },
+        {
+          name: 'consideration_amount',
+          label: 'Monthly Rent',
+          placeholder: 'e.g., INR 15,000',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'jurisdiction',
+          label: 'Property Location/Address',
+          placeholder: 'e.g., Flat 102, Saket, New Delhi',
+          type: 'text',
+          required: true,
+        },
+        {
+          name: 'extra_field_1',
+          label: 'Security Deposit',
+          placeholder: 'e.g., INR 30,000',
+          type: 'text',
+          required: true,
+        },
+      ];
+    }
+  }, [templateType]);
 
   const isFormComplete = useMemo(() => {
-    return FIELD_CONFIG.every(
-      (field) => formData[field.name].trim().length > 0
+    return fields.every(
+      (field) => formData[field.name]?.trim().length > 0
     );
-  }, [formData]);
+  }, [formData, fields]);
 
   const handleChange = (fieldName, value) => {
     setFormData((prev) => ({ ...prev, [fieldName]: value }));
@@ -74,7 +129,7 @@ export default function DocumentGenerator() {
   const validate = () => {
     const nextErrors = {};
 
-    FIELD_CONFIG.forEach((field) => {
+    fields.forEach((field) => {
       const value = formData[field.name]?.trim();
       if (field.required && !value) {
         nextErrors[field.name] = `${field.label} is required.`;
@@ -88,7 +143,9 @@ export default function DocumentGenerator() {
         formData.party_two_name.trim().toLowerCase()
     ) {
       nextErrors.party_two_name =
-        'Receiving Party must be different from Disclosing Party.';
+        templateType === 'NDA'
+          ? 'Receiving Party must be different from Disclosing Party.'
+          : 'Tenant must be different from Landlord.';
     }
 
     setErrors(nextErrors);
@@ -194,11 +251,38 @@ export default function DocumentGenerator() {
           onSubmit={handleGenerate}
           className="mt-10 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 md:p-8 shadow-md"
         >
+          <div className="mb-6">
+            <label className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2">
+              Select Document Template
+            </label>
+            <select
+              value={templateType}
+              onChange={(e) => {
+                setTemplateType(e.target.value);
+                setFormData((prev) => ({
+                  ...prev,
+                  template_type: e.target.value,
+                  party_one_name: '',
+                  party_two_name: '',
+                  effective_date: '',
+                  consideration_amount: '',
+                  jurisdiction: '',
+                  extra_field_1: '',
+                }));
+                setErrors({});
+              }}
+              className="w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50 transition cursor-pointer"
+            >
+              <option value="NDA">Non-Disclosure Agreement (NDA)</option>
+              <option value="RENT">Rent Agreement</option>
+            </select>
+          </div>
+
           <div className="grid md:grid-cols-2 gap-5">
-            {FIELD_CONFIG.map((field) => (
+            {fields.map((field) => (
               <div
                 key={field.name}
-                className={field.name === 'jurisdiction' ? 'md:col-span-2' : ''}
+                className={(field.name === 'jurisdiction' || field.name === 'extra_field_1') ? 'md:col-span-2' : ''}
               >
                 <label
                   htmlFor={field.name}
@@ -209,7 +293,7 @@ export default function DocumentGenerator() {
                 <input
                   id={field.name}
                   type={field.type}
-                  value={formData[field.name]}
+                  value={formData[field.name] || ''}
                   onChange={(e) => handleChange(field.name, e.target.value)}
                   placeholder={field.placeholder}
                   className={`w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/40 border ${errors[field.name] ? 'border-rose-500' : 'border-slate-200 dark:border-white/10'} text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400
