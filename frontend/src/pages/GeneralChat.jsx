@@ -245,19 +245,20 @@ export default function GeneralChat() {
   };
 
   const handleDownload = () => {
-    let content = 'NyayaVanni Legal Assistant - Consultation History\n';
-    content += '=================================================\n\n';
+    let content = '# NyayaVanni Legal Assistant - Consultation History\n\n';
+    content += `*Generated on ${new Date().toLocaleDateString()}*\n\n`;
+    content += '---\n\n';
 
     chatHistory.forEach((msg) => {
-      const role = msg.role === 'user' ? 'You' : 'Assistant';
-      content += `${role}:\n${msg.message}\n\n`;
+      const role = msg.role === 'user' ? '### You' : '### NyayaVanni Assistant';
+      content += `${role}\n\n${msg.message}\n\n---\n\n`;
     });
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'nyaya-vanni-chat.txt';
+    a.download = 'nyaya-vanni-consultation.md';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
