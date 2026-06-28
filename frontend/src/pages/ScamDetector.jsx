@@ -206,6 +206,7 @@ export default function ScamDetector() {
   const [copied, setCopied] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [resultCopied, setResultCopied] = useState(false);
+  const [validationWarning, setValidationWarning] = useState('');
 
   const analysis = useMemo(() => {
     if (!lastAnalyzed) return null;
@@ -219,6 +220,11 @@ export default function ScamDetector() {
   const onAnalyze = () => {
     const trimmed = text.trim();
     if (!trimmed) return;
+    if (trimmed.length < 15) {
+      setValidationWarning('Message is too short to accurately detect scam patterns. Please enter at least 15 characters.');
+      return;
+    }
+    setValidationWarning('');
     setAnalyzing(true);
     setTimeout(() => {
       setLastAnalyzed(trimmed);
@@ -232,6 +238,7 @@ export default function ScamDetector() {
     setCopied(false);
     setAnalyzing(false);
     setResultCopied(false);
+    setValidationWarning('');
   };
   const onCopy = async () => {
     try {
@@ -329,11 +336,22 @@ export default function ScamDetector() {
 
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (e.target.value.trim().length >= 15) {
+                  setValidationWarning('');
+                }
+              }}
               rows={10}
               placeholder={PLACEHOLDERS.SCAM_DETECTOR}
               className={TEXTAREA_BASE}
             />
+
+            {validationWarning && (
+              <div className="mt-2 text-xs text-rose-500 font-semibold">
+                {validationWarning}
+              </div>
+            )}
 
             <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
               <p className="text-xs text-slate-500 dark:text-slate-400">
