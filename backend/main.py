@@ -64,7 +64,8 @@ app.add_middleware(SlowAPIMiddleware)
 
 
 @app.on_event("startup")
-async def startup_event():
+async def startup_event() -> None:
+    """Initialize background tasks on application startup."""
     asyncio.create_task(cleanup_expired_documents())
 
 
