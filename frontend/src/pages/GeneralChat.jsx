@@ -386,8 +386,21 @@ export default function GeneralChat() {
                       }`}
                     >
                       {msg.role === 'assistant' ? (
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                        <div>
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <ReactMarkdown>{msg.message}</ReactMarkdown>
+                          </div>
+                          <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 flex gap-2 justify-end">
+                            <button
+                              onClick={() => {
+                                navigator.clipboard.writeText(msg.message);
+                              }}
+                              className="p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors text-slate-400 hover:text-slate-650 dark:hover:text-slate-200 cursor-pointer"
+                              title="Copy response"
+                            >
+                              <Copy className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         msg.message
