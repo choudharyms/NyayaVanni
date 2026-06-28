@@ -106,6 +106,20 @@ export default function HireLawyer() {
     }
   });
 
+  const [bookingSearchTerm, setBookingSearchTerm] = useState('');
+
+  const filteredBookings = useMemo(() => {
+    return activeBookings.filter((booking) => {
+      const q = bookingSearchTerm.toLowerCase().trim();
+      if (!q) return true;
+      return (
+        booking.lawyer.name.toLowerCase().includes(q) ||
+        booking.lawyer.specialty.toLowerCase().includes(q) ||
+        (booking.caseDescription && booking.caseDescription.toLowerCase().includes(q))
+      );
+    });
+  }, [activeBookings, bookingSearchTerm]);
+
   // Mock Data for Lawyers (BCI Compliant - No Ratings)
   const mockLawyers = useMemo(
     () => [
@@ -487,20 +501,29 @@ export default function HireLawyer() {
         {/* Active Consultations */}
         {activeBookings.length > 0 && (
           <div className="mt-10 mb-10 rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-md">
-            <div className="flex items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10 gap-4">
               <div className="flex items-center gap-2">
                 <Bookmark className="w-5 h-5 text-nyaya-600 dark:text-nyaya-300" />
                 <h2 className="text-lg font-bold text-slate-850 dark:text-white">
                   Your Active Consultations
                 </h2>
               </div>
-              <span className="px-3 py-1 text-xs font-semibold border rounded-full bg-slate-100 border-slate-200 dark:bg-white/5 dark:border-white/10 text-slate-700 dark:text-slate-200">
-                {activeBookings.length} Scheduled
-              </span>
+              <div className="flex items-center gap-3">
+                <input
+                  type="text"
+                  placeholder="Filter consultations..."
+                  value={bookingSearchTerm}
+                  onChange={(e) => setBookingSearchTerm(e.target.value)}
+                  className="px-3 py-1.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50 transition"
+                />
+                <span className="px-3 py-1 text-xs font-semibold border rounded-full bg-slate-100 border-slate-200 dark:bg-white/5 dark:border-white/10 text-slate-700 dark:text-slate-200 shrink-0">
+                  {filteredBookings.length} of {activeBookings.length} Scheduled
+                </span>
+              </div>
             </div>
 
             <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {activeBookings.map((booking) => (
+              {filteredBookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-center gap-4 p-4 transition border group rounded-2xl border-slate-200 dark:border-white/10 bg-white/50 dark:bg-slate-950/30 hover:bg-slate-100 dark:hover:bg-slate-950/45"
