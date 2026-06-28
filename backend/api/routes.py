@@ -41,6 +41,7 @@ from ..services.gemini_service import (
     stream_chat_response,
 )
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
+from ..utils.date_extractor import extract_dates
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
 from ..services.search_service import (
@@ -338,11 +339,13 @@ def _analyze_document_sync(
             if cached:
                 logger.info(f"Cache HIT for document {document_id}")
                 knowledge_graph = graph_builder.generate_graph(cached["extracted_text"])
+                key_dates = extract_dates(cached["extracted_text"])
                 return {
                     "documentId": document_id,
                     "analysis": cached["analysis"],
                     "knowledge_graph": knowledge_graph,
                     "extracted_text": cached["extracted_text"][:500] + "...",
+                    "key_dates": key_dates,
                     "cached": True,
                 }
 
@@ -389,12 +392,14 @@ def _analyze_document_sync(
         knowledge_graph = graph_builder.generate_graph(text)
         save_cached_analysis(document_id, session_id, language, text, analysis_result)
 
+        key_dates = extract_dates(text)
         return {
             "documentId": document_id,
             "analysis": analysis_result,
             "confidence": confidence,
             "classification": classification,
             "knowledge_graph": knowledge_graph,
+            "key_dates": key_dates,
             "extracted_text": text[:500] + "...",
             "cached": False,
         }

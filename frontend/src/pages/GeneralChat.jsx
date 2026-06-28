@@ -9,6 +9,7 @@ import {
   Download,
   Copy,
   Trash2,
+  Mic,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -43,6 +44,9 @@ export default function GeneralChat() {
         'Hello! I am NyayaVanni Legal Assistant. How can I help you understand your legal rights today?',
     },
   ]);
+
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -242,6 +246,44 @@ export default function GeneralChat() {
 
       handleChat(e);
     }
+  };
+
+  const toggleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((r) => r[0].transcript)
+        .join('');
+      setChatInput(transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
   };
 
   const handleDownload = () => {
@@ -455,6 +497,19 @@ export default function GeneralChat() {
                     max-h-[160px]
                   "
                 />
+                <button
+                  type="button"
+                  onClick={toggleVoiceInput}
+                  disabled={chatLoading}
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                    isListening
+                      ? 'bg-red-500 text-white shadow-lg animate-pulse'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                  }`}
+                  title={isListening ? 'Stop recording' : 'Voice input'}
+                >
+                  <Mic className="w-5 h-5 sm:w-6 sm:h-6" />
+                </button>
                 <button
                   type="submit"
                   disabled={chatLoading || !chatInput.trim()}
