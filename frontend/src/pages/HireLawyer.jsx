@@ -100,6 +100,25 @@ export default function HireLawyer() {
     }
   });
 
+  const [bookmarkedIds, setBookmarkedIds] = useState(() => {
+    try {
+      const stored = localStorage.getItem('nyayavanni_bookmarked_lawyers');
+      return stored ? JSON.parse(stored) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+
+  const toggleBookmark = (id) => {
+    setBookmarkedIds((prev) => {
+      const updated = prev.includes(id)
+        ? prev.filter((item) => item !== id)
+        : [...prev, id];
+      localStorage.setItem('nyayavanni_bookmarked_lawyers', JSON.stringify(updated));
+      return updated;
+    });
+  };
+
   // Mock Data for Lawyers (BCI Compliant - No Ratings)
   const mockLawyers = useMemo(
     () => [
@@ -170,6 +189,7 @@ export default function HireLawyer() {
   const categories = useMemo(
     () => [
       'All',
+      'Bookmarked',
       'Real Estate & Property',
       'Family Law & Divorce',
       'Corporate & Business',
@@ -217,11 +237,19 @@ export default function HireLawyer() {
         lawyer.name.toLowerCase().includes(s) ||
         lawyer.specialty.toLowerCase().includes(s) ||
         lawyer.location.toLowerCase().includes(s);
-      const matchesFilter =
-        filterType === 'All' || lawyer.specialty === filterType;
+      
+      let matchesFilter = false;
+      if (filterType === 'All') {
+        matchesFilter = true;
+      } else if (filterType === 'Bookmarked') {
+        matchesFilter = bookmarkedIds.includes(lawyer.id);
+      } else {
+        matchesFilter = lawyer.specialty === filterType;
+      }
+      
       return matchesSearch && matchesFilter;
     });
-  }, [mockLawyers, searchTerm, filterType]);
+  }, [mockLawyers, searchTerm, filterType, bookmarkedIds]);
 
   const suggestions = useMemo(() => {
     const query = searchTerm.trim();
@@ -754,6 +782,21 @@ export default function HireLawyer() {
                 {/* glow blobs */}
                 <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -top-10 -right-10 h-28 w-28 bg-nyaya-500/10 dark:bg-nyaya-500/20 blur-3xl group-hover:opacity-100" />
                 <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -bottom-10 -left-10 h-28 w-28 bg-blue-500/10 dark:bg-blue-500/20 blur-3xl group-hover:opacity-100" />
+
+                {/* Bookmark Button */}
+                <button
+                  onClick={() => toggleBookmark(lawyer.id)}
+                  className="absolute top-6 right-6 p-2 rounded-full border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 transition-colors z-10 cursor-pointer text-slate-400 hover:text-nyaya-500"
+                  aria-label="Bookmark Lawyer"
+                >
+                  <Bookmark
+                    className={`w-4 h-4 ${
+                      bookmarkedIds.includes(lawyer.id)
+                        ? 'fill-nyaya-500 text-nyaya-500'
+                        : ''
+                    }`}
+                  />
+                </button>
 
                 <div className="flex items-start gap-4">
                   <div className="relative w-16 h-16 overflow-hidden transition rounded-full shrink-0 ring-2 ring-slate-200 dark:ring-white/10 group-hover:ring-nyaya-500/40">
