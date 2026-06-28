@@ -19,6 +19,7 @@ import {
   Copy,
   Printer,
   Share2,
+  Mic,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -235,6 +236,7 @@ export default function Dashboard() {
   const [analysis, setAnalysis] = useState(null);
   const [extractedText, setExtractedText] = useState('');
   const [knowledgeGraph, setKnowledgeGraph] = useState(null);
+  const [keyDates, setKeyDates] = useState([]);
   const [selectedNode, setSelectedNode] = useState(null);
   const [searchTerm, _setSearchTerm] = useState('');
   const [selectedType, _setSelectedType] = useState('all');
@@ -251,6 +253,8 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
+  const [isListening, setIsListening] = useState(false);
+  const recognitionRef = useRef(null);
   const messagesEndRef = useRef(null);
   
   // Ref for Knowledge Graph search input
@@ -296,6 +300,7 @@ export default function Dashboard() {
         setAnalysis(data.analysis);
         setClassification(data.classification);
         setKnowledgeGraph(data.knowledge_graph);
+        setKeyDates(data.key_dates || []);
         setExtractedText(data.extracted_text);
         setConfidence(data.confidence);
 
@@ -419,6 +424,45 @@ export default function Dashboard() {
       setChatLoading(false);
     }
   };
+
+  const toggleVoiceInput = () => {
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      alert('Speech recognition is not supported in this browser.');
+      return;
+    }
+
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const recognition = new SpeechRecognition();
+    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+
+    recognition.onresult = (event) => {
+      const transcript = Array.from(event.results)
+        .map((r) => r[0].transcript)
+        .join('');
+      setChatInput(transcript);
+    };
+
+    recognition.onerror = () => {
+      setIsListening(false);
+    };
+
+    recognition.onend = () => {
+      setIsListening(false);
+    };
+
+    recognitionRef.current = recognition;
+    recognition.start();
+    setIsListening(true);
+  };
+
   const filteredNodes =
     knowledgeGraph?.nodes?.filter((node) => {
       const matchesSearch = node.label
@@ -902,6 +946,33 @@ export default function Dashboard() {
                 </button>
               </div>
 
+              {keyDates.length > 0 && (
+                <div className="mt-8">
+                  <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                    <Calendar className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
+                    Key Dates
+                  </h3>
+                  <div className="relative pl-6 border-l-2 border-nyaya-300 dark:border-nyaya-700 space-y-4">
+                    {keyDates.map((item, idx) => (
+                      <div key={idx} className="relative">
+                        <div className="absolute -left-[25px] top-1 w-4 h-4 rounded-full bg-nyaya-500 border-2 border-white dark:border-slate-900" />
+                        <div className={`${CARD_SUB} p-3`}>
+                          <div className="font-semibold text-slate-900 dark:text-white text-sm">
+                            {item.date}
+                          </div>
+                          <div className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                            {item.format}
+                          </div>
+                          <div className="text-xs text-slate-600 dark:text-slate-300 mt-1 line-clamp-2">
+                            {item.context}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {(analysis?.risk_level === 'High' ||
                 analysis?.risk_level === 'Medium') && (
                 <div className={RISK_WARN_BOX}>
@@ -1109,6 +1180,19 @@ export default function Dashboard() {
                 placeholder={t('chat.placeholder')}
                 className={CHAT_INPUT}
               />
+              <button
+                type="button"
+                onClick={toggleVoiceInput}
+                disabled={chatLoading}
+                className={`w-12 h-12 rounded-full flex items-center justify-center transition-all shrink-0 cursor-pointer ${
+                  isListening
+                    ? 'bg-red-500 text-white shadow-lg animate-pulse'
+                    : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                }`}
+                title={isListening ? 'Stop recording' : 'Voice input'}
+              >
+                <Mic className="w-5 h-5" />
+              </button>
               <button
                 type="submit"
                 disabled={chatLoading || !chatInput.trim()}
