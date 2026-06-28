@@ -670,3 +670,48 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+class FeedbackRequest(BaseModel):
+    message_id: str = Field(None, max_length=100)
+    rating: str = Field(..., max_length=10)
+    comments: str = Field(None, max_length=2000)
+
+
+@api_router.post("/feedback")
+async def save_feedback(body: FeedbackRequest, request: Request):
+    """
+    Save user feedback for the chat or analyzer responses.
+    """
+    try:
+        session_id = require_session_id(request)
+        feedback_dir = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+        os.makedirs(feedback_dir, exist_ok=True)
+        feedback_file = os.path.join(feedback_dir, "feedback.json")
+
+        new_feedback = {
+            "session_id": session_id,
+            "message_id": body.message_id or str(uuid.uuid4()),
+            "rating": body.rating,
+            "comments": body.comments or "",
+        }
+
+        feedbacks = []
+        if os.path.exists(feedback_file):
+            try:
+                with open(feedback_file, "r") as f:
+                    feedbacks = json.load(f)
+            except Exception:
+                feedbacks = []
+
+        feedbacks.append(new_feedback)
+        with open(feedback_file, "w") as f:
+            json.dump(feedbacks, f, indent=2)
+
+        return {"status": "ok", "message": "Feedback saved successfully"}
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Feedback save failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save feedback")
+

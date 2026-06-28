@@ -9,6 +9,8 @@ import {
   Download,
   Copy,
   Trash2,
+  ThumbsUp,
+  ThumbsDown,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import { useLanguage } from '../contexts/LanguageContext';
@@ -276,6 +278,32 @@ export default function GeneralChat() {
     }
   };
 
+  const handleFeedback = async (idx, rating) => {
+    try {
+      const msg = chatHistory[idx];
+      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const response = await fetch(`${apiUrl}/api/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          message_id: `${currentConversationId || 'temp'}-${idx}`,
+          rating: rating,
+          comments: msg.message.substring(0, 100),
+        }),
+      });
+      if (response.ok) {
+        setChatHistory((prev) => {
+          const updated = [...prev];
+          updated[idx] = { ...updated[idx], feedback: rating };
+          return updated;
+        });
+      }
+    } catch (err) {
+      console.error('Failed to submit feedback:', err);
+    }
+  };
+
   const chatContainerRef = useRef(null);
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -386,8 +414,32 @@ export default function GeneralChat() {
                       }`}
                     >
                       {msg.role === 'assistant' ? (
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown>{msg.message}</ReactMarkdown>
+                        <div>
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <ReactMarkdown>{msg.message}</ReactMarkdown>
+                          </div>
+                          {idx > 0 && (
+                            <div className="mt-3 pt-2 border-t border-slate-200 dark:border-slate-700 flex gap-2 justify-end">
+                              <button
+                                onClick={() => handleFeedback(idx, 'like')}
+                                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer ${
+                                  msg.feedback === 'like' ? 'text-green-600 dark:text-green-400' : 'text-slate-400'
+                                }`}
+                                title="Like"
+                              >
+                                <ThumbsUp className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleFeedback(idx, 'dislike')}
+                                className={`p-1.5 rounded hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors cursor-pointer ${
+                                  msg.feedback === 'dislike' ? 'text-red-600 dark:text-red-400' : 'text-slate-400'
+                                }`}
+                                title="Dislike"
+                              >
+                                <ThumbsDown className="w-4 h-4" />
+                              </button>
+                            </div>
+                          )}
                         </div>
                       ) : (
                         msg.message
