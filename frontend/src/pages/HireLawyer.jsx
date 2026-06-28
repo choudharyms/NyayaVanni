@@ -173,16 +173,19 @@ export default function HireLawyer() {
     []
   );
 
+  const practiceAreaToSpecialty = useMemo(
+    () => ({
+      Criminal: 'Criminal Defense',
+      Family: 'Family Law & Divorce',
+      Corporate: 'Corporate & Business',
+      Civil: 'Civil Litigation',
+      Cyber: 'Intellectual Property',
+    }),
+    []
+  );
+
   const categories = useMemo(
-    () => [
-      'All',
-      'Real Estate & Property',
-      'Family Law & Divorce',
-      'Corporate & Business',
-      'Criminal Defense',
-      'Civil Litigation',
-      'Intellectual Property',
-    ],
+    () => ['All', 'Criminal', 'Family', 'Corporate', 'Civil', 'Cyber'],
     []
   );
 
@@ -223,11 +226,14 @@ export default function HireLawyer() {
         lawyer.name.toLowerCase().includes(s) ||
         lawyer.specialty.toLowerCase().includes(s) ||
         lawyer.location.toLowerCase().includes(s);
+      const mappedSpecialty = practiceAreaToSpecialty[filterType];
       const matchesFilter =
-        filterType === 'All' || lawyer.specialty === filterType;
+        filterType === 'All' ||
+        lawyer.specialty === filterType ||
+        (mappedSpecialty && lawyer.specialty === mappedSpecialty);
       return matchesSearch && matchesFilter;
     });
-  }, [mockLawyers, searchTerm, filterType]);
+  }, [mockLawyers, searchTerm, filterType, practiceAreaToSpecialty]);
 
   const suggestions = useMemo(() => {
     const query = searchTerm.trim();
@@ -240,12 +246,15 @@ export default function HireLawyer() {
           lawyer.name.toLowerCase().includes(s) ||
           lawyer.specialty.toLowerCase().includes(s) ||
           lawyer.location.toLowerCase().includes(s);
+        const mappedSpecialty = practiceAreaToSpecialty[filterType];
         const matchesFilter =
-          filterType === 'All' || lawyer.specialty === filterType;
+          filterType === 'All' ||
+          lawyer.specialty === filterType ||
+          (mappedSpecialty && lawyer.specialty === mappedSpecialty);
         return matchesSearch && matchesFilter;
       })
       .slice(0, MAX_SUGGESTIONS);
-  }, [mockLawyers, searchTerm, filterType]);
+  }, [mockLawyers, searchTerm, filterType, practiceAreaToSpecialty]);
 
   const handleSelectSuggestion = useCallback((lawyer) => {
     setSearchTerm(lawyer.name);

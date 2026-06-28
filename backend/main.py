@@ -69,6 +69,21 @@ async def startup_event() -> None:
     asyncio.create_task(cleanup_expired_documents())
 
 
+class CSPMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["Content-Security-Policy"] = (
+            "default-src 'self'; "
+            "script-src 'self' 'unsafe-inline' 'unsafe-eval'; "
+            "style-src 'self' 'unsafe-inline'; "
+            "img-src 'self' data: https:; "
+            "frame-ancestors 'none'; "
+            "object-src 'none'"
+        )
+        return response
+
+app.add_middleware(CSPMiddleware)
+
 # Configure CORS for React frontend
 app.add_middleware(
     CORSMiddleware,

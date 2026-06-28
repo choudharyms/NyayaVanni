@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import DashboardSkeleton from '../components/DashboardSkeleton';
 import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { toPng } from 'html-to-image';
 import {
   Scale,
   AlertTriangle,
@@ -19,6 +20,7 @@ import {
   Copy,
   Printer,
   Share2,
+  Download,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -255,6 +257,20 @@ export default function Dashboard() {
   
   // Ref for Knowledge Graph search input
   const kgSearchInputRef = useRef(null);
+  const kgFlowRef = useRef(null);
+
+  const handleDownloadGraph = async () => {
+    if (!kgFlowRef.current) return;
+    try {
+      const dataUrl = await toPng(kgFlowRef.current, { backgroundColor: '#ffffff' });
+      const link = document.createElement('a');
+      link.download = 'knowledge-graph.png';
+      link.href = dataUrl;
+      link.click();
+    } catch (err) {
+      console.error('Failed to export knowledge graph:', err);
+    }
+  };
 
   // Ctrl+K / Cmd+K to focus knowledge graph search
   useKeyboardShortcut('k', () => {
@@ -940,19 +956,28 @@ export default function Dashboard() {
                     and relationships
                   </p>
 
-                  <div className="relative mt-4">
-                    <input
-                      ref={kgSearchInputRef}
-                      type="text"
-                      placeholder="Search nodes... (Ctrl+K)"
-                      className={SEARCH_INPUT}
-                    />
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                      <SearchShortcutHint />
+                  <div className="flex items-center gap-3 mt-4">
+                    <div className="relative flex-1">
+                      <input
+                        ref={kgSearchInputRef}
+                        type="text"
+                        placeholder="Search nodes... (Ctrl+K)"
+                        className={SEARCH_INPUT}
+                      />
+                      <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
+                        <SearchShortcutHint />
+                      </div>
                     </div>
+                    <button
+                      onClick={handleDownloadGraph}
+                      className="flex items-center gap-2 px-4 py-2 text-sm font-semibold transition border rounded-xl bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer shrink-0"
+                    >
+                      <Download className="w-4 h-4" />
+                      Download Image
+                    </button>
                   </div>
                 </div>
-                <div className={KG_FLOW_CONTAINER}>
+                <div className={KG_FLOW_CONTAINER} ref={kgFlowRef}>
                   <ReactFlow
                     nodes={graphNodes}
                     edges={graphEdges}
