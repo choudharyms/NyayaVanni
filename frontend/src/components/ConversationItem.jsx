@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, ChevronRight } from 'lucide-react';
+import { Trash2, ChevronRight, Edit2 } from 'lucide-react';
 import { ARIA_LABELS, TITLES, MESSAGES } from '../constants';
 
 export default function ConversationItem({
@@ -7,6 +7,7 @@ export default function ConversationItem({
   isActive = false,
   onSelect,
   onDelete,
+  onRename,
 }) {
   const [isHovering, setIsHovering] = useState(false);
 
@@ -72,14 +73,29 @@ export default function ConversationItem({
       </div>
       <div className="flex items-center gap-1 ml-2">
         {isHovering ? (
-          <button
-            onClick={handleDelete}
-            className="p-1.5 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors shrink-0"
-            aria-label={ARIA_LABELS.DELETE_CONVERSATION}
-            title={TITLES.DELETE_CONVERSATION}
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
+          <div className="flex items-center gap-0.5 shrink-0">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                const newTitle = window.prompt('Rename conversation:', conversation.title);
+                if (newTitle && newTitle.trim()) {
+                  onRename(conversation.id, newTitle.trim());
+                }
+              }}
+              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              title="Rename Conversation"
+            >
+              <Edit2 className="w-3.5 h-3.5" />
+            </button>
+            <button
+              onClick={handleDelete}
+              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors cursor-pointer"
+              aria-label={ARIA_LABELS.DELETE_CONVERSATION}
+              title={TITLES.DELETE_CONVERSATION}
+            >
+              <Trash2 className="w-3.5 h-3.5" />
+            </button>
+          </div>
         ) : isActive ? (
           <ChevronRight className="w-4 h-4 text-nyaya-500 shrink-0" />
         ) : null}
