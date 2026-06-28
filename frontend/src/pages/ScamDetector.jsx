@@ -335,6 +335,11 @@ export default function ScamDetector() {
               className={TEXTAREA_BASE}
             />
 
+            <div className="mt-2 text-xs text-slate-500 dark:text-slate-400 flex gap-4">
+              <span>Characters: {text.length}</span>
+              <span>Words: {text.trim() ? text.trim().split(/\s+/).length : 0}</span>
+            </div>
+
             <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
               <p className="text-xs text-slate-500 dark:text-slate-400">
                 Tip: include links/phone numbers if present (helps detection).
