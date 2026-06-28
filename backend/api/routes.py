@@ -1,17 +1,20 @@
+import asyncio
 import io
 import json
 import logging
 import os
 import uuid
 
-
-from fastapi import APIRouter, File, UploadFile, HTTPException, Depends, Request, Response
-import asyncio
-
 import google.generativeai as genai
-from fastapi import (APIRouter, Depends, File, HTTPException, Request,
-                     Response, UploadFile)
-
+from fastapi import (
+    APIRouter,
+    Depends,
+    File,
+    HTTPException,
+    Request,
+    Response,
+    UploadFile,
+)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from reportlab.lib.pagesizes import letter
@@ -22,28 +25,40 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from ..config.rate_limits import CONTACT_RATE_LIMIT, DELETE_RATE_LIMIT, UPLOAD_RATE_LIMIT
+from ..config.rate_limits import (
+    CONTACT_RATE_LIMIT,
+    DELETE_RATE_LIMIT,
+    UPLOAD_RATE_LIMIT,
+)
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
-from ..services.gemini_service import (analyze_document_with_gemini,
-                                       generate_chat_response,
-                                       stream_chat_response,
-                                       GEMINI_TIMEOUT)
+from ..services.gemini_service import (
+    GEMINI_TIMEOUT,
+    analyze_document_with_gemini,
+    generate_chat_response,
+    stream_chat_response,
+)
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
-from ..services.search_service import (index_document,
-                                       remove_document_from_index,
-                                       search_documents)
-from ..services.storage_service import (UPLOAD_DIR, create_session_id,
-                                        delete_document_and_cache,
-                                        get_cached_analysis,
-                                        get_document_record,
-                                        save_cached_analysis,
-                                        save_document_record, upload_to_local,
-                                        validate_session)
+from ..services.search_service import (
+    index_document,
+    remove_document_from_index,
+    search_documents,
+)
+from ..services.storage_service import (
+    UPLOAD_DIR,
+    create_session_id,
+    delete_document_and_cache,
+    get_cached_analysis,
+    get_document_record,
+    save_cached_analysis,
+    save_document_record,
+    upload_to_local,
+    validate_session,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -207,11 +222,13 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
         # Only allow safe filenames to be stored; do not trust user-controlled paths/characters.
         safe_filename = os.path.basename(filename)
-        safe_filename = "".join(ch for ch in safe_filename if ch.isalnum() or ch in ("._-"))
+        safe_filename = "".join(
+            ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+        )
         if not safe_filename:
             safe_filename = "upload"
 
-        ext = safe_filename.split('.')[-1].lower() if '.' in safe_filename else ''
+        ext = safe_filename.split(".")[-1].lower() if "." in safe_filename else ""
 
         if ext not in ALLOWED_EXTENSIONS:
             raise HTTPException(
@@ -230,7 +247,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             actual_mime = detect_actual_mime(raw_bytes)
             logger.warning(
                 "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
-                file.content_type, actual_mime, ext,
+                file.content_type,
+                actual_mime,
+                ext,
             )
             raise HTTPException(
                 status_code=400,
@@ -266,8 +285,13 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
 @api_router.post("/analyze/{document_id}")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-
-async def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False, file: UploadFile = File(None)):
+async def analyze_document(
+    request: Request,
+    document_id: str,
+    language: str = "en",
+    force_ocr: bool = False,
+    file: UploadFile = File(None),
+):
     """Trigger full analysis pipeline."""
 
     # Heavy OCR/LLM/DB work is executed in a worker thread to avoid blocking the event loop.
@@ -282,16 +306,12 @@ async def analyze_document(request: Request, document_id: str, language: str = "
 
 
 def _analyze_document_sync(
-
-def analyze_document(
-
     request: Request,
     document_id: str,
     language: str = "en",
     force_ocr: bool = False,
     file: UploadFile = File(None),
 ):
-
     """Trigger the full document analysis pipeline.
 
     Args:
@@ -340,9 +360,13 @@ def analyze_document(
                     status_code=500, detail="Failed to read document from storage"
                 )
             filename = record["filename"]
-            ext_from_record = str(filename).lower().split('.')[-1] if '.' in str(filename) else ''
+            ext_from_record = (
+                str(filename).lower().split(".")[-1] if "." in str(filename) else ""
+            )
             if ext_from_record not in ALLOWED_EXTENSIONS:
-                raise HTTPException(status_code=400, detail="Stored document has unsupported file type")
+                raise HTTPException(
+                    status_code=400, detail="Stored document has unsupported file type"
+                )
         else:
             contents = file.file.read()
             filename = file.filename
@@ -390,10 +414,12 @@ def analyze_document(
             status_code=404, detail="Requested document file not found on storage."
         )
     except Exception as e:
-        from google.api_core.exceptions import (GoogleAPIError,
-                                                InvalidArgument,
-                                                ResourceExhausted,
-                                                DeadlineExceeded)
+        from google.api_core.exceptions import (
+            DeadlineExceeded,
+            GoogleAPIError,
+            InvalidArgument,
+            ResourceExhausted,
+        )
 
         logger.error(f"Analysis failed: {e}")
 
@@ -651,8 +677,11 @@ Provide a JSON response matching this exact schema:
 }}
 """
         from google.api_core.exceptions import DeadlineExceeded
+
         model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(prompt, request_options={"timeout": GEMINI_TIMEOUT})
+        response = model.generate_content(
+            prompt, request_options={"timeout": GEMINI_TIMEOUT}
+        )
         result = json.loads(response.text)
         return result
 
