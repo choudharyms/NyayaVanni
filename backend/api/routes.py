@@ -108,7 +108,11 @@ def require_session_id(request: Request) -> str:
     """
     session_id = request.cookies.get("session_id")
     if not session_id:
-        raise HTTPException(status_code=401, detail="Missing session_id cookie")
+        session_id = request.headers.get("X-Session-Id")
+    if not session_id:
+        session_id = request.headers.get("x-session-id")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing session_id cookie or header")
     if not validate_session(session_id):
         raise HTTPException(status_code=401, detail="Invalid or expired session")
     return session_id
@@ -191,7 +195,7 @@ async def create_session(request: Request, response: Response):
             secure=session_secure,
             max_age=30 * 24 * 60 * 60,  # 30 days
         )
-    return {"status": "Session active"}
+    return {"status": "Session active", "sessionId": session_id}
 
 
 @api_router.post("/upload")
@@ -457,6 +461,173 @@ def _analyze_document_sync(
             )
 
         raise HTTPException(status_code=500, detail="Document analysis failed")
+
+
+class AnalyzeTextRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    language: str = "en"
+
+
+@api_router.post("/analyze-text")
+@limiter.limit(RATE_LIMIT_ANALYZE)
+async def analyze_text(request: Request, body: AnalyzeTextRequest):
+    """Trigger analysis directly on raw text sent from client/browser extension."""
+    return await asyncio.to_thread(
+        _analyze_text_sync,
+        request,
+        body.text,
+        body.language,
+    )
+
+
+MOCK_ANALYSIS_RESULT = {
+    "document_type": "Terms of Service",
+    "parties": [
+        {"name": "Website Owner / Service Provider", "role": "First Party"},
+        {"name": "End User / Consumer", "role": "Second Party"}
+    ],
+    "dates": [
+        {"type": "notice_date", "value": "2026-06-29"},
+        {"type": "response_deadline", "value": "2026-07-29"}
+    ],
+    "sections": [
+        "Section 12: Limitation of Liability",
+        "Section 19: Dispute Resolution & Arbitration",
+        "Section 24: User Data Collection & Privacy Policy"
+    ],
+    "clauses": [
+        "Unilateral Modification: The company reserves the right to modify the terms at any time without prior notification.",
+        "Limitation of Liability: The provider is not liable for any direct, indirect, or consequential damages resulting from service outages.",
+        "Class Action Waiver: Users waive their right to participate in class-action lawsuits or class-wide arbitration."
+    ],
+    "summary": "This Terms of Service agreement outlines the rules, guidelines, and legal provisions governing the use of the platform. Key areas of concern include high-risk clauses regarding unilateral modifications of terms and waivers of class-action rights.",
+    "risk_level": "High",
+    "urgency": "Immediate",
+    "consequences": [
+        "Loss of legal recourse due to the class action waiver clause.",
+        "Sudden changes to pricing or service access without advance notice.",
+        "Limited compensation in case of data breaches or service interruption."
+    ],
+    "recommended_timeline": "Respond/Agree within 30 days",
+    "actions": [
+        {
+            "priority": "high",
+            "action": "Review the dispute resolution clause and consider opting out of arbitration if allowed.",
+            "why": "Arbitration clauses restrict your right to sue in court.",
+            "timeline": "Within 30 days of account creation"
+        },
+        {
+            "priority": "medium",
+            "action": "Export and back up your user data regularly.",
+            "why": "The limitation of liability clause protects the provider from data loss liability.",
+            "timeline": "Ongoing / Weekly"
+        }
+    ]
+}
+
+
+def _analyze_text_sync(request: Request, text: str, language: str = "en"):
+    """Run full analysis pipeline on raw text in a sync worker thread."""
+    try:
+        session_id = require_session_id(request)
+
+        # Limit text length to 8000
+        text = text[:8000]
+
+        doc_id = str(uuid.uuid4())
+
+        # Save a document record with mock file path so that require_document_owner passes 
+        # and it is associated with the user session
+        save_document_record(session_id, doc_id, "Terms of Service (Scraped)", "")
+
+        # Index document content for search
+        index_document(doc_id, "Terms of Service (Scraped)", text)
+
+        relevant_laws = []
+        try:
+            relevant_laws = retrieve_relevant_laws(text, k=3)
+        except Exception:
+            logger.warning("RAG retrieval failed. Continuing.")
+
+        # Check for mock query parameter
+        is_mock = request.query_params.get("mock", "false").lower() == "true"
+
+        if is_mock:
+            analysis_result = MOCK_ANALYSIS_RESULT
+            confidence = {"score": 0.85, "reason": "Evaluated based on standard terms"}
+            classification = "terms_of_service"
+            knowledge_graph = {"nodes": [], "edges": []}
+        else:
+            analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+            confidence = ConfidenceService.generate(
+                document_text=text,
+                summary=analysis_result.get("summary", ""),
+                relevant_laws=relevant_laws,
+            )
+            classification = classify_document(text)
+            knowledge_graph = graph_builder.generate_graph(text)
+
+        # Cache the analysis result
+        save_cached_analysis(doc_id, session_id, language, text, analysis_result)
+
+        return {
+            "documentId": doc_id,
+            "analysis": analysis_result,
+            "confidence": confidence,
+            "classification": classification,
+            "knowledge_graph": knowledge_graph,
+            "extracted_text": text[:500] + "...",
+            "cached": False,
+        }
+
+    except RateLimitExceeded:
+        raise
+    except HTTPException as http_err:
+        raise http_err
+    except ValueError as val_err:
+        logger.error("ValueError in text analysis: %s", val_err, exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid input or configuration in analysis request.",
+        )
+    except Exception as e:
+        from google.api_core.exceptions import (
+            DeadlineExceeded,
+            GoogleAPIError,
+            InvalidArgument,
+            ResourceExhausted,
+        )
+
+        logger.error(f"Text analysis failed: {e}")
+
+        if isinstance(e, DeadlineExceeded):
+            raise HTTPException(
+                status_code=504,
+                detail="AI request timed out. Please try again later.",
+            )
+        elif isinstance(e, ResourceExhausted):
+            raise HTTPException(
+                status_code=429,
+                detail="AI Quota limit reached. Please wait a minute and try again.",
+            )
+        elif isinstance(e, InvalidArgument):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid input structure. The document may be too long for the model.",
+            )
+        elif isinstance(e, GoogleAPIError):
+            raise HTTPException(
+                status_code=502,
+                detail="Upstream AI Service error. Please try again in a few moments.",
+            )
+
+        if not os.getenv("GEMINI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="Server configuration issue: GEMINI_API_KEY environment variable is missing.",
+            )
+
+        raise HTTPException(status_code=500, detail="Text analysis failed")
 
 
 @api_router.get("/chat/stream")
