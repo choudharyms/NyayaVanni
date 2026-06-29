@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import DashboardSkeleton from '../components/DashboardSkeleton';
 import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
+import { toPng } from 'html-to-image';
 import 'reactflow/dist/style.css';
 import {
   Scale,
@@ -255,6 +256,26 @@ export default function Dashboard() {
   
   // Ref for Knowledge Graph search input
   const kgSearchInputRef = useRef(null);
+
+  // Ref for Knowledge Graph export
+  const kgContainerRef = useRef(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportPng = async () => {
+    if (!kgContainerRef.current) return;
+    setIsExporting(true);
+    try {
+      const dataUrl = await toPng(kgContainerRef.current, { pixelRatio: 2 });
+      const link = document.createElement('a');
+      link.download = 'knowledge-graph.png';
+      link.href = dataUrl;
+      link.click();
+    } catch {
+      // silent fail
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   // Ctrl+K / Cmd+K to focus knowledge graph search
   useKeyboardShortcut('k', () => {
@@ -952,7 +973,7 @@ export default function Dashboard() {
                     </div>
                   </div>
                 </div>
-                <div className={KG_FLOW_CONTAINER}>
+                <div className={KG_FLOW_CONTAINER} ref={kgContainerRef}>
                   <ReactFlow
                     nodes={graphNodes}
                     edges={graphEdges}
@@ -965,6 +986,16 @@ export default function Dashboard() {
                     <Controls />
                     <Background />
                   </ReactFlow>
+                </div>
+
+                <div className="mt-3 flex justify-end">
+                  <button
+                    onClick={handleExportPng}
+                    disabled={isExporting}
+                    className="flex items-center gap-2 text-sm px-4 py-2 rounded-xl bg-nyaya-600 hover:bg-nyaya-700 text-white font-semibold transition-colors disabled:opacity-50 cursor-pointer shadow-sm"
+                  >
+                    {isExporting ? 'Exporting...' : '⬇ Download PNG'}
+                  </button>
                 </div>
 
                 {selectedNode && (
