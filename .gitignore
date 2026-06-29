@@ -39,3 +39,4 @@ backend/data/
 # Build outputs
 dist/
 build/
+models.txt
