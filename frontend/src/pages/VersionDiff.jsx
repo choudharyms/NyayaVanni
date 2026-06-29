@@ -16,6 +16,8 @@ import {
   Scale,
   Plus,
   Minus,
+  DollarSign,
+  Lock,
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
@@ -198,228 +200,256 @@ const isValidFile = (file) => {
     </div>
   );
 }
+function DiffResults({ data }) {
+  const { summary, clauses, ai_summary } = data;
 
-// eslint-disable-next-line no-unused-vars
-function ResultSection({ icon: Icon, title, iconClass, items, renderItem }) {
-  if (!items || items.length === 0) return null;
-  return (
-    <div className="mb-6">
-      <div className="flex items-center gap-2 mb-3">
-        <Icon className={`w-4 h-4 ${iconClass}`} />
-        <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm uppercase tracking-wider">
-          {title}
-        </h4>
-        <span className="ml-auto text-xs text-slate-400 font-medium">
-          {items.length} finding{items.length !== 1 ? 's' : ''}
-        </span>
-      </div>
-      <div className="space-y-3">
-        {items.map((item, i) => renderItem(item, i))}
-      </div>
-    </div>
-  );
-}
-
-function DiffResults({ data }) {
-  const { diff_stats, analysis } = data;
-  const risk = analysis.overall_risk_level || 'low';
-
-  const riskCardStyle =
-    {
-      low: 'border-emerald-200 bg-emerald-50/80 dark:bg-emerald-900/20 dark:border-emerald-800/50 text-emerald-800 dark:text-emerald-300',
-      medium:
-        'border-amber-200 bg-amber-50/80 dark:bg-amber-900/20 dark:border-amber-800/50 text-amber-800 dark:text-amber-300',
-      high: 'border-rose-200 bg-rose-50/80 dark:bg-rose-900/20 dark:border-rose-800/50 text-rose-800 dark:text-rose-300',
-      critical:
-        'border-purple-200 bg-purple-50/80 dark:bg-purple-900/20 dark:border-purple-800/50 text-purple-800 dark:text-purple-300',
-    }[risk] || '';
+  // Calculate High Risk Changes count dynamically:
+  // Count clauses that are modified, added, or removed AND are under "Liability", "Termination", or contain words indicating high-risk
+  const highRiskCount = clauses.filter(
+    (c) =>
+      c.status !== 'unchanged' &&
+      (c.category === 'Liability' ||
+        c.category === 'Termination' ||
+        /penalty|indemnity|liability|terminate|forfeit|sole discretion|jurisdiction|arbitration|court/i.test((c.oldClause || '') + ' ' + (c.newClause || '')))
+  ).length;
 
   return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-3 gap-4">
-        <div className="rounded-3xl border border-slate-200 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 p-4 text-center">
-          <div className="flex items-center justify-center gap-1 text-emerald-600 dark:text-emerald-400 mb-1">
-            <Plus className="w-4 h-4" />
-            <span className="text-2xl font-bold">{diff_stats.lines_added}</span>
+    <div className="space-y-8 animate-fadeIn">
+      {/* Summary Card */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+        <div className="rounded-3xl border border-slate-205 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-4 text-center hover:shadow-lg transition duration-300">
+          <div className="flex items-center justify-center gap-1.5 text-emerald-600 dark:text-emerald-400 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            <span className="text-2xl font-bold">{summary.matched}</span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Lines Added
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Matched Clauses
           </p>
         </div>
-        <div className="rounded-3xl border border-slate-200 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 p-4 text-center">
-          <div className="flex items-center justify-center gap-1 text-rose-600 dark:text-rose-400 mb-1">
-            <Minus className="w-4 h-4" />
-            <span className="text-2xl font-bold">
-              {diff_stats.lines_removed}
-            </span>
+
+        <div className="rounded-3xl border border-slate-205 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-4 text-center hover:shadow-lg transition duration-300">
+          <div className="flex items-center justify-center gap-1.5 text-amber-500 dark:text-amber-400 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+            <span className="text-2xl font-bold">{summary.modified}</span>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400">
-            Lines Removed
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Modified Clauses
           </p>
         </div>
-        <div
-          className={`rounded-3xl border-2 p-4 text-center ${riskCardStyle}`}
-        >
-          <p className="text-2xl font-bold uppercase mb-1">{risk}</p>
-          <p className="text-xs opacity-70">Overall Risk</p>
+
+        <div className="rounded-3xl border border-slate-205 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-4 text-center hover:shadow-lg transition duration-300">
+          <div className="flex items-center justify-center gap-1.5 text-blue-500 dark:text-blue-400 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+            <span className="text-2xl font-bold">{summary.added}</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Added Clauses
+          </p>
+        </div>
+
+        <div className="rounded-3xl border border-slate-205 dark:border-slate-800 bg-white/80 dark:bg-slate-900/80 p-4 text-center hover:shadow-lg transition duration-300">
+          <div className="flex items-center justify-center gap-1.5 text-rose-500 dark:text-rose-400 mb-1">
+            <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
+            <span className="text-2xl font-bold">{summary.removed}</span>
+          </div>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+            Removed Clauses
+          </p>
+        </div>
+
+        <div className="col-span-2 md:col-span-1 rounded-3xl border-2 border-rose-200 bg-rose-50/50 dark:bg-rose-950/20 dark:border-rose-900/50 p-4 text-center hover:shadow-lg transition duration-300">
+          <div className="flex items-center justify-center gap-1.5 text-rose-600 dark:text-rose-400 mb-1">
+            <ShieldAlert className="w-5 h-5 animate-bounce" />
+            <span className="text-2xl font-bold">{highRiskCount}</span>
+          </div>
+          <p className="text-xs text-rose-700 dark:text-rose-300 font-semibold uppercase tracking-wider">
+            High Risk Changes
+          </p>
         </div>
       </div>
 
-      {analysis.summary && (
-        <div className="rounded-3xl border border-slate-200 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-5">
-          <p className="text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
-            {analysis.summary}
-          </p>
+      {/* AI Summary Panel */}
+      <div className="rounded-4xl border border-slate-200 dark:border-slate-800 bg-linear-to-b from-white/95 to-slate-50/95 dark:from-slate-900/90 dark:to-slate-950/90 backdrop-blur-xl p-6 shadow-xl space-y-6">
+        <div className="flex items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800">
+          <TrendingUp className="w-5 h-5 text-nyaya-500" />
+          <h3 className="font-bold text-slate-850 dark:text-slate-100 text-sm uppercase tracking-wider">
+            AI Comparison Summary
+          </h3>
         </div>
-      )}
 
-      <div className="rounded-3xl border border-slate-200 dark:border-slate-700/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6 space-y-1">
-        <ResultSection
-          icon={TrendingUp}
-          title={VERSION_DIFF.ADDED_OBLIGATIONS}
-          iconClass="text-amber-500"
-          items={analysis.added_obligations}
-          renderItem={(item, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-amber-100 dark:border-amber-900/40 bg-amber-50/60 dark:bg-amber-900/10 p-4"
-            >
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-                  {item.clause}
-                </span>
-                <SeverityBadge level={item.severity} />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="space-y-4">
+            {/* Payment Section */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-amber-500/10 text-amber-500 flex-shrink-0">
+                <DollarSign className="w-4 h-4" />
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {item.detail}
-              </p>
-            </div>
-          )}
-        />
-        <ResultSection
-          icon={ShieldAlert}
-          title={VERSION_DIFF.INCREASED_PENALTIES}
-          iconClass="text-rose-500"
-          items={analysis.increased_penalties}
-          renderItem={(item, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-rose-100 dark:border-rose-900/40 bg-rose-50/60 dark:bg-rose-900/10 p-4"
-            >
-              <p className="font-semibold text-slate-800 dark:text-slate-200 text-sm mb-2">
-                {item.clause}
-              </p>
-              <div className="flex items-center gap-3 text-sm mb-2">
-                <span className="line-through text-slate-400">
-                  {item.old_value}
-                </span>
-                <ArrowRight className="w-4 h-4 text-slate-400" />
-                <span className="font-semibold text-rose-600 dark:text-rose-400">
-                  {item.new_value}
-                </span>
+              <div>
+                <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Payment & Compensation</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{ai_summary.payment}</p>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {item.detail}
-              </p>
             </div>
-          )}
-        />
-        <ResultSection
-          icon={UserMinus}
-          title={VERSION_DIFF.REDUCED_EMPLOYEE_RIGHTS}
-          iconClass="text-purple-500"
-          items={analysis.reduced_employee_rights}
-          renderItem={(item, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-purple-100 dark:border-purple-900/40 bg-purple-50/60 dark:bg-purple-900/10 p-4"
-            >
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-                  {item.clause}
-                </span>
-                <SeverityBadge level={item.severity} />
+
+            {/* Liability Section */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-red-500/10 text-red-500 flex-shrink-0">
+                <ShieldAlert className="w-4 h-4" />
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {item.detail}
-              </p>
-            </div>
-          )}
-        />
-        <ResultSection
-          icon={Eye}
-          title={VERSION_DIFF.HIDDEN_MODIFICATIONS}
-          iconClass="text-slate-500"
-          items={analysis.hidden_modifications}
-          renderItem={(item, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/40 p-4"
-            >
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-                  {item.clause}
-                </span>
-                <SeverityBadge level={item.risk} />
+              <div>
+                <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Liability & Indemnity</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{ai_summary.liability}</p>
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {item.detail}
-              </p>
             </div>
-          )}
-        />
-        <ResultSection
-          icon={AlertCircle}
-          title={VERSION_DIFF.NEW_LEGAL_EXPOSURE}
-          iconClass="text-red-500"
-          items={analysis.new_legal_exposure}
-          renderItem={(item, i) => (
-            <div
-              key={i}
-              className="rounded-2xl border border-red-100 dark:border-red-900/40 bg-red-50/60 dark:bg-red-900/10 p-4"
-            >
-              <div className="flex items-start justify-between gap-2 mb-1">
-                <span className="font-semibold text-slate-800 dark:text-slate-200 text-sm">
-                  {item.clause}
-                </span>
-                <SeverityBadge level={item.severity} />
+
+            {/* Termination Section */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-purple-500/10 text-purple-500 flex-shrink-0">
+                <X className="w-4 h-4" />
               </div>
-              <p className="text-sm text-slate-600 dark:text-slate-400">
-                {item.detail}
-              </p>
+              <div>
+                <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Termination & Duration</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{ai_summary.termination}</p>
+              </div>
             </div>
-          )}
-        />
+          </div>
+
+          <div className="space-y-4">
+            {/* Privacy Section */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500 flex-shrink-0">
+                <Lock className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Privacy & Confidentiality</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{ai_summary.privacy}</p>
+              </div>
+            </div>
+
+            {/* Intellectual Property Section */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500 flex-shrink-0">
+                <FileText className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Intellectual Property</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{ai_summary.intellectual_property}</p>
+              </div>
+            </div>
+
+            {/* Dispute Resolution Section */}
+            <div className="flex items-start gap-3">
+              <div className="p-2 rounded-xl bg-violet-500/10 text-violet-500 flex-shrink-0">
+                <Scale className="w-4 h-4" />
+              </div>
+              <div>
+                <h4 className="font-semibold text-sm text-slate-800 dark:text-slate-200">Dispute Resolution & Jurisdiction</h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{ai_summary.dispute_resolution}</p>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      {analysis.recommended_actions?.length > 0 && (
-        <div className="rounded-3xl border border-nyaya-200 dark:border-nyaya-800/50 bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-6">
-          <div className="flex items-center gap-2 mb-4">
-            <CheckCircle2 className="w-4 h-4 text-nyaya-600 dark:text-nyaya-400" />
-            <h4 className="font-semibold text-slate-800 dark:text-slate-200 text-sm uppercase tracking-wider">
-              Recommended Actions
-            </h4>
-          </div>
-          <ul className="space-y-2">
-            {analysis.recommended_actions.map((action, i) => (
-              <li
-                key={i}
-                className="flex items-start gap-3 text-sm text-slate-700 dark:text-slate-300"
+      {/* Side-by-Side Clause Comparison */}
+      <div className="space-y-4">
+        <div className="flex items-center justify-between px-1">
+          <h3 className="font-bold text-slate-800 dark:text-slate-200 text-base">
+            Clause-by-Clause Comparison
+          </h3>
+          <span className="text-xs text-slate-400 font-medium">
+            {clauses.length} aligned clauses
+          </span>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4 font-semibold text-xs tracking-wider text-slate-450 dark:text-slate-500 uppercase px-4">
+          <div>Document A (Original)</div>
+          <div>Document B (Updated)</div>
+        </div>
+
+        <div className="space-y-4">
+          {clauses.map((clause, index) => {
+            const statusConfig = {
+              unchanged: {
+                border: 'border-emerald-100 dark:border-emerald-950/40 bg-emerald-50/10 dark:bg-emerald-950/5',
+                dot: 'bg-emerald-500',
+                badge: 'bg-emerald-100 text-emerald-700 dark:bg-emerald-905/40 dark:text-emerald-300',
+                label: 'Unchanged',
+              },
+              modified: {
+                border: 'border-amber-200 dark:border-amber-950/40 bg-amber-50/20 dark:bg-amber-950/5',
+                dot: 'bg-amber-500',
+                badge: 'bg-amber-100 text-amber-700 dark:bg-amber-905/40 dark:text-amber-300',
+                label: 'Modified',
+              },
+              added: {
+                border: 'border-blue-200 dark:border-blue-950/40 bg-blue-50/20 dark:bg-blue-950/5',
+                dot: 'bg-blue-500',
+                badge: 'bg-blue-100 text-blue-700 dark:bg-blue-905/40 dark:text-blue-300',
+                label: 'Added',
+              },
+              removed: {
+                border: 'border-rose-200 dark:border-rose-950/40 bg-rose-50/20 dark:bg-rose-950/5',
+                dot: 'bg-rose-500',
+                badge: 'bg-rose-100 text-rose-700 dark:bg-rose-905/40 dark:text-rose-300',
+                label: 'Removed',
+              },
+            }[clause.status] || {
+              border: 'border-slate-100 dark:border-slate-900 bg-slate-50/10',
+              dot: 'bg-slate-400',
+              badge: 'bg-slate-100 text-slate-700',
+              label: 'Unknown',
+            };
+
+            return (
+              <div
+                key={index}
+                className={`rounded-3xl border p-5 shadow-xs transition duration-200 hover:shadow-md ${statusConfig.border}`}
               >
-                <span className="mt-0.5 w-5 h-5 rounded-full bg-nyaya-500/15 dark:bg-nyaya-500/20 text-nyaya-700 dark:text-nyaya-300 flex items-center justify-center text-xs font-bold flex-shrink-0">
-                  {i + 1}
-                </span>
-                {action}
-              </li>
-            ))}
-          </ul>
+                {/* Header line for category/status */}
+                <div className="flex items-center gap-2 mb-3">
+                  <span className={`w-2 h-2 rounded-full ${statusConfig.dot}`}></span>
+                  <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full ${statusConfig.badge}`}>
+                    {statusConfig.label}
+                  </span>
+                  <span className="text-[10px] font-semibold text-slate-405 dark:text-slate-500 uppercase tracking-widest ml-1">
+                    {clause.category}
+                  </span>
+                </div>
+
+                {/* Side-by-side content */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm text-slate-700 dark:text-slate-300 leading-relaxed">
+                  {/* Left Column (Old) */}
+                  <div className="relative">
+                    {clause.status === 'added' ? (
+                      <div className="h-full flex items-center justify-center p-4 bg-slate-50/45 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs italic select-none">
+                        (Clause not present in original document)
+                      </div>
+                    ) : (
+                      <p>{clause.oldClause}</p>
+                    )}
+                  </div>
+
+                  {/* Right Column (New) */}
+                  <div className="relative">
+                    {clause.status === 'removed' ? (
+                      <div className="h-full flex items-center justify-center p-4 bg-slate-50/45 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 text-slate-400 text-xs italic select-none">
+                        (Clause deleted in updated document)
+                      </div>
+                    ) : (
+                      <p>{clause.newClause}</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
         </div>
-      )}
+      </div>
 
       <div className="flex items-start gap-2 rounded-2xl border border-slate-200 dark:border-slate-700/50 bg-slate-50/60 dark:bg-slate-800/40 p-4">
         <Scale className="w-4 h-4 text-slate-400 mt-0.5 flex-shrink-0" />
         <p className="text-xs text-slate-400 dark:text-slate-500 leading-relaxed">
-          This analysis is AI-generated and for informational purposes only. It
+          This clause comparison is AI-generated and for informational purposes only. It
           does not constitute legal advice. Consult a qualified lawyer before
           acting on any findings.
         </p>
