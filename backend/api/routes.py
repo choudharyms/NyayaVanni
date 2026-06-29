@@ -164,6 +164,7 @@ async def contact_us(request: Request, body: ContactRequest):
     }
 
 
+
 @api_router.get("/session")
 @limiter.limit("10/minute")
 async def create_session(request: Request, response: Response):
@@ -193,6 +194,14 @@ async def create_session(request: Request, response: Response):
         )
     return {"status": "Session active"}
 
+    Args:
+        request (Request): The incoming HTTP request object.
+        response (Response): The HTTP response object used to set cookies.
+
+    Returns:
+        dict: A status message confirming the session is active.
+    """
+    session_id = request.cookies.get("session_id")
 
 @api_router.post("/upload")
 @limiter.limit(UPLOAD_RATE_LIMIT)
@@ -496,6 +505,7 @@ def chat_stream_sse(
             pass
 
     def event_generator():
+        """Generate SSE events for real-time chat streaming."""
         try:
             for chunk in stream_chat_response(analysis, [], user_message, language):
                 # SSE format: data: <payload>\n\n
