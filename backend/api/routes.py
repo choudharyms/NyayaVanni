@@ -33,6 +33,11 @@ from ..config.rate_limits import (
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
+from ..services.encryption_service import (
+    decrypt_document,
+    encrypt_document,
+    is_encryption_configured,
+)
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
 from ..services.gemini_service import (
     GEMINI_TIMEOUT,
@@ -260,8 +265,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
 
         try:
+            ciphertext = encrypt_document(raw_bytes, doc_id)
             with open(local_path, "wb") as buffer:
-                buffer.write(raw_bytes)
+                buffer.write(ciphertext)
         except Exception as e:
             if os.path.exists(local_path):
                 os.remove(local_path)
@@ -354,7 +360,8 @@ def _analyze_document_sync(
                 )
             try:
                 with open(record["local_path"], "rb") as f:
-                    contents = f.read()
+                    ciphertext = f.read()
+                contents = decrypt_document(ciphertext, document_id)
             except IOError:
                 raise HTTPException(
                     status_code=500, detail="Failed to read document from storage"
