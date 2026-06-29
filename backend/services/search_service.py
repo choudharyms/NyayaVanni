@@ -14,6 +14,7 @@ from datetime import datetime, timedelta
 from typing import Any, Dict, List, Optional
 
 from .database import connect_db
+from .privacy_filter import filter_search_result
 
 logger = logging.getLogger(__name__)
 
@@ -214,8 +215,13 @@ def search_documents(
         results = [dict(row) for row in cursor.fetchall()]
         conn.close()
 
+        filtered_results = [
+            {**r, "filename": filter_search_result(r.get("filename", ""))}
+            for r in results
+        ]
+
         response = {
-            "results": results,
+            "results": filtered_results,
             "total_count": total_count,
             "page": page,
             "page_size": page_size,
