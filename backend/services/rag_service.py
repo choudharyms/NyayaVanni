@@ -7,6 +7,8 @@ import google.generativeai as genai
 import numpy as np
 from dotenv import load_dotenv
 
+from .rag_refresh_scheduler import is_index_stale
+
 load_dotenv(override=True)
 logger = logging.getLogger(__name__)
 
@@ -129,27 +131,33 @@ def init_index():
 init_index()
 
 
-def retrieve_relevant_laws(query_text: str, k=2) -> list:
+def retrieve_relevant_laws(query_text: str, k=2) -> dict:
     """
     Retrieve the most relevant legal corpus entries for a given query.
 
     Embeds the query text and searches the FAISS index for the closest
-    matching legal documents using L2 distance.
+    matching legal documents using L2 distance. Flags results if the index
+    is stale (case law may be outdated).
 
     Args:
         query_text: The legal query or document text to search against.
         k: Number of top results to retrieve. Defaults to 2.
 
     Returns:
-        A list of relevant legal corpus strings. Returns an empty list
-        if the index is unavailable or retrieval fails.
+        A dict with keys:
+        - results: List of relevant legal corpus strings
+        - is_outdated: Boolean flag indicating if index is stale (>30 days old)
+        Returns empty results if index is unavailable or retrieval fails.
     """
     if index is None or index.ntotal == 0:
         logger.warning(
             "RAG system degraded: FAISS index unavailable or empty. "
             "Returning no legal context."
         )
-        return []
+        return {"results": [], "is_outdated": True}
+
+    db_path = os.path.join(os.path.dirname(__file__), "..", "data", "nyayavanni.db")
+    is_outdated = is_index_stale(db_path, "case_law")
 
     try:
         query_embed = genai.embed_content(
@@ -168,8 +176,11 @@ def retrieve_relevant_laws(query_text: str, k=2) -> list:
         if len(results) == 0:
             logger.warning("RAG system degraded: no retrieval results for query.")
 
-        return results
+        if is_outdated:
+            logger.warning("Flagging RAG results as potentially outdated: index is stale")
+
+        return {"results": results, "is_outdated": is_outdated}
 
     except Exception as e:
         logger.error(f"RAG system degraded: retrieval failed: {e}")
-        return []
+        return {"results": [], "is_outdated": True}

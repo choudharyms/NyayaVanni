@@ -338,12 +338,16 @@ def _analyze_document_sync(
             if cached:
                 logger.info(f"Cache HIT for document {document_id}")
                 knowledge_graph = graph_builder.generate_graph(cached["extracted_text"])
+                db_path = os.path.join(os.path.dirname(__file__), "..", "data", "nyayavanni.db")
+                from ..services.rag_refresh_scheduler import is_index_stale
+                is_outdated = is_index_stale(db_path, "case_law")
                 return {
                     "documentId": document_id,
                     "analysis": cached["analysis"],
                     "knowledge_graph": knowledge_graph,
                     "extracted_text": cached["extracted_text"][:500] + "...",
                     "cached": True,
+                    "ragIndexOutdated": is_outdated,
                 }
 
         if not file:
@@ -378,7 +382,9 @@ def _analyze_document_sync(
         # Index document content for full-text search
         index_document(document_id, filename, text)
 
-        relevant_laws = retrieve_relevant_laws(text, k=3)
+        rag_result = retrieve_relevant_laws(text, k=3)
+        relevant_laws = rag_result.get("results", [])
+        is_outdated = rag_result.get("is_outdated", False)
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
         confidence = ConfidenceService.generate(
             document_text=text,
@@ -397,6 +403,7 @@ def _analyze_document_sync(
             "knowledge_graph": knowledge_graph,
             "extracted_text": text[:500] + "...",
             "cached": False,
+            "ragIndexOutdated": is_outdated,
         }
 
     except RateLimitExceeded:
