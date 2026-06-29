@@ -44,3 +44,36 @@ class DocumentAnalysis(BaseModel):
     consequences: List[str] = Field(description="List of potential outcomes")
     recommended_timeline: str = Field(description="e.g., Respond within X days")
     actions: List[ActionItem]
+
+
+class ComparisonSummary(BaseModel):
+    matched: int = Field(..., description="Number of unchanged/matched clauses")
+    modified: int = Field(..., description="Number of modified clauses")
+    added: int = Field(..., description="Number of added clauses")
+    removed: int = Field(..., description="Number of removed clauses")
+
+
+class ClauseComparison(BaseModel):
+    status: Literal["unchanged", "modified", "added", "removed"]
+    oldClause: str = Field(default="", description="The content of the clause in the old document, or empty string if added")
+    newClause: str = Field(default="", description="The content of the clause in the new document, or empty string if removed")
+    category: Literal["Payment", "Liability", "Termination", "Privacy", "Intellectual Property", "Dispute Resolution", "Other"] = Field(
+        ..., description="The functional legal category of the clause"
+    )
+
+
+
+class AISummary(BaseModel):
+    payment: str = Field(..., description="Concise summary of payment term changes")
+    liability: str = Field(..., description="Concise summary of liability changes")
+    termination: str = Field(..., description="Concise summary of termination changes")
+    privacy: str = Field(..., description="Concise summary of privacy changes")
+    intellectual_property: str = Field(..., description="Concise summary of intellectual property changes")
+    dispute_resolution: str = Field(..., description="Concise summary of dispute resolution changes")
+
+
+class CompareResponse(BaseModel):
+    summary: ComparisonSummary
+    clauses: List[ClauseComparison]
+    ai_summary: AISummary
+
