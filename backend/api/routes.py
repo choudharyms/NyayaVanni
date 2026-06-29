@@ -28,6 +28,7 @@ from slowapi.util import get_remote_address
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
     DELETE_RATE_LIMIT,
+    SEARCH_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
 )
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
@@ -803,6 +804,7 @@ async def delete_document(document_id: str, request: Request):
 
 
 @api_router.get("/search")
+@limiter.limit(SEARCH_RATE_LIMIT)
 def search_documents_endpoint(
     request: Request, q: str, page: int = 1, page_size: int = 10
 ):
