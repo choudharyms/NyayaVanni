@@ -4,18 +4,8 @@ import os
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
-
-from starlette.middleware.base import BaseHTTPMiddleware
-from slowapi.errors import RateLimitExceeded
-
-import os
-import asyncio
-from dotenv import load_dotenv
-
 from fastapi.responses import JSONResponse
-from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
-
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
@@ -92,10 +82,6 @@ def read_root() -> dict:
 
 
 from .api.routes import api_router
-
-
-from .api.routes import api_router, limiter
-
 
 app.include_router(api_router, prefix="/api")
 
