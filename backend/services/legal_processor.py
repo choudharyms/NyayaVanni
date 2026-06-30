@@ -56,7 +56,7 @@ class LegalQueryOptimizer:
             cleaned = re.sub(pattern, replacement, cleaned)
 
         # Strip characters commonly used in prompt injection attempts
-        cleaned = re.sub(r"[^\w\s\-\.,\(\)!?]", "", cleaned)
+        cleaned = re.sub(r"[^\w\s\-\.,\(\)!?\/₹\$\:\'\"]", "", cleaned)
         return cleaned
 
     def optimize_prompt(self, user_message: str) -> str:
