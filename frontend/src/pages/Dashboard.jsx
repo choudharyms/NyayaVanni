@@ -431,7 +431,39 @@ export default function Dashboard() {
       return matchesSearch && matchesType;
     }) || [];
 
-  const graphNodes = filteredNodes.map((node, index) => ({
+  // Group nodes by column for dynamic centering layout
+  const nodesByColumn = { 0: [], 1: [], 2: [] };
+  filteredNodes.forEach((node) => {
+    let col = 2;
+    if (node.type === 'clauses') col = 0;
+    else if (node.type === 'obligations') col = 1;
+    nodesByColumn[col].push(node);
+  });
+
+  const colWidth = 350;
+  const rowHeight = 120;
+  const maxNodes = Math.max(
+    nodesByColumn[0].length,
+    nodesByColumn[1].length,
+    nodesByColumn[2].length
+  );
+  const maxHeight = maxNodes * rowHeight;
+
+  const positions = {};
+  [0, 1, 2].forEach((col) => {
+    const colNodes = nodesByColumn[col];
+    const totalHeight = colNodes.length * rowHeight;
+    const startY = (maxHeight - totalHeight) / 2;
+
+    colNodes.forEach((node, idx) => {
+      positions[node.id] = {
+        x: col * colWidth,
+        y: startY + idx * rowHeight,
+      };
+    });
+  });
+
+  const graphNodes = filteredNodes.map((node) => ({
     id: node.id,
 
     data: {
@@ -439,10 +471,7 @@ export default function Dashboard() {
       type: node.type,
     },
 
-    position: {
-      x: (index % 4) * 250,
-      y: Math.floor(index / 4) * 150,
-    },
+    position: positions[node.id] || { x: 0, y: 0 },
 
     style: {
       padding: 10,
