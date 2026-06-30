@@ -1,6 +1,6 @@
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class ChatMessage(BaseModel):
@@ -9,8 +9,8 @@ class ChatMessage(BaseModel):
 
 
 class ChatRequest(BaseModel):
-    user_message: str
-    chat_history: List[ChatMessage]
+    user_message: str = Field(..., max_length=4000)
+    chat_history: List[ChatMessage] = Field(default_factory=list, max_length=50)
     language: str = "en"
     document_analysis: Optional[Dict[str, Any]] = None
 
@@ -20,10 +20,10 @@ class ChatResponse(BaseModel):
 
 
 class ContactRequest(BaseModel):
-    name: str
-    email: str
-    subject: str
-    message: str
+    name: str = Field(..., max_length=200)
+    email: str = Field(..., max_length=254)
+    subject: str = Field(..., max_length=500)
+    message: str = Field(..., max_length=5000)
 
 
 class DocumentGenerationRequest(BaseModel):
