@@ -182,12 +182,12 @@ async def create_session(request: Request, response: Response):
     session_id = request.cookies.get("session_id")
     if not session_id or not validate_session(session_id):
         session_id = create_session_id()
-        session_secure = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+        session_secure = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
         response.set_cookie(
             key="session_id",
             value=session_id,
             httponly=True,
-            samesite="lax",
+            samesite="strict",
             secure=session_secure,
             max_age=30 * 24 * 60 * 60,  # 30 days
         )
