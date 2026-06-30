@@ -41,9 +41,9 @@ def init_search_service(db_path: str):
     _create_fts_index()
 
 
-def _get_query_hash(query: str, page: int, page_size: int) -> str:
+def _get_query_hash(query: str, page: int, page_size: int, session_id: str = "") -> str:
     """Generate a hash of the search query for caching purposes."""
-    key = f"{query}:{page}:{page_size}"
+    key = f"{query}:{page}:{page_size}:{session_id}"
     return hashlib.md5(key.encode()).hexdigest()
 
 
@@ -65,6 +65,20 @@ def _create_fts_index():
                 content,
                 tokenize = 'porter ascii'
             )
+        """)
+
+        # Create document ownership mapping table for per-user search scoping
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS document_owners (
+                document_id TEXT PRIMARY KEY,
+                session_id TEXT NOT NULL
+            )
+        """)
+
+        # Index for faster ownership lookups
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_document_owners_session
+            ON document_owners(session_id)
         """)
 
         # Create search cache table
@@ -93,7 +107,7 @@ def _create_fts_index():
         logger.error(f"Failed to create FTS index: {e}")
 
 
-def index_document(document_id: str, filename: str, content: str):
+def index_document(document_id: str, filename: str, content: str, session_id: str = ""):
     """
     Index a document in the full-text search index.
 
@@ -101,6 +115,7 @@ def index_document(document_id: str, filename: str, content: str):
         document_id: Unique document identifier
         filename: Document filename
         content: Document text content to index
+        session_id: Owner session ID for per-user search scoping
     """
     if not DB_PATH:
         logger.error("DB_PATH not set. Call init_search_service first.")
@@ -124,6 +139,15 @@ def index_document(document_id: str, filename: str, content: str):
             (document_id, filename, content),
         )
 
+        # Record document ownership for per-user search filtering
+        cursor.execute(
+            """
+            INSERT OR REPLACE INTO document_owners (document_id, session_id)
+            VALUES (?, ?)
+        """,
+            (document_id, session_id),
+        )
+
         conn.commit()
         conn.close()
         logger.info(f"Document {document_id} indexed successfully")
@@ -132,7 +156,11 @@ def index_document(document_id: str, filename: str, content: str):
 
 
 def search_documents(
-    query: str, page: int = 1, page_size: int = 10, use_cache: bool = True
+    query: str,
+    page: int = 1,
+    page_size: int = 10,
+    use_cache: bool = True,
+    session_id: str = "",
 ) -> Dict[str, Any]:
     """
     Search documents using full-text search with caching.
@@ -140,11 +168,16 @@ def search_documents(
     Performs indexed full-text search on documents, with results cached
     for 1 hour to minimize database load for repeated searches.
 
+    Results are scoped to the requesting user's session_id to prevent
+    cross-user data leakage. Only documents owned by the given session_id
+    will be returned.
+
     Args:
         query: Search query string
         page: Page number (1-indexed)
         page_size: Results per page
         use_cache: Whether to use cached results
+        session_id: Owner session ID to scope results (prevents data leak)
 
     Returns:
         Dict containing:
@@ -171,7 +204,8 @@ def search_documents(
     if page_size < 1 or page_size > 100:
         page_size = 10
 
-    query_hash = _get_query_hash(query.strip(), page, page_size)
+    # Include session_id in cache key so each user's results are cached separately
+    query_hash = _get_query_hash(query.strip(), page, page_size, session_id)
 
     # Try to get cached result
     if use_cache:
@@ -189,26 +223,28 @@ def search_documents(
         if not safe_query:
             return {"results": [], "total_count": 0, "from_cache": False}
 
-        # Count total matching documents
+        # Count total matching documents scoped to session
         cursor.execute(
             """
-            SELECT COUNT(*) as count FROM documents_fts
-            WHERE documents_fts MATCH ?
+            SELECT COUNT(*) as count FROM documents_fts f
+            JOIN document_owners o ON f.document_id = o.document_id
+            WHERE f MATCH ? AND o.session_id = ?
         """,
-            (safe_query,),
+            (safe_query, session_id),
         )
         total_count = cursor.fetchone()["count"]
 
-        # Fetch paginated results with relevance ranking
+        # Fetch paginated results with relevance ranking, scoped to session
         offset = (page - 1) * page_size
         cursor.execute(
             """
-            SELECT document_id, filename, rank FROM documents_fts
-            WHERE documents_fts MATCH ?
-            ORDER BY rank
+            SELECT f.document_id, f.filename, f.rank FROM documents_fts f
+            JOIN document_owners o ON f.document_id = o.document_id
+            WHERE f MATCH ? AND o.session_id = ?
+            ORDER BY f.rank
             LIMIT ? OFFSET ?
         """,
-            (safe_query, page_size, offset),
+            (safe_query, session_id, page_size, offset),
         )
 
         results = [dict(row) for row in cursor.fetchall()]
@@ -358,7 +394,7 @@ def clear_expired_cache():
 
 
 def remove_document_from_index(document_id: str):
-    """Remove a document from the search index."""
+    """Remove a document from the search index and ownership table."""
     if not DB_PATH:
         return
 
@@ -367,6 +403,9 @@ def remove_document_from_index(document_id: str):
         cursor = conn.cursor()
         cursor.execute(
             "DELETE FROM documents_fts WHERE document_id = ?", (document_id,)
+        )
+        cursor.execute(
+            "DELETE FROM document_owners WHERE document_id = ?", (document_id,)
         )
         conn.commit()
         conn.close()
