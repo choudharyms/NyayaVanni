@@ -86,6 +86,48 @@ ALLOWED_MIME_TYPES = {
 }
 
 
+async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
+    filename = file.filename
+    if not filename:
+        raise HTTPException(
+            status_code=400, detail="Uploaded file must have a valid filename."
+        )
+
+    safe_filename = os.path.basename(filename)
+    safe_filename = "".join(
+        ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+    )
+    ext = safe_filename.split(".")[-1].lower() if "." in safe_filename else ""
+
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+        )
+
+    raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File size exceeds the maximum allowed limit of 10MB.",
+        )
+
+    if not validate_file_magic_bytes(raw_bytes, ext):
+        actual_mime = detect_actual_mime(raw_bytes)
+        logger.warning(
+            "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
+            file.content_type,
+            actual_mime,
+            ext,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="File content does not match the claimed file type. Upload rejected.",
+        )
+
+    return raw_bytes, safe_filename
+
+
 class DocumentGenerationRequest(BaseModel):
     effective_date: str = Field(..., max_length=100)
     party_one_name: str = Field(..., max_length=500)
@@ -602,7 +644,7 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
 
 @api_router.post("/diff-analysis")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-def diff_analysis(
+async def diff_analysis(
     request: Request,
     old_document: UploadFile = File(...),
     new_document: UploadFile = File(...),
@@ -625,11 +667,11 @@ def diff_analysis(
     try:
         session_id = require_session_id(request)
 
-        old_contents = old_document.file.read()
-        new_contents = new_document.file.read()
+        old_contents, old_filename = await read_validated_upload(old_document)
+        new_contents, new_filename = await read_validated_upload(new_document)
 
-        old_text = extract_document(old_contents, old_document.filename or "old.pdf")
-        new_text = extract_document(new_contents, new_document.filename or "new.pdf")
+        old_text = extract_document(old_contents, old_filename)
+        new_text = extract_document(new_contents, new_filename)
 
         old_text = old_text[:8000]
         new_text = new_text[:8000]
