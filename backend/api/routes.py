@@ -486,14 +486,11 @@ def chat_stream_sse(
 
     analysis = {}
     if document_id:
-        try:
-            session_id = require_session_id(request)
-            require_document_owner(document_id, session_id)
-            cached = get_cached_analysis(document_id, session_id, language)
-            if cached:
-                analysis = cached.get("analysis", {})
-        except HTTPException:
-            pass
+        session_id = require_session_id(request)
+        require_document_owner(document_id, session_id)
+        cached = get_cached_analysis(document_id, session_id, language)
+        if cached:
+            analysis = cached.get("analysis", {})
 
     def event_generator():
         try:
