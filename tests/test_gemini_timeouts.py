@@ -89,10 +89,10 @@ def test_diff_analysis_timeout(test_client, monkeypatch):
         
     monkeypatch.setattr("backend.api.routes.genai.GenerativeModel.generate_content", mock_generate)
     
-    # Prepare dummy files
+    # Prepare files that pass the upload validation layer.
     files = {
-        "old_document": ("old.pdf", b"dummy content", "application/pdf"),
-        "new_document": ("new.pdf", b"dummy content", "application/pdf"),
+        "old_document": ("old.pdf", b"%PDF-1.4\nold content", "application/pdf"),
+        "new_document": ("new.pdf", b"%PDF-1.4\nnew content", "application/pdf"),
     }
     
     response = test_client.post("/api/diff-analysis", files=files)
