@@ -6,15 +6,8 @@ import os
 import uuid
 
 import google.generativeai as genai
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    HTTPException,
-    Request,
-    Response,
-    UploadFile,
-)
+from fastapi import (APIRouter, Depends, File, HTTPException, Request,
+                     Response, UploadFile)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from reportlab.lib.pagesizes import letter
@@ -25,40 +18,30 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from ..config.rate_limits import (
-    CONTACT_RATE_LIMIT,
-    DELETE_RATE_LIMIT,
-    UPLOAD_RATE_LIMIT,
-)
+from ..config.rate_limits import (CONTACT_RATE_LIMIT, DELETE_RATE_LIMIT,
+                                  UPLOAD_RATE_LIMIT)
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
-from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
-from ..services.gemini_service import (
-    GEMINI_TIMEOUT,
-    analyze_document_with_gemini,
-    generate_chat_response,
-    stream_chat_response,
-)
+from ..services.file_validation import (detect_actual_mime,
+                                        validate_file_magic_bytes)
+from ..services.gemini_service import (GEMINI_TIMEOUT,
+                                       analyze_document_with_gemini,
+                                       generate_chat_response,
+                                       stream_chat_response)
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
-from ..services.search_service import (
-    index_document,
-    remove_document_from_index,
-    search_documents,
-)
-from ..services.storage_service import (
-    UPLOAD_DIR,
-    create_session_id,
-    delete_document_and_cache,
-    get_cached_analysis,
-    get_document_record,
-    save_cached_analysis,
-    save_document_record,
-    upload_to_local,
-    validate_session,
-)
+from ..services.search_service import (index_document,
+                                       remove_document_from_index,
+                                       search_documents)
+from ..services.storage_service import (UPLOAD_DIR, create_session_id,
+                                        delete_document_and_cache,
+                                        get_cached_analysis,
+                                        get_document_record,
+                                        save_cached_analysis,
+                                        save_document_record, upload_to_local,
+                                        validate_session)
 
 logger = logging.getLogger(__name__)
 
@@ -383,7 +366,6 @@ def _analyze_document_sync(
         confidence = ConfidenceService.generate(
             document_text=text,
             summary=analysis_result.get("summary", ""),
-            relevant_laws=relevant_laws,
         )
         classification = classify_document(text)
         knowledge_graph = graph_builder.generate_graph(text)
@@ -414,12 +396,10 @@ def _analyze_document_sync(
             status_code=404, detail="Requested document file not found on storage."
         )
     except Exception as e:
-        from google.api_core.exceptions import (
-            DeadlineExceeded,
-            GoogleAPIError,
-            InvalidArgument,
-            ResourceExhausted,
-        )
+        from google.api_core.exceptions import (DeadlineExceeded,
+                                                GoogleAPIError,
+                                                InvalidArgument,
+                                                ResourceExhausted)
 
         logger.error(f"Analysis failed: {e}")
 
@@ -852,4 +832,3 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
-
