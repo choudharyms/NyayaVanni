@@ -767,6 +767,8 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
             media_type="application/pdf",
             headers={"Content-Disposition": 'attachment; filename="NDA_Document.pdf"'},
         )
+    except HTTPException as http_err:
+        raise http_err
     except Exception as e:
         logger.error(f"Failed to generate document: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate document")
