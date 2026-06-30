@@ -376,7 +376,7 @@ def _analyze_document_sync(
         )
 
         # Index document content for full-text search
-        index_document(document_id, filename, text)
+        index_document(document_id, filename, text, session_id=session_id)
 
         relevant_laws = retrieve_relevant_laws(text, k=3)
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
@@ -840,7 +840,7 @@ def search_documents_endpoint(
         if page_size < 1 or page_size > 100:
             page_size = 10
 
-        result = search_documents(q, page=page, page_size=page_size, use_cache=True)
+        result = search_documents(q, page=page, page_size=page_size, use_cache=True, session_id=session_id)
 
         if "error" in result:
             raise HTTPException(status_code=500, detail=result["error"])
