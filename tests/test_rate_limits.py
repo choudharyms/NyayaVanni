@@ -21,3 +21,10 @@ def test_session_rate_limit():
         last_response = client.get("/api/session")
 
     assert last_response.status_code == 429
+
+def test_search_rate_limit():
+    last_response = None
+    for _ in range(35):
+        last_response = client.get("/api/search?q=test")
+
+    assert last_response.status_code == 429
