@@ -29,6 +29,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
+import { calculateLayout } from '../utils/graphLayout';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -431,7 +432,26 @@ export default function Dashboard() {
       return matchesSearch && matchesType;
     }) || [];
 
-  const graphNodes = filteredNodes.map((node, index) => ({
+  const visibleNodeIds = new Set(filteredNodes.map((node) => node.id));
+
+  const graphEdges =
+    knowledgeGraph?.edges
+      ?.filter((edge) => {
+        return (
+          visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+        );
+      })
+      .map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        animated: true,
+      })) || [];
+
+  const layoutPositions = calculateLayout(filteredNodes, graphEdges);
+
+  const graphNodes = filteredNodes.map((node) => ({
     id: node.id,
 
     data: {
@@ -439,10 +459,7 @@ export default function Dashboard() {
       type: node.type,
     },
 
-    position: {
-      x: (index % 4) * 250,
-      y: Math.floor(index / 4) * 150,
-    },
+    position: layoutPositions[node.id] || { x: 0, y: 0 },
 
     style: {
       padding: 10,
@@ -463,23 +480,6 @@ export default function Dashboard() {
       fontSize: 12,
     },
   }));
-
-  const visibleNodeIds = new Set(graphNodes.map((node) => node.id));
-
-  const graphEdges =
-    knowledgeGraph?.edges
-      ?.filter((edge) => {
-        return (
-          visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-        );
-      })
-      .map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.label,
-        animated: true,
-      })) || [];
 
   if (loading) {
     return <DashboardSkeleton />;
