@@ -23,6 +23,7 @@ import {
   CalendarDays,
   BadgeAlert,
   BadgeCheck,
+  SearchX,
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ARIA_LABELS, PLACEHOLDERS } from '../constants';
@@ -731,23 +732,49 @@ export default function HireLawyer() {
             ))}
           </div>
         ) : filteredLawyers.length === 0 ? (
-          <div className="p-10 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
-            <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
-            <h3 className="text-xl font-bold text-slate-850 dark:text-white">
-              No lawyers found
-            </h3>
-            <p className="mt-2 text-slate-650 dark:text-slate-400">
-              Try adjusting your search or filters.
-            </p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilterType('All');
-              }}
-              className="inline-flex items-center justify-center px-6 py-3 mt-6 font-semibold text-slate-700 dark:text-white transition border rounded-full bg-slate-100 hover:bg-slate-150 border-slate-250 dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15 cursor-pointer shadow-xs"
-            >
-              Reset Filters
-            </button>
+          <div className="relative overflow-hidden p-8 md:p-12 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md transition-all duration-300">
+            {/* Ambient background glow */}
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-48 h-48 bg-nyaya-500/10 dark:bg-nyaya-500/15 rounded-full blur-3xl pointer-events-none" />
+
+            <div className="relative z-10 flex flex-col items-center max-w-md mx-auto">
+              <div className="relative flex items-center justify-center w-20 h-20 mb-6 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 shadow-inner">
+                {/* Decorative rotating dashed ring */}
+                <div className="absolute inset-0 rounded-full border-2 border-dashed border-nyaya-500/30 dark:border-nyaya-500/45 animate-spin-slow" />
+                <SearchX className="w-10 h-10 text-slate-500 dark:text-slate-400" />
+              </div>
+
+              <h3 className="text-2xl font-bold tracking-tight text-slate-850 dark:text-white mb-2">
+                No legal experts found
+              </h3>
+
+              <p className="text-sm md:text-base text-slate-650 dark:text-slate-400 mb-8 leading-relaxed font-medium">
+                {searchTerm.trim() ? (
+                  <>
+                    We couldn't find any lawyers matching "<span className="font-bold text-nyaya-600 dark:text-nyaya-400">{searchTerm}</span>"
+                    {filterType !== 'All' && (
+                      <>
+                        {' '}under the <span className="font-bold text-slate-800 dark:text-slate-200">{filterType}</span> specialty
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  <>
+                    No lawyers available under the <span className="font-bold text-slate-800 dark:text-slate-200">{filterType}</span> specialty.
+                  </>
+                )}
+              </p>
+
+              <button
+                onClick={() => {
+                  setSearchTerm('');
+                  setFilterType('All');
+                }}
+                className="inline-flex items-center justify-center gap-2 px-6 py-3.5 font-bold text-white transition-all duration-300 rounded-2xl bg-gradient-to-r from-nyaya-500 to-blue-600 hover:scale-[1.02] active:scale-[0.99] cursor-pointer shadow-md shadow-nyaya-500/10 dark:shadow-nyaya-500/20"
+              >
+                Reset Search Filters
+              </button>
+            </div>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
