@@ -46,6 +46,8 @@ def init_db(raise_on_error: bool = False):
             cursor.execute("ALTER TABLE documents ADD COLUMN session_id TEXT")
         if "user_id" not in existing_columns:
             cursor.execute("ALTER TABLE documents ADD COLUMN user_id TEXT")
+        if "updated_at" not in existing_columns:
+            cursor.execute("ALTER TABLE documents ADD COLUMN updated_at TEXT")
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_session_id
             ON documents(session_id)
@@ -53,6 +55,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_status_history_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -161,6 +164,23 @@ def _ensure_sessions_table(cursor):
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
+    """)
+
+
+def _ensure_status_history_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS document_status_history (
+            history_id TEXT PRIMARY KEY,
+            document_id TEXT NOT NULL,
+            old_status TEXT,
+            new_status TEXT,
+            changed_at TEXT NOT NULL,
+            changed_by TEXT
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_document_status_history_doc_id
+        ON document_status_history(document_id)
     """)
 
 
@@ -273,6 +293,16 @@ def save_document_record(session_id: str, doc_id: str, filename: str, local_path
         cursor.execute(
             "INSERT INTO documents (document_id, session_id, user_id, filename, local_path, status, uploaded_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
             (doc_id, session_id, None, filename, local_path, "processing", timestamp),
+        )
+        # Record initial status in history
+        history_id = str(uuid.uuid4())
+        cursor.execute(
+            """
+            INSERT INTO document_status_history
+            (history_id, document_id, old_status, new_status, changed_at, changed_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (history_id, doc_id, None, "processing", timestamp, session_id),
         )
         conn.commit()
     except Exception as e:
@@ -513,6 +543,79 @@ def get_cached_analysis(doc_id: str, session_id: str, language: str) -> Optional
     except Exception as e:
         logger.error(f"SQLite analysis cache retrieve failed: {e}")
         return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_document_status(doc_id: str, new_status: str, changed_by: str = None) -> bool:
+    """Update a document's status and record the change in status history for audit trails."""
+    timestamp = datetime.utcnow().isoformat()
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        
+        # Get old status
+        cursor.execute("SELECT status FROM documents WHERE document_id = ?", (doc_id,))
+        row = cursor.fetchone()
+        if not row:
+            logger.warning(f"Document {doc_id} not found for status update")
+            return False
+        
+        old_status = row[0]
+        
+        # Update status and updated_at
+        cursor.execute(
+            "UPDATE documents SET status = ?, updated_at = ? WHERE document_id = ?",
+            (new_status, timestamp, doc_id),
+        )
+        
+        # Write history record
+        history_id = str(uuid.uuid4())
+        cursor.execute(
+            """
+            INSERT INTO document_status_history
+            (history_id, document_id, old_status, new_status, changed_at, changed_by)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """,
+            (history_id, doc_id, old_status, new_status, timestamp, changed_by),
+        )
+        
+        conn.commit()
+        logger.info(f"Document {doc_id} status updated: {old_status} -> {new_status}")
+        return True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to update document status for {doc_id}: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_document_status_history(doc_id: str) -> list[dict]:
+    """Retrieve the complete audit history of status changes for a document."""
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT old_status, new_status, changed_at, changed_by
+            FROM document_status_history
+            WHERE document_id = ?
+            ORDER BY changed_at ASC
+            """,
+            (doc_id,),
+        )
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
+    except Exception as e:
+        logger.error(f"Failed to retrieve document status history for {doc_id}: {e}")
+        return []
     finally:
         if conn:
             conn.close()

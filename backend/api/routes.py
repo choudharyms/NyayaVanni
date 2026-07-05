@@ -58,6 +58,8 @@ from ..services.storage_service import (
     save_document_record,
     upload_to_local,
     validate_session,
+    update_document_status,
+    get_document_status_history,
 )
 
 logger = logging.getLogger(__name__)
@@ -92,6 +94,10 @@ class DocumentGenerationRequest(BaseModel):
     party_two_name: str = Field(..., max_length=500)
     consideration_amount: str = Field(..., max_length=500)
     jurisdiction: str = Field(..., max_length=200)
+
+
+class StatusUpdateRequest(BaseModel):
+    status: str = Field(..., min_length=1, max_length=100)
 
 
 def require_session_id(request: Request) -> str:
@@ -346,48 +352,54 @@ def _analyze_document_sync(
                     "cached": True,
                 }
 
-        if not file:
-            record = get_document_record(document_id)
-            if not record or not record.get("local_path"):
-                raise HTTPException(
-                    status_code=404, detail="Document not found or file missing"
+        try:
+            if not file:
+                record = get_document_record(document_id)
+                if not record or not record.get("local_path"):
+                    raise HTTPException(
+                        status_code=404, detail="Document not found or file missing"
+                    )
+                try:
+                    with open(record["local_path"], "rb") as f:
+                        contents = f.read()
+                except IOError:
+                    raise HTTPException(
+                        status_code=500, detail="Failed to read document from storage"
+                    )
+                filename = record["filename"]
+                ext_from_record = (
+                    str(filename).lower().split(".")[-1] if "." in str(filename) else ""
                 )
-            try:
-                with open(record["local_path"], "rb") as f:
-                    contents = f.read()
-            except IOError:
-                raise HTTPException(
-                    status_code=500, detail="Failed to read document from storage"
-                )
-            filename = record["filename"]
-            ext_from_record = (
-                str(filename).lower().split(".")[-1] if "." in str(filename) else ""
+                if ext_from_record not in ALLOWED_EXTENSIONS:
+                    raise HTTPException(
+                        status_code=400, detail="Stored document has unsupported file type"
+                    )
+            else:
+                contents = file.file.read()
+                filename = file.filename
+
+            text = extract_document(
+                contents, filename, force_ocr=force_ocr, language=language
             )
-            if ext_from_record not in ALLOWED_EXTENSIONS:
-                raise HTTPException(
-                    status_code=400, detail="Stored document has unsupported file type"
-                )
-        else:
-            contents = file.file.read()
-            filename = file.filename
 
-        text = extract_document(
-            contents, filename, force_ocr=force_ocr, language=language
-        )
+            # Index document content for full-text search
+            index_document(document_id, filename, text)
 
-        # Index document content for full-text search
-        index_document(document_id, filename, text)
-
-        relevant_laws = retrieve_relevant_laws(text, k=3)
-        analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
-        confidence = ConfidenceService.generate(
-            document_text=text,
-            summary=analysis_result.get("summary", ""),
-            relevant_laws=relevant_laws,
-        )
-        classification = classify_document(text)
-        knowledge_graph = graph_builder.generate_graph(text)
-        save_cached_analysis(document_id, session_id, language, text, analysis_result)
+            relevant_laws = retrieve_relevant_laws(text, k=3)
+            analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+            confidence = ConfidenceService.generate(
+                document_text=text,
+                summary=analysis_result.get("summary", ""),
+                relevant_laws=relevant_laws,
+            )
+            classification = classify_document(text)
+            knowledge_graph = graph_builder.generate_graph(text)
+            save_cached_analysis(document_id, session_id, language, text, analysis_result)
+            
+            update_document_status(document_id, "analyzed", changed_by="system")
+        except Exception as analysis_err:
+            update_document_status(document_id, "failed", changed_by="system")
+            raise analysis_err
 
         return {
             "documentId": document_id,
@@ -852,4 +864,51 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+@api_router.post("/documents/{document_id}/status")
+@limiter.limit("30/minute")
+async def update_doc_status_endpoint(
+    document_id: str,
+    body: StatusUpdateRequest,
+    request: Request,
+):
+    """
+    Update the status of a document.
+    
+    Requires session authentication and document ownership verification.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    updated = update_document_status(document_id, body.status, changed_by=session_id)
+    if not updated:
+        raise HTTPException(status_code=500, detail="Failed to update document status")
+        
+    return {
+        "documentId": document_id,
+        "status": body.status,
+        "message": "Status updated successfully",
+    }
+
+
+@api_router.get("/documents/{document_id}/history")
+@limiter.limit("30/minute")
+async def get_doc_history_endpoint(
+    document_id: str,
+    request: Request,
+):
+    """
+    Retrieve the status transition history (audit trail) of a document.
+    
+    Requires session authentication and document ownership verification.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    history = get_document_status_history(document_id)
+    return {
+        "documentId": document_id,
+        "history": history,
+    }
 
