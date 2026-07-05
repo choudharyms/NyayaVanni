@@ -21,9 +21,8 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
+from ..middleware.rate_limit import limiter
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -71,7 +70,6 @@ graph_builder = LegalKnowledgeGraphBuilder()
 #   RATE_LIMIT_ANALYZE  (default: 10/minute)  heavy Gemini + OCR call
 #   RATE_LIMIT_CHAT     (default: 30/minute)  streaming chat call
 # ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 
@@ -519,15 +517,16 @@ def chat_stream_sse(
 
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
-def chat_general(request: Request, chat_request: ChatRequest):
+def chat_general(request: Request, chat_request: ChatRequest, stream: bool = False):
     """General legal chat - no document context.
 
     Args:
         request: The incoming HTTP request.
         chat_request: The chat payload including message, history, and language.
+        stream: Whether to stream the response chunks.
 
     Returns:
-        ChatResponse: The AI-generated chat response.
+        StreamingResponse | ChatResponse: The streaming or static AI-generated chat response.
 
     Raises:
         HTTPException 400: If the message is empty.
@@ -542,6 +541,22 @@ def chat_general(request: Request, chat_request: ChatRequest):
             {"role": msg.role, "message": msg.message}
             for msg in chat_request.chat_history
         ]
+
+        accept_header = request.headers.get("accept", "")
+        if stream or "text/event-stream" in accept_header or "text/plain" in accept_header:
+            generator = stream_chat_response(
+                analysis, history, chat_request.user_message, chat_request.language
+            )
+            return StreamingResponse(
+                generator,
+                media_type="text/plain",
+                headers={
+                    "Cache-Control": "no-cache",
+                    "X-Accel-Buffering": "no",
+                    "Connection": "keep-alive",
+                },
+            )
+
         response_text = generate_chat_response(
             analysis, history, chat_request.user_message, chat_request.language
         )

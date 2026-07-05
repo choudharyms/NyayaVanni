@@ -368,7 +368,19 @@ export default function Dashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error('Chat failed');
+      if (!response.ok) {
+        let errMessage = 'Chat failed';
+        try {
+          const errData = await response.json();
+          errMessage = errData.detail || errMessage;
+        } catch {
+          try {
+            const errText = await response.text();
+            if (errText) errMessage = errText;
+          } catch {}
+        }
+        throw new Error(errMessage);
+      }
 
       // Set up a stream reader to consume the plaintext chunks
       const reader = response.body.getReader();
@@ -399,18 +411,20 @@ export default function Dashboard() {
           });
         }
       }
-    } catch {
+    } catch (err) {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      let msg =
-        'This is a fallback response. The backend might not be running correctly.';
+      let msg = err.message || 'This is a fallback response. The backend might not be running correctly.';
 
-      if (
-        apiUrl.includes('localhost') &&
-        window.location.hostname !== 'localhost'
-      ) {
-        msg =
-          'Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.';
+      if (err instanceof TypeError || err.message === 'Failed to fetch') {
+        msg = 'This is a fallback response. The backend might not be running correctly.';
+        if (
+          apiUrl.includes('localhost') &&
+          window.location.hostname !== 'localhost'
+        ) {
+          msg =
+            'Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.';
+        }
       }
 
       setChatHistory([...newHistory, { role: 'assistant', message: msg }]);

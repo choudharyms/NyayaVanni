@@ -140,7 +140,7 @@ export default function GeneralChat() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const response = await fetch(`${apiUrl}/api/chat/general`, {
+      const response = await fetch(`${apiUrl}/api/chat/general?stream=true`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -151,7 +151,19 @@ export default function GeneralChat() {
         }),
       });
 
-      if (!response.ok) throw new Error('Chat failed');
+      if (!response.ok) {
+        let errMessage = 'Chat failed';
+        try {
+          const errData = await response.json();
+          errMessage = errData.detail || errMessage;
+        } catch {
+          try {
+            const errText = await response.text();
+            if (errText) errMessage = errText;
+          } catch {}
+        }
+        throw new Error(errMessage);
+      }
 
       // Set up a stream reader to consume the plaintext chunks
       const reader = response.body.getReader();
@@ -182,18 +194,20 @@ export default function GeneralChat() {
           });
         }
       }
-    } catch {
+    } catch (err) {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      let errorMessage =
-        "I'm having trouble connecting to the server. Please try again later.";
+      let errorMessage = err.message || "I'm having trouble connecting to the server. Please try again later.";
 
-      if (
-        apiUrl.includes('localhost') &&
-        window.location.hostname !== 'localhost'
-      ) {
-        errorMessage =
-          'Configuration Error: The app is trying to connect to a local server (localhost) while deployed. Please set the VITE_API_URL environment variable in your Vercel dashboard.';
+      if (err instanceof TypeError || err.message === 'Failed to fetch') {
+        errorMessage = "I'm having trouble connecting to the server. Please try again later.";
+        if (
+          apiUrl.includes('localhost') &&
+          window.location.hostname !== 'localhost'
+        ) {
+          errorMessage =
+            'Configuration Error: The app is trying to connect to a local server (localhost) while deployed. Please set the VITE_API_URL environment variable in your Vercel dashboard.';
+        }
       }
 
       setChatHistory([

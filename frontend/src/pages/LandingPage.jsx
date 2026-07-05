@@ -81,7 +81,19 @@ export default function LandingPage() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) {
+        let errMessage = 'Upload failed';
+        try {
+          const errData = await response.json();
+          errMessage = errData.detail || errMessage;
+        } catch {
+          try {
+            const errText = await response.text();
+            if (errText) errMessage = errText;
+          } catch {}
+        }
+        throw new Error(errMessage);
+      }
       const data = await response.json();
 
       // Navigate to Dashboard with the document ID

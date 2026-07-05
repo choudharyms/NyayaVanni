@@ -110,3 +110,32 @@ def test_general_chat_with_history(test_client, monkeypatch):
 
     assert response.status_code == 200
     assert "response" in response.json()
+
+
+def test_general_chat_streaming(test_client, monkeypatch):
+    """
+    POST /api/chat/general?stream=true returns a StreamingResponse with chunks.
+    """
+    chunks = ["You have ", "the right ", "to consult ", "a lawyer."]
+
+    def mock_stream(*args, **kwargs):
+        for chunk in chunks:
+            yield chunk
+
+    monkeypatch.setattr("backend.api.routes.stream_chat_response", mock_stream)
+
+    response = test_client.post(
+        "/api/chat/general?stream=true",
+        json={
+            "user_message": "What are my rights?",
+            "chat_history": [],
+            "language": "en",
+        },
+    )
+
+    assert response.status_code == 200
+    assert response.headers["content-type"] == "text/plain; charset=utf-8"
+    
+    # Read stream chunks
+    body = b"".join(response.iter_bytes())
+    assert body.decode() == "You have the right to consult a lawyer."
