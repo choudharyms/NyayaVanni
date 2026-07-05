@@ -93,12 +93,15 @@ export default function ContactUs() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col transition-colors duration-300">
-      <div className="max-w-6xl mx-auto flex flex-col flex-1 w-full px-6 py-6">
-        <header className="flex items-center justify-between py-4 mb-8 border-b border-slate-200 dark:border-slate-800">
+    <div className="relative min-h-screen bg-court-walnut text-court-cream wood-panel flex flex-col transition-colors duration-300 font-sans">
+      {/* Radial vignette backdrop */}
+      <div className="absolute inset-0 court-vignette opacity-95 pointer-events-none z-0"></div>
+
+      <div className="relative z-10 max-w-6xl mx-auto flex flex-col flex-1 w-full px-6 py-6">
+        <header className="flex items-center justify-between py-4 mb-8 border-b border-court-gold/25">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition text-slate-700 dark:text-slate-200 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-court-gold/30 hover:bg-court-gold hover:text-court-walnut transition text-court-cream cursor-pointer"
           >
             <ArrowLeft className="w-4 h-4" />{' '}
             {language === 'en' ? 'Back' : 'वापस'}
@@ -108,19 +111,19 @@ export default function ContactUs() {
 
         <main className="flex-1 w-full flex flex-col md:flex-row gap-12">
           <div className="flex-1 flex flex-col">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-850 dark:text-white mb-4">
+            <h1 className="text-4xl md:text-5xl font-bold font-serif text-court-cream mb-4">
               {L.CONTACT_TITLE}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mb-8 text-lg">
+            <p className="text-court-muted mb-8 text-lg">
               {L.CONTACT_DESC}
             </p>
 
             <form
               onSubmit={handleSubmit}
-              className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-6"
+              className="court-card p-8 rounded-3xl flex flex-col gap-6"
             >
               {submitStatus === 'success' && (
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl flex items-start gap-3">
+                <div className="bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 p-4 rounded-xl flex items-start gap-3">
                   <CheckCircle className="w-5 h-5 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">
@@ -136,7 +139,7 @@ export default function ContactUs() {
               )}
 
               {submitStatus === 'error' && (
-                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-start gap-3">
+                <div className="bg-red-500/10 border border-red-500/20 text-red-400 p-4 rounded-xl flex items-start gap-3">
                   <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">
@@ -157,7 +160,7 @@ export default function ContactUs() {
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="name"
-                    className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                    className="text-sm font-semibold text-court-cream"
                   >
                     {L.FULL_NAME}
                   </label>
@@ -167,7 +170,7 @@ export default function ContactUs() {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
-                    className={`px-4 py-3 rounded-xl border ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
+                    className={`px-4 py-3 rounded-xl border ${errors.name ? 'border-red-500 focus:ring-red-500/20' : 'border-court-gold/35 focus:border-court-gold'} bg-court-walnut/40 text-court-cream focus:ring-2 focus:ring-court-gold/20 outline-none transition-all`}
                     placeholder={
                       language === 'en'
                         ? CONTACT_PLACEHOLDERS.NAME_EN
@@ -182,7 +185,7 @@ export default function ContactUs() {
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="email"
-                    className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                    className="text-sm font-semibold text-court-cream"
                   >
                     {L.EMAIL_ADDRESS}
                   </label>
@@ -192,7 +195,7 @@ export default function ContactUs() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
-                    className={`px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
+                    className={`px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500 focus:ring-red-500/20' : 'border-court-gold/35 focus:border-court-gold'} bg-court-walnut/40 text-court-cream focus:ring-2 focus:ring-court-gold/20 outline-none transition-all`}
                     placeholder={
                       CONTACT_PLACEHOLDERS.CONTACT_EMAIL || 'john@example.com'
                     }
@@ -206,7 +209,7 @@ export default function ContactUs() {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="subject"
-                  className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                  className="text-sm font-semibold text-court-cream"
                 >
                   {L.SUBJECT}
                 </label>
@@ -216,7 +219,7 @@ export default function ContactUs() {
                   name="subject"
                   value={formData.subject}
                   onChange={handleChange}
-                  className={`px-4 py-3 rounded-xl border ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
+                  className={`px-4 py-3 rounded-xl border ${errors.subject ? 'border-red-500 focus:ring-red-500/20' : 'border-court-gold/35 focus:border-court-gold'} bg-court-walnut/40 text-court-cream focus:ring-2 focus:ring-court-gold/20 outline-none transition-all`}
                   placeholder={
                     language === 'en'
                       ? CONTACT_PLACEHOLDERS.HELP_EN
@@ -231,7 +234,7 @@ export default function ContactUs() {
               <div className="flex flex-col gap-2">
                 <label
                   htmlFor="message"
-                  className="text-sm font-semibold text-slate-700 dark:text-slate-300"
+                  className="text-sm font-semibold text-court-cream"
                 >
                   {L.MESSAGE}
                 </label>
@@ -241,7 +244,7 @@ export default function ContactUs() {
                   rows="5"
                   value={formData.message}
                   onChange={handleChange}
-                  className={`px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all resize-none`}
+                  className={`px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500 focus:ring-red-500/20' : 'border-court-gold/35 focus:border-court-gold'} bg-court-walnut/40 text-court-cream focus:ring-2 focus:ring-court-gold/20 outline-none transition-all resize-none`}
                   placeholder={
                     language === 'en'
                       ? CONTACT_PLACEHOLDERS.ISSUE_EN
@@ -256,11 +259,11 @@ export default function ContactUs() {
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 flex items-center justify-center gap-2 w-full md:w-auto self-start bg-linear-to-r from-nyaya-600 to-nyaya-500 hover:from-nyaya-500 hover:to-nyaya-400 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-nyaya-500/20 dark:shadow-nyaya-500/30 hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 cursor-pointer"
+                className="mt-2 flex items-center justify-center gap-2 w-full md:w-auto self-start bg-court-gold hover:bg-yellow-500 text-court-walnut px-8 py-3 rounded-xl font-bold transition-all shadow-lg shadow-court-gold/10 hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 cursor-pointer"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="w-5 h-5 border-2 border-court-walnut/30 border-t-court-walnut rounded-full animate-spin"></div>
                     {L.SENDING}
                   </>
                 ) : (
@@ -274,22 +277,22 @@ export default function ContactUs() {
           </div>
 
           <div className="w-full md:w-80 flex flex-col gap-6 mt-8 md:mt-24">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-850 dark:text-white mb-6">
+            <div className="court-card p-8 rounded-3xl shadow-sm">
+              <h3 className="text-xl font-bold font-serif text-court-cream mb-6">
                 {L.CONTACT_INFO}
               </h3>
               <div className="flex flex-col gap-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-nyaya-500/10 flex items-center justify-center shrink-0 text-nyaya-600 dark:text-nyaya-400">
+                  <div className="w-10 h-10 rounded-full bg-court-gold/15 flex items-center justify-center shrink-0 text-court-gold border border-court-gold/25">
                     <Mail className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 dark:text-white">
+                    <p className="font-semibold text-court-cream">
                       Email
                     </p>
                     <a
                       href="mailto:support@nyayavanni.com"
-                      className="text-sm text-slate-600 dark:text-slate-400 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-colors"
+                      className="text-sm text-court-muted hover:text-court-gold transition-colors"
                     >
                       support@nyayavanni.com
                     </a>
@@ -297,28 +300,28 @@ export default function ContactUs() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-nyaya-500/10 flex items-center justify-center shrink-0 text-nyaya-600 dark:text-nyaya-400">
+                  <div className="w-10 h-10 rounded-full bg-court-gold/15 flex items-center justify-center shrink-0 text-court-gold border border-court-gold/25">
                     <Clock className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 dark:text-white">
+                    <p className="font-semibold text-court-cream">
                       {L.BUSINESS_HOURS}
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-court-muted">
                       {L.BUSINESS_HOURS_VALUE}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-nyaya-500/10 flex items-center justify-center shrink-0 text-nyaya-600 dark:text-nyaya-400">
+                  <div className="w-10 h-10 rounded-full bg-court-gold/15 flex items-center justify-center shrink-0 text-court-gold border border-court-gold/25">
                     <MapPin className="w-5 h-5" />
                   </div>
                   <div>
-                    <p className="font-semibold text-slate-800 dark:text-white">
+                    <p className="font-semibold text-court-cream">
                       {L.LOCATION}
                     </p>
-                    <p className="text-sm text-slate-600 dark:text-slate-400">
+                    <p className="text-sm text-court-muted">
                       {L.LOCATION_VALUE}
                     </p>
                   </div>
@@ -329,7 +332,7 @@ export default function ContactUs() {
         </main>
       </div>
 
-      <section className="z-10 w-full">
+      <section className="relative z-10 w-full mt-auto">
         <Footer />
       </section>
     </div>
