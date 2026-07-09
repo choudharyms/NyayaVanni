@@ -131,7 +131,7 @@ class LegalKnowledgeGraphBuilder:
         return entities
 
     def build_relationships(self, entities: Dict) -> List[Dict]:
-       """
+        """
         Build graph edges between extracted legal entities.
 
         Creates directed relationships between clauses, obligations,
@@ -146,7 +146,7 @@ class LegalKnowledgeGraphBuilder:
             'source_label', 'target_label', and 'relationship' keys.
         """
 
-        relationships = []
+        relationships = []  
 
         # Clause -> Obligation
         for clause in entities["clauses"]:
