@@ -74,26 +74,24 @@ class DocumentGenerationRequest(BaseModel):
 
 
     def require_session_id(request: Request) -> str:
-    """
-    Extract and validate session ID from request cookies.
+        """
+        Extract and validate session ID from request cookies.
 
-    Args:
-        request (Request): The incoming HTTP request object.
+        Args:
+            request (Request): The incoming HTTP request object.
 
-    Returns:
-        str: The session ID string from cookies.
+        Returns:
+            str: The session ID string from cookies.
 
-    Raises:
-        HTTPException 401: If session_id cookie is missing.
-    """
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Missing session_id cookie")
-    if not validate_session(session_id):
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
-    return session_id
-
-
+        Raises:
+            HTTPException 401: If session_id cookie is missing.
+        """
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Missing session_id cookie")
+        if not validate_session(session_id):
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+        return session_id
 def require_document_owner(document_id: str, session_id: str) -> dict:
     """
     Verify that the current session owns the requested document.
@@ -418,42 +416,42 @@ def chat_stream_sse(
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_general(request: Request, chat_request: ChatRequest):
-   """
-Handle general legal chat without any document context.
+        """
+        Handle general legal chat without any document context.
 
-Args:
-    request (Request): The incoming HTTP request object.
-    chat_request (ChatRequest): Contains user_message, language,
-        and chat_history.
+        Args:
+            request (Request): The incoming HTTP request object.
+            chat_request (ChatRequest): Contains user_message, language,
+                and chat_history.
 
-Returns:
-    ChatResponse: AI-generated legal response text.
+        Returns:
+            ChatResponse: AI-generated legal response text.
 
-Raises:
-    HTTPException 400: If the user message is empty.
-    HTTPException 500: If chat generation fails.
-"""
-    try:
-        if not chat_request.user_message or not chat_request.user_message.strip():
-            raise HTTPException(status_code=400, detail="Message cannot be empty")
+        Raises:
+            HTTPException 400: If the user message is empty.
+            HTTPException 500: If chat generation fails.
+        """
+        try:
+            if not chat_request.user_message or not chat_request.user_message.strip():
+                raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-        analysis = {}
-        history = [
-            {"role": msg.role, "message": msg.message}
-            for msg in chat_request.chat_history
-        ]
-        response_text = generate_chat_response(
-            analysis, history, chat_request.user_message, chat_request.language
-        )
-        return ChatResponse(response=response_text)
+            analysis = {}
+            history = [
+                {"role": msg.role, "message": msg.message}
+                for msg in chat_request.chat_history
+            ]
+            response_text = generate_chat_response(
+                analysis, history, chat_request.user_message, chat_request.language
+            )
+            return ChatResponse(response=response_text)
 
-    except RateLimitExceeded:
-        raise
-    except HTTPException as http_err:
-        raise
-    except Exception as e:
-        logger.error(f"General chat failed: {e}")
-        raise HTTPException(status_code=500, detail="Chat generation failed")
+        except RateLimitExceeded:
+            raise
+        except HTTPException as http_err:
+            raise
+        except Exception as e:
+            logger.error(f"General chat failed: {e}")
+            raise HTTPException(status_code=500, detail="Chat generation failed")
 
 
 @api_router.post("/chat/{document_id}")
