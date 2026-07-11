@@ -73,25 +73,25 @@ class DocumentGenerationRequest(BaseModel):
 
 
 
-    def require_session_id(request: Request) -> str:
-        """
-        Extract and validate session ID from request cookies.
+def require_session_id(request: Request) -> str:
+    """
+    Extract and validate session ID from request cookies.
 
-        Args:
-            request (Request): The incoming HTTP request object.
+    Args:
+        request (Request): The incoming HTTP request object.
 
-        Returns:
-            str: The session ID string from cookies.
+    Returns:
+        str: The session ID string from cookies.
 
-        Raises:
-            HTTPException 401: If session_id cookie is missing.
-        """
-        session_id = request.cookies.get("session_id")
-        if not session_id:
-            raise HTTPException(status_code=401, detail="Missing session_id cookie")
-        if not validate_session(session_id):
-            raise HTTPException(status_code=401, detail="Invalid or expired session")
-        return session_id
+    Raises:
+        HTTPException 401: If session_id cookie is missing.
+    """
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing session_id cookie")
+    if not validate_session(session_id):
+        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    return session_id
 def require_document_owner(document_id: str, session_id: str) -> dict:
     """
     Verify that the current session owns the requested document.
