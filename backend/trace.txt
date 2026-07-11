@@ -1,1 +1,0 @@
-{"detail":"AI Quota limit reached. Please wait a minute and try again."}
