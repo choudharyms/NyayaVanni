@@ -840,7 +840,7 @@ def search_documents_endpoint(
         if page_size < 1 or page_size > 100:
             page_size = 10
 
-        result = search_documents(q, page=page, page_size=page_size, use_cache=True)
+        result = search_documents(q, page=page, page_size=page_size, use_cache=True, session_id=session_id)
 
         if "error" in result:
             raise HTTPException(status_code=500, detail=result["error"])

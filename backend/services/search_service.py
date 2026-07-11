@@ -132,7 +132,7 @@ def index_document(document_id: str, filename: str, content: str):
 
 
 def search_documents(
-    query: str, page: int = 1, page_size: int = 10, use_cache: bool = True
+    query: str, page: int = 1, page_size: int = 10, use_cache: bool = True, session_id: str = None
 ) -> Dict[str, Any]:
     """
     Search documents using full-text search with caching.
@@ -145,6 +145,7 @@ def search_documents(
         page: Page number (1-indexed)
         page_size: Results per page
         use_cache: Whether to use cached results
+        session_id: Optional session ID to scope results to a specific session
 
     Returns:
         Dict containing:
@@ -212,6 +213,19 @@ def search_documents(
         )
 
         results = [dict(row) for row in cursor.fetchall()]
+
+        # Filter results by session_id if provided (security: prevent cross-user data leak)
+        if session_id:
+            doc_ids = tuple(r["document_id"] for r in results) if results else ("",)
+            placeholders = ",".join("?" for _ in doc_ids)
+            cursor.execute(
+                f"SELECT document_id FROM documents WHERE document_id IN ({placeholders}) AND session_id = ?",
+                (*doc_ids, session_id),
+            )
+            allowed_ids = {row[0] for row in cursor.fetchall()}
+            results = [r for r in results if r["document_id"] in allowed_ids]
+            total_count = len(results)
+
         conn.close()
 
         response = {
