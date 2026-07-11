@@ -153,30 +153,42 @@ export default function Footer() {
           {/* Social Links */}
           <div className="flex items-center gap-5">
             <a
-              href="#"
+              href="https://twitter.com/nyayavanni"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
-              aria-label="Twitter"
+              aria-label="NyayaVanni on Twitter (opens in new tab)"
+              title="Follow NyayaVanni on Twitter"
             >
               <Twitter className="w-5 h-5" />
             </a>
             <a
-              href="#"
+              href="https://github.com/choudharyms/NyayaVanni"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
-              aria-label="GitHub"
+              aria-label="NyayaVanni on GitHub (opens in new tab)"
+              title="View NyayaVanni source code on GitHub"
             >
               <Github className="w-5 h-5" />
             </a>
             <a
-              href="#"
+              href="https://linkedin.com/company/nyayavanni"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
-              aria-label="LinkedIn"
+              aria-label="NyayaVanni on LinkedIn (opens in new tab)"
+              title="Follow NyayaVanni on LinkedIn"
             >
               <Linkedin className="w-5 h-5" />
             </a>
             <a
-              href="#"
+              href="https://instagram.com/nyayavanni"
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
-              aria-label="Instagram"
+              aria-label="NyayaVanni on Instagram (opens in new tab)"
+              title="Follow NyayaVanni on Instagram"
             >
               <Instagram className="w-5 h-5" />
             </a>
