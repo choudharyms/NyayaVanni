@@ -1,20 +1,12 @@
-import asyncio
-import io
+﻿import io
 import json
 import logging
 import os
 import uuid
 
 import google.generativeai as genai
-from fastapi import (
-    APIRouter,
-    Depends,
-    File,
-    HTTPException,
-    Request,
-    Response,
-    UploadFile,
-)
+from fastapi import (APIRouter, Depends, File, HTTPException, Request,
+                     Response, UploadFile)
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 from reportlab.lib.pagesizes import letter
@@ -25,40 +17,26 @@ from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
 from slowapi.util import get_remote_address
 
-from ..config.rate_limits import (
-    CONTACT_RATE_LIMIT,
-    DELETE_RATE_LIMIT,
-    UPLOAD_RATE_LIMIT,
-)
+from ..config.rate_limits import CONTACT_RATE_LIMIT, UPLOAD_RATE_LIMIT
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
-from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
-from ..services.gemini_service import (
-    GEMINI_TIMEOUT,
-    analyze_document_with_gemini,
-    generate_chat_response,
-    stream_chat_response,
-)
+from ..services.gemini_service import (analyze_document_with_gemini,
+                                       generate_chat_response,
+                                       stream_chat_response)
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
-from ..services.search_service import (
-    index_document,
-    remove_document_from_index,
-    search_documents,
-)
-from ..services.storage_service import (
-    UPLOAD_DIR,
-    create_session_id,
-    delete_document_and_cache,
-    get_cached_analysis,
-    get_document_record,
-    save_cached_analysis,
-    save_document_record,
-    upload_to_local,
-    validate_session,
-)
+from ..services.search_service import (index_document,
+                                       remove_document_from_index,
+                                       search_documents)
+from ..services.storage_service import (UPLOAD_DIR, create_session_id,
+                                        delete_document_and_cache,
+                                        get_cached_analysis,
+                                        get_document_record,
+                                        save_cached_analysis,
+                                        save_document_record, upload_to_local,
+                                        validate_session)
 
 logger = logging.getLogger(__name__)
 
@@ -94,62 +72,58 @@ class DocumentGenerationRequest(BaseModel):
     jurisdiction: str = Field(..., max_length=200)
 
 
-def require_session_id(request: Request) -> str:
-    """Extract and validate the session ID from the request cookie.
 
-    Args:
-        request: The incoming HTTP request.
+    def require_session_id(request: Request) -> str:
+        """
+        Extract and validate session ID from request cookies.
 
-    Returns:
-        str: The validated session ID.
+        Args:
+            request (Request): The incoming HTTP request object.
 
-    Raises:
-        HTTPException 401: If the session_id cookie is missing or invalid.
-    """
-    session_id = request.cookies.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Missing session_id cookie")
-    if not validate_session(session_id):
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
-    return session_id
+        Returns:
+            str: The session ID string from cookies.
 
-
+        Raises:
+            HTTPException 401: If session_id cookie is missing.
+        """
+        session_id = request.cookies.get("session_id")
+        if not session_id:
+            raise HTTPException(status_code=401, detail="Missing session_id cookie")
+        if not validate_session(session_id):
+            raise HTTPException(status_code=401, detail="Invalid or expired session")
+        return session_id
 def require_document_owner(document_id: str, session_id: str) -> dict:
-    """Verify that the session owns the requested document.
+    """
+    Verify that the current session owns the requested document.
 
     Args:
-        document_id: The unique identifier of the document.
-        session_id: The session ID from the request cookie.
+        document_id (str): The unique identifier of the document.
+        session_id (str): The current user's session ID.
 
     Returns:
-        dict: The document record if ownership is confirmed.
+        dict: The document record if ownership is verified.
 
     Raises:
         HTTPException 404: If the document is not found.
         HTTPException 403: If the session does not own the document.
     """
-    record = get_document_record(document_id)
-    if not record:
-        raise HTTPException(status_code=404, detail="Document not found")
-    if record.get("session_id") != session_id:
-        raise HTTPException(status_code=403, detail="Access denied for this document")
-    return record
 
 
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
-    """Receive and log contact form submissions with IP-based rate limiting.
+    """
+    Handle contact form submissions with rate limiting.
 
     Args:
-        request: The incoming HTTP request.
-        body: The contact form payload including name, email, and subject.
+        request (Request): The incoming HTTP request object.
+        body (ContactRequest): Contains name, email, subject, and message.
 
     Returns:
-        dict: A status ok message confirming receipt.
+        dict: Status ok and confirmation message.
 
     Raises:
-        HTTPException 429: If the rate limit is exceeded.
+        HTTPException 429: If rate limit is exceeded.
     """
     logger.info(
         "Contact submission from %s: name=%s email=%s subject=%s",
@@ -168,31 +142,8 @@ async def contact_us(request: Request, body: ContactRequest):
 @api_router.get("/session")
 @limiter.limit("10/minute")
 async def create_session(request: Request, response: Response):
-    """Create or reuse a session cookie for the current user.
-
-    Args:
-        request: The incoming HTTP request.
-        response: The outgoing HTTP response used to set the cookie.
-
-    Returns:
-        dict: A status message confirming the session is active.
-
-    Raises:
-        HTTPException 429: If the rate limit is exceeded.
     """
-    session_id = request.cookies.get("session_id")
-    if not session_id or not validate_session(session_id):
-        session_id = create_session_id()
-        session_secure = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
-        response.set_cookie(
-            key="session_id",
-            value=session_id,
-            httponly=True,
-            samesite="lax",
-            secure=session_secure,
-            max_age=30 * 24 * 60 * 60,  # 30 days
-        )
-    return {"status": "Session active"}
+    Create or retrieve a session ID stored in a secure cookie.
 
     Args:
         request (Request): The incoming HTTP request object.
@@ -206,18 +157,19 @@ async def create_session(request: Request, response: Response):
 @api_router.post("/upload")
 @limiter.limit(UPLOAD_RATE_LIMIT)
 async def upload_document(request: Request, file: UploadFile = File(...)):
-    """Upload a legal document and return a document ID.
+    """
+    Upload a legal document and store it on the server.
 
     Args:
-        request: The incoming HTTP request.
-        file: The uploaded file (PDF, PNG, JPG, JPEG).
+        request (Request): The incoming HTTP request object.
+        file (UploadFile): The document file to upload (PDF, PNG, JPG, JPEG).
 
     Returns:
-        dict: A dictionary containing the documentId and a success message.
+        dict: Contains documentId and success message.
 
     Raises:
-        HTTPException 400: If the file format or MIME type is unsupported.
-        HTTPException 413: If the file exceeds the maximum allowed size.
+        HTTPException 400: If filename is invalid or file format not supported.
+        HTTPException 413: If file size exceeds 10MB limit.
         HTTPException 500: If file save fails.
     """
     try:
@@ -228,49 +180,31 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             raise HTTPException(
                 status_code=400, detail="Uploaded file must have a valid filename."
             )
-
-        # Only allow safe filenames to be stored; do not trust user-controlled paths/characters.
-        safe_filename = os.path.basename(filename)
-        safe_filename = "".join(
-            ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
-        )
-        if not safe_filename:
-            safe_filename = "upload"
-
-        ext = safe_filename.split(".")[-1].lower() if "." in safe_filename else ""
-
-        if ext not in ALLOWED_EXTENSIONS:
+        ext = filename.split(".")[-1].lower() if "." in filename else ""
+        if ext not in ALLOWED_EXTENSIONS or file.content_type not in ALLOWED_MIME_TYPES:
             raise HTTPException(
                 status_code=400,
-                detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
-            )
-
-        raw_bytes = await file.read()
-        if len(raw_bytes) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail="File size exceeds the maximum allowed limit of 10MB.",
-            )
-
-        if not validate_file_magic_bytes(raw_bytes, ext):
-            actual_mime = detect_actual_mime(raw_bytes)
-            logger.warning(
-                "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
-                file.content_type,
-                actual_mime,
-                ext,
-            )
-            raise HTTPException(
-                status_code=400,
-                detail="File content does not match the claimed file type. Upload rejected.",
+                detail="Unsupported file format or MIME type. Only PDF, PNG, JPG, and JPEG are allowed.",
             )
 
         doc_id = str(uuid.uuid4())
         local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
 
+        size = 0
         try:
             with open(local_path, "wb") as buffer:
-                buffer.write(raw_bytes)
+                while chunk := await file.read(1024 * 1024):
+                    size += len(chunk)
+                    if size > MAX_FILE_SIZE:
+                        raise HTTPException(
+                            status_code=413,
+                            detail="File size exceeds the maximum allowed limit of 10MB.",
+                        )
+                    buffer.write(chunk)
+        except HTTPException as http_exc:
+            if os.path.exists(local_path):
+                os.remove(local_path)
+            raise http_exc
         except Exception as e:
             if os.path.exists(local_path):
                 os.remove(local_path)
@@ -294,50 +228,27 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
 @api_router.post("/analyze/{document_id}")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-async def analyze_document(
-    request: Request,
-    document_id: str,
-    language: str = "en",
-    force_ocr: bool = False,
-    file: UploadFile = File(None),
-):
-    """Trigger full analysis pipeline."""
-
-    # Heavy OCR/LLM/DB work is executed in a worker thread to avoid blocking the event loop.
-    return await asyncio.to_thread(
-        _analyze_document_sync,
-        request,
-        document_id,
-        language,
-        force_ocr,
-        file,
-    )
-
-
-def _analyze_document_sync(
-    request: Request,
-    document_id: str,
-    language: str = "en",
-    force_ocr: bool = False,
-    file: UploadFile = File(None),
-):
-    """Trigger the full document analysis pipeline.
+def analyze_document(request: Request, document_id: str, language: str = "en", force_ocr: bool = False, file: UploadFile = File(None)):
+    """
+    Analyze a legal document using OCR, AI, and knowledge graph.
 
     Args:
-        request: The incoming HTTP request.
-        document_id: The unique identifier of the document.
-        language: The target language for analysis (default "en").
-        force_ocr: Whether to force OCR re-processing (default False).
-        file: An optional new file to re-upload.
+        request (Request): The incoming HTTP request object.
+        document_id (str): The unique ID of the document to analyze.
+        language (str): Language code for analysis, defaults to 'en'.
+        force_ocr (bool): Force OCR even if text is cached.
+        file (UploadFile): Optional new file to analyze directly.
 
     Returns:
-        dict: Analysis results including risk score, clause breakdown, and knowledge graph.
+        dict: Contains documentId, analysis, confidence, classification,
+            knowledge_graph, extracted_text, and cached status.
 
     Raises:
-        HTTPException 404: If the document is not found.
+        HTTPException 400: If input structure is invalid.
+        HTTPException 404: If document file is not found.
+        HTTPException 429: If AI quota limit is reached.
         HTTPException 500: If analysis fails.
     """
-
     try:
         session_id = require_session_id(request)
         record = require_document_owner(document_id, session_id)
@@ -369,13 +280,6 @@ def _analyze_document_sync(
                     status_code=500, detail="Failed to read document from storage"
                 )
             filename = record["filename"]
-            ext_from_record = (
-                str(filename).lower().split(".")[-1] if "." in str(filename) else ""
-            )
-            if ext_from_record not in ALLOWED_EXTENSIONS:
-                raise HTTPException(
-                    status_code=400, detail="Stored document has unsupported file type"
-                )
         else:
             contents = file.file.read()
             filename = file.filename
@@ -423,21 +327,13 @@ def _analyze_document_sync(
             status_code=404, detail="Requested document file not found on storage."
         )
     except Exception as e:
-        from google.api_core.exceptions import (
-            DeadlineExceeded,
-            GoogleAPIError,
-            InvalidArgument,
-            ResourceExhausted,
-        )
+        from google.api_core.exceptions import (GoogleAPIError,
+                                                InvalidArgument,
+                                                ResourceExhausted)
 
         logger.error(f"Analysis failed: {e}")
 
-        if isinstance(e, DeadlineExceeded):
-            raise HTTPException(
-                status_code=504,
-                detail="AI request timed out. Please try again later.",
-            )
-        elif isinstance(e, ResourceExhausted):
+        if isinstance(e, ResourceExhausted):
             raise HTTPException(
                 status_code=429,
                 detail="AI Quota limit reached. Please wait a minute and try again.",
@@ -473,20 +369,10 @@ def _analyze_document_sync(
 def chat_stream_sse(
     request: Request, user_message: str, language: str = "en", document_id: str = None
 ):
-    """Stream chat responses as Server-Sent Events (SSE).
-
-    Args:
-        request: The incoming HTTP request.
-        user_message: The user's chat message (query parameter).
-        language: The target language for the response (default "en").
-        document_id: Optional document ID to load analysis context.
-
-    Returns:
-        StreamingResponse: A text/event-stream response with token-by-token chunks.
-
-    Raises:
-        HTTPException 400: If the user message is empty.
-        HTTPException 429: If the rate limit is exceeded.
+    """
+    SSE endpoint for real-time token-by-token streaming.
+    Returns text/event-stream for EventSource-compatible clients.
+    Usage: GET /chat/stream?user_message=hello&language=en
     """
     import json as _json
 
@@ -530,57 +416,60 @@ def chat_stream_sse(
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_general(request: Request, chat_request: ChatRequest):
-    """General legal chat - no document context.
+        """
+        Handle general legal chat without any document context.
 
-    Args:
-        request: The incoming HTTP request.
-        chat_request: The chat payload including message, history, and language.
+        Args:
+            request (Request): The incoming HTTP request object.
+            chat_request (ChatRequest): Contains user_message, language,
+                and chat_history.
 
-    Returns:
-        ChatResponse: The AI-generated chat response.
+        Returns:
+            ChatResponse: AI-generated legal response text.
 
-    Raises:
-        HTTPException 400: If the message is empty.
-        HTTPException 500: If chat generation fails.
-    """
-    try:
-        if not chat_request.user_message or not chat_request.user_message.strip():
-            raise HTTPException(status_code=400, detail="Message cannot be empty")
+        Raises:
+            HTTPException 400: If the user message is empty.
+            HTTPException 500: If chat generation fails.
+        """
+        try:
+            if not chat_request.user_message or not chat_request.user_message.strip():
+                raise HTTPException(status_code=400, detail="Message cannot be empty")
 
-        analysis = {}
-        history = [
-            {"role": msg.role, "message": msg.message}
-            for msg in chat_request.chat_history
-        ]
-        response_text = generate_chat_response(
-            analysis, history, chat_request.user_message, chat_request.language
-        )
-        return ChatResponse(response=response_text)
+            analysis = {}
+            history = [
+                {"role": msg.role, "message": msg.message}
+                for msg in chat_request.chat_history
+            ]
+            response_text = generate_chat_response(
+                analysis, history, chat_request.user_message, chat_request.language
+            )
+            return ChatResponse(response=response_text)
 
-    except RateLimitExceeded:
-        raise
-    except HTTPException as http_err:
-        raise
-    except Exception as e:
-        logger.error(f"General chat failed: {e}")
-        raise HTTPException(status_code=500, detail="Chat generation failed")
+        except RateLimitExceeded:
+            raise
+        except HTTPException as http_err:
+            raise
+        except Exception as e:
+            logger.error(f"General chat failed: {e}")
+            raise HTTPException(status_code=500, detail="Chat generation failed")
 
 
 @api_router.post("/chat/{document_id}")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_with_document(request: Request, document_id: str, chat_request: ChatRequest):
-    """Send a chat message with document context loaded server-side.
+    """
+    Handle chat with a specific legal document as context.
 
     Args:
-        request: The incoming HTTP request.
-        document_id: The document to use as context.
-        chat_request: The chat payload including message, history, and language.
+        request (Request): The incoming HTTP request object.
+        document_id (str): The ID of the document to use as context.
+        chat_request (ChatRequest): Contains user_message and chat_history.
 
     Returns:
-        StreamingResponse: A streaming response with the AI-generated reply.
+        StreamingResponse: AI-generated response based on document context.
 
     Raises:
-        HTTPException 404: If the document is not found.
+        HTTPException 400: If message is empty.
         HTTPException 500: If chat generation fails.
     """
     try:
@@ -617,21 +506,7 @@ def diff_analysis(
     old_document: UploadFile = File(...),
     new_document: UploadFile = File(...),
 ):
-    """Compare two document versions and return a structured difference analysis.
-
-    Args:
-        request: The incoming HTTP request.
-        old_document: The original document file.
-        new_document: The updated document file.
-
-    Returns:
-        dict: Structured diff including added obligations, penalties,
-              reduced rights, hidden modifications, and recommended actions.
-
-    Raises:
-        HTTPException 401: If the session is missing or invalid.
-        HTTPException 500: If the diff analysis fails.
-    """
+    """Compare two document versions and return a structured difference analysis."""
     try:
         session_id = require_session_id(request)
 
@@ -686,12 +561,8 @@ Provide a JSON response matching this exact schema:
   }}
 }}
 """
-        from google.api_core.exceptions import DeadlineExceeded
-
         model = genai.GenerativeModel("gemini-2.0-flash")
-        response = model.generate_content(
-            prompt, request_options={"timeout": GEMINI_TIMEOUT}
-        )
+        response = model.generate_content(prompt)
         result = json.loads(response.text)
         return result
 
@@ -699,9 +570,6 @@ Provide a JSON response matching this exact schema:
         raise
     except HTTPException as http_err:
         raise http_err
-    except DeadlineExceeded as e:
-        logger.error(f"Diff analysis timed out: {e}")
-        raise HTTPException(status_code=504, detail="Diff analysis request timed out.")
     except Exception as e:
         logger.error(f"Diff analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Diff analysis failed")
@@ -710,18 +578,19 @@ Provide a JSON response matching this exact schema:
 @api_router.post("/generate-document")
 @limiter.limit("10/minute")
 def generate_document(request: Request, payload: DocumentGenerationRequest):
-    """Generate a standard NDA document as a downloadable PDF.
+    """
+    Generate a standard NDA document as a downloadable PDF.
 
     Args:
-        request: The incoming HTTP request.
-        payload: The document generation payload including party names,
-                 effective date, consideration amount, and jurisdiction.
+        request (Request): The incoming HTTP request object.
+        payload (DocumentGenerationRequest): Contains effective_date,
+            party_one_name, party_two_name, consideration_amount,
+            and jurisdiction.
 
     Returns:
-        StreamingResponse: A PDF file attachment of the generated NDA.
+        StreamingResponse: A downloadable PDF file of the NDA document.
 
     Raises:
-        HTTPException 401: If the session is missing or invalid.
         HTTPException 500: If PDF generation fails.
     """
     try:
@@ -783,21 +652,21 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
 
 
 @api_router.delete("/documents/{document_id}")
-@limiter.limit(DELETE_RATE_LIMIT)
 async def delete_document(document_id: str, request: Request):
-    """Delete a document and remove it from the search index.
+    """
+    Delete a legal document and remove it from the search index.
 
     Args:
-        document_id: The unique identifier of the document to delete.
-        request: The incoming HTTP request.
+        document_id (str): The unique ID of the document to delete.
+        request (Request): The incoming HTTP request object.
 
     Returns:
-        dict: A confirmation with the deleted document ID.
+        dict: Contains documentId and deleted status.
 
     Raises:
-        HTTPException 401: If the session is missing or invalid.
-        HTTPException 403: If the session does not own the document.
-        HTTPException 404: If the document is not found.
+        HTTPException 401: If session is missing.
+        HTTPException 403: If session does not own the document.
+        HTTPException 404: If document is not found.
     """
     session_id = require_session_id(request)
     require_document_owner(document_id, session_id)
@@ -862,4 +731,3 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
-
