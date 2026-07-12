@@ -1,4 +1,4 @@
-import React, {
+﻿import React, {
   useMemo,
   useState,
   useEffect,
@@ -23,14 +23,15 @@ import {
   CalendarDays,
   BadgeAlert,
   BadgeCheck,
+  SearchX,
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ARIA_LABELS, PLACEHOLDERS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import Footer from '../components/Footer';
-import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
-import SearchShortcutHint from "../components/SearchShortcutHint";
+import useKeyboardShortcut from '../hooks/useKeyboardShortcut';
+import SearchShortcutHint from '../components/SearchShortcutHint';
 
 function HighlightedText({ text, query }) {
   if (!query.trim()) return text;
@@ -53,6 +54,92 @@ function HighlightedText({ text, query }) {
 }
 
 const MAX_SUGGESTIONS = 8;
+
+const POPULAR_AREAS = [
+  'Real Estate & Property',
+  'Family Law & Divorce',
+  'Criminal Defense',
+  'Corporate & Business',
+  'Civil Litigation',
+  'Intellectual Property',
+];
+
+function EmptyState({ searchTerm, filterType, onReset, onSelectArea }) {
+  const hasSearch = searchTerm.trim().length > 0;
+  const hasFilter = filterType !== 'All';
+
+  return (
+    <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
+      {/* Illustration */}
+      <div className="relative mb-8">
+        <div className="absolute inset-0 rounded-full bg-nyaya-500/10 dark:bg-nyaya-500/20 blur-2xl scale-150 pointer-events-none" />
+        <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-gradient-to-br from-nyaya-500/15 to-blue-600/15 dark:from-nyaya-500/25 dark:to-blue-600/25 border border-nyaya-500/20 dark:border-nyaya-500/30 shadow-lg">
+          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-nyaya-500/20 to-blue-600/20 dark:from-nyaya-500/30 dark:to-blue-600/30">
+            <SearchX className="w-8 h-8 text-nyaya-600 dark:text-nyaya-300" />
+          </div>
+        </div>
+      </div>
+
+      {/* Heading */}
+      <h3 className="text-2xl font-extrabold tracking-tight text-slate-800 dark:text-white mb-2">
+        {hasSearch
+          ? `No results for "${searchTerm}"`
+          : hasFilter
+            ? `No lawyers in "${filterType}"`
+            : 'No lawyers found'}
+      </h3>
+
+      {/* Subtext */}
+      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-8">
+        {hasSearch && hasFilter
+          ? `We couldn't find any ${filterType} lawyers matching "${searchTerm}". Try broadening your search or resetting the filters.`
+          : hasSearch
+            ? `We couldn't find any lawyers matching "${searchTerm}". Check the spelling or try a different keyword.`
+            : hasFilter
+              ? `There are no lawyers listed under "${filterType}" right now. Browse another practice area below.`
+              : 'No lawyers match your current criteria. Try adjusting your search or filters.'}
+      </p>
+
+      {/* Quick area suggestions */}
+      <div className="w-full max-w-lg mb-8">
+        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
+          Browse popular practice areas
+        </p>
+        <div className="flex flex-wrap justify-center gap-2">
+          {POPULAR_AREAS.filter((area) => area !== filterType).map((area) => (
+            <button
+              key={area}
+              onClick={() => onSelectArea(area)}
+              className="px-3 py-1.5 text-xs font-semibold rounded-full border transition-all
+                         bg-slate-50 dark:bg-white/5
+                         border-slate-200 dark:border-white/10
+                         text-slate-600 dark:text-slate-300
+                         hover:bg-nyaya-500/10 hover:border-nyaya-500/30 hover:text-nyaya-600
+                         dark:hover:bg-nyaya-500/15 dark:hover:border-nyaya-500/30 dark:hover:text-nyaya-300
+                         cursor-pointer"
+            >
+              {area}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Reset button */}
+      <button
+        onClick={onReset}
+        className="inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-sm rounded-full transition-all
+                   bg-gradient-to-r from-nyaya-500 to-blue-600
+                   text-white shadow-md
+                   hover:from-nyaya-400 hover:to-blue-500
+                   hover:scale-[1.03] active:scale-[0.99]
+                   cursor-pointer"
+      >
+        <X className="w-4 h-4" />
+        Reset All Filters
+      </button>
+    </div>
+  );
+}
 
 export default function HireLawyer() {
   const { t } = useLanguage();
@@ -422,6 +509,16 @@ export default function HireLawyer() {
     );
   };
 
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setFilterType('All');
+  };
+
+  const handleSelectArea = (area) => {
+    setFilterType(area);
+    setSearchTerm('');
+  };
+
   return (
     <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
       {/* Background gradients (match LandingPage) */}
@@ -731,24 +828,12 @@ export default function HireLawyer() {
             ))}
           </div>
         ) : filteredLawyers.length === 0 ? (
-          <div className="p-10 text-center border rounded-4xl border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
-            <Briefcase className="w-12 h-12 mx-auto mb-4 text-slate-400 dark:text-slate-500" />
-            <h3 className="text-xl font-bold text-slate-850 dark:text-white">
-              No lawyers found
-            </h3>
-            <p className="mt-2 text-slate-650 dark:text-slate-400">
-              Try adjusting your search or filters.
-            </p>
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setFilterType('All');
-              }}
-              className="inline-flex items-center justify-center px-6 py-3 mt-6 font-semibold text-slate-700 dark:text-white transition border rounded-full bg-slate-100 hover:bg-slate-150 border-slate-250 dark:bg-white/10 dark:border-white/10 dark:hover:bg-white/15 cursor-pointer shadow-xs"
-            >
-              Reset Filters
-            </button>
-          </div>
+          <EmptyState
+            searchTerm={searchTerm}
+            filterType={filterType}
+            onReset={handleResetFilters}
+            onSelectArea={handleSelectArea}
+          />
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
             {filteredLawyers.map((lawyer) => (
