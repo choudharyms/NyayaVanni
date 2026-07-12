@@ -165,7 +165,7 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
 
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
-async def contact_us(request: Request, body: ContactRequest):
+async def contact_us(request: Request, body: ContactRequest, response: Response = None):
     """Receive and log contact form submissions with IP-based rate limiting.
 
     Args:
@@ -223,7 +223,7 @@ async def create_session(request: Request, response: Response):
 
 @api_router.post("/upload")
 @limiter.limit(UPLOAD_RATE_LIMIT)
-async def upload_document(request: Request, file: UploadFile = File(...)):
+async def upload_document(request: Request, file: UploadFile = File(...), response: Response = None):
     """Upload a legal document and return a document ID.
 
     Args:
@@ -318,6 +318,7 @@ async def analyze_document(
     language: str = "en",
     force_ocr: bool = False,
     file: UploadFile = File(None),
+    response: Response = None,
 ):
     """Trigger full analysis pipeline."""
 
@@ -497,7 +498,7 @@ class AnalyzeTextRequest(BaseModel):
 
 @api_router.post("/analyze-text")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-async def analyze_text(request: Request, body: AnalyzeTextRequest):
+async def analyze_text(request: Request, body: AnalyzeTextRequest, response: Response = None):
     """Trigger analysis directly on raw text sent from client/browser extension."""
     return await asyncio.to_thread(
         _analyze_text_sync,
@@ -660,7 +661,7 @@ def _analyze_text_sync(request: Request, text: str, language: str = "en"):
 @api_router.get("/chat/stream")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_stream_sse(
-    request: Request, user_message: str, language: str = "en", document_id: str = None
+    request: Request, user_message: str, language: str = "en", document_id: str = None, response: Response = None
 ):
     """Stream chat responses as Server-Sent Events (SSE).
 
@@ -714,7 +715,7 @@ def chat_stream_sse(
 
 @api_router.post("/chat/general")
 @limiter.limit(RATE_LIMIT_CHAT)
-def chat_general(request: Request, chat_request: ChatRequest):
+def chat_general(request: Request, chat_request: ChatRequest, response: Response = None):
     """General legal chat - no document context.
 
     Args:
@@ -753,7 +754,7 @@ def chat_general(request: Request, chat_request: ChatRequest):
 
 @api_router.post("/chat/{document_id}")
 @limiter.limit(RATE_LIMIT_CHAT)
-def chat_with_document(request: Request, document_id: str, chat_request: ChatRequest):
+def chat_with_document(request: Request, document_id: str, chat_request: ChatRequest, response: Response = None):
     """Send a chat message with document context loaded server-side.
 
     Args:
@@ -801,6 +802,7 @@ async def diff_analysis(
     request: Request,
     old_document: UploadFile = File(...),
     new_document: UploadFile = File(...),
+    response: Response = None,
 ):
     """Compare two document versions and return a structured difference analysis.
 
@@ -894,7 +896,7 @@ Provide a JSON response matching this exact schema:
 
 @api_router.post("/generate-document")
 @limiter.limit("10/minute")
-def generate_document(request: Request, payload: DocumentGenerationRequest):
+def generate_document(request: Request, payload: DocumentGenerationRequest, response: Response = None):
     """Generate a standard NDA document as a downloadable PDF.
 
     Args:
@@ -971,7 +973,7 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
 
 @api_router.delete("/documents/{document_id}")
 @limiter.limit(DELETE_RATE_LIMIT)
-async def delete_document(document_id: str, request: Request):
+async def delete_document(document_id: str, request: Request, response: Response = None):
     """Delete a document and remove it from the search index.
 
     Args:
@@ -1002,7 +1004,7 @@ async def delete_document(document_id: str, request: Request):
 @api_router.get("/search")
 @limiter.limit(SEARCH_RATE_LIMIT)
 def search_documents_endpoint(
-    request: Request, q: str, page: int = 1, page_size: int = 10
+    request: Request, q: str, page: int = 1, page_size: int = 10, response: Response = None
 ):
     """
     Search indexed documents using full-text search.
