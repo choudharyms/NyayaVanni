@@ -11,4 +11,4 @@ def test_generate_document_without_session_returns_401(test_client):
     )
 
     assert response.status_code == 401
-    assert response.json()["detail"] == "Missing session_id cookie"
+    assert response.json()["error"]["message"] == "Missing session_id cookie or header"
