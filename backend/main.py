@@ -40,7 +40,11 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
                     return JSONResponse(
                         status_code=413,
                         content={
-                            "detail": "Payload Too Large: The request body exceeds the maximum allowed limit."
+                            "success": False,
+                            "error": {
+                                "code": 413,
+                                "message": "Payload Too Large: The request body exceeds the maximum allowed limit.",
+                            },
                         },
                     )
             except ValueError:
@@ -61,6 +65,53 @@ init_search_service(STORAGE_DB_PATH)
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
+
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+
+@app.exception_handler(StarletteHTTPException)
+async def http_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "success": False,
+            "error": {
+                "code": exc.status_code,
+                "message": exc.detail,
+            },
+        },
+    )
+
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request, exc):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "success": False,
+            "error": {
+                "code": 422,
+                "message": "Validation error",
+                "details": exc.errors(),
+            },
+        },
+    )
+
+
+@app.exception_handler(Exception)
+async def unhandled_exception_handler(request, exc):
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    return JSONResponse(
+        status_code=500,
+        content={
+            "success": False,
+            "error": {
+                "code": 500,
+                "message": "An internal server error occurred",
+            },
+        },
+    )
 
 
 @app.on_event("startup")
