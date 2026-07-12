@@ -30,6 +30,7 @@ export function useSSEChat() {
         });
 
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        if (!response.body) throw new Error('No body for streaming');
 
         const reader = response.body.getReader();
         const decoder = new TextDecoder();

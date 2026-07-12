@@ -35,6 +35,7 @@ export default function GeneralChat() {
   const [isSaving, setIsSaving] = useState(false);
   const messagesEndRef = React.useRef(null);
   const textareaRef = React.useRef(null);
+  const abortRef = useRef(null);
 
   const [chatHistory, setChatHistory] = useState([
     {
@@ -138,12 +139,16 @@ export default function GeneralChat() {
     setChatHistory(newHistory);
     setChatLoading(true);
 
+    const controller = new AbortController();
+    abortRef.current = controller;
+
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       const response = await fetch(`${apiUrl}/api/chat/general`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: currentHistory,
@@ -212,6 +217,9 @@ export default function GeneralChat() {
       // Clear state to prevent re-triggering on navigation
       window.history.replaceState({}, document.title);
     }
+    return () => {
+      abortRef.current?.abort();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

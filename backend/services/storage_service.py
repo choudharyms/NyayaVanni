@@ -265,7 +265,7 @@ def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
 
 def save_document_record(session_id: str, doc_id: str, filename: str, local_path: str):
     """Save document metadata to SQLite"""
-    timestamp = datetime.utcnow().isoformat()
+    timestamp = datetime.now(timezone.utc).isoformat()
     conn = None
     try:
         conn = _connect_db()
@@ -383,7 +383,7 @@ def delete_document_history(session_id: str) -> int:
 def cleanup_expired_documents_once() -> int:
     """Delete expired documents in a synchronous pass owned by one worker thread."""
     logger.info("Running expired documents cleanup task...")
-    threshold = (datetime.utcnow() - timedelta(hours=24)).isoformat()
+    threshold = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
     conn = None
     try:
         conn = _connect_db()
