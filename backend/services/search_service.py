@@ -53,6 +53,7 @@ def _create_fts_index():
         logger.error("DB_PATH not set. Call init_search_service first.")
         return
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -87,10 +88,12 @@ def _create_fts_index():
         """)
 
         conn.commit()
-        conn.close()
         logger.info("Full-text search index created successfully")
     except Exception as e:
         logger.error(f"Failed to create FTS index: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def index_document(document_id: str, filename: str, content: str):
@@ -106,6 +109,7 @@ def index_document(document_id: str, filename: str, content: str):
         logger.error("DB_PATH not set. Call init_search_service first.")
         return
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -125,10 +129,12 @@ def index_document(document_id: str, filename: str, content: str):
         )
 
         conn.commit()
-        conn.close()
         logger.info(f"Document {document_id} indexed successfully")
     except Exception as e:
         logger.error(f"Failed to index document {document_id}: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def search_documents(
@@ -180,6 +186,7 @@ def search_documents(
             cached["from_cache"] = True
             return cached
 
+    conn = None
     try:
         conn = _connect_db()
         conn.row_factory = sqlite3.Row
@@ -212,7 +219,6 @@ def search_documents(
         )
 
         results = [dict(row) for row in cursor.fetchall()]
-        conn.close()
 
         response = {
             "results": results,
@@ -230,6 +236,9 @@ def search_documents(
     except Exception as e:
         logger.error(f"Search failed for query '{query}': {e}")
         return {"results": [], "total_count": 0, "error": str(e), "from_cache": False}
+    finally:
+        if conn:
+            conn.close()
 
 
 def _get_cached_result(query_hash: str) -> Optional[Dict[str, Any]]:
@@ -237,6 +246,7 @@ def _get_cached_result(query_hash: str) -> Optional[Dict[str, Any]]:
     if not DB_PATH:
         return None
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -251,7 +261,6 @@ def _get_cached_result(query_hash: str) -> Optional[Dict[str, Any]]:
         )
 
         row = cursor.fetchone()
-        conn.close()
 
         if not row:
             return None
@@ -275,6 +284,9 @@ def _get_cached_result(query_hash: str) -> Optional[Dict[str, Any]]:
     except Exception as e:
         logger.error(f"Failed to retrieve cached result: {e}")
         return None
+    finally:
+        if conn:
+            conn.close()
 
 
 def _cache_result(
@@ -289,6 +301,7 @@ def _cache_result(
     if not DB_PATH:
         return
 
+    conn = None
     try:
         import json
 
@@ -313,9 +326,11 @@ def _cache_result(
         )
 
         conn.commit()
-        conn.close()
     except Exception as e:
         logger.error(f"Failed to cache search result: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def _delete_cache_entry(query_hash: str):
@@ -323,14 +338,17 @@ def _delete_cache_entry(query_hash: str):
     if not DB_PATH:
         return
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
         cursor.execute("DELETE FROM search_cache WHERE query_hash = ?", (query_hash,))
         conn.commit()
-        conn.close()
     except Exception as e:
         logger.error(f"Failed to delete cache entry: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def clear_expired_cache():
@@ -338,6 +356,7 @@ def clear_expired_cache():
     if not DB_PATH:
         return
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -349,12 +368,14 @@ def clear_expired_cache():
 
         conn.commit()
         deleted = cursor.rowcount
-        conn.close()
 
         if deleted > 0:
             logger.info(f"Cleaned up {deleted} expired cache entries")
     except Exception as e:
         logger.error(f"Failed to clear expired cache: {e}")
+    finally:
+        if conn:
+            conn.close()
 
 
 def remove_document_from_index(document_id: str):
@@ -362,6 +383,7 @@ def remove_document_from_index(document_id: str):
     if not DB_PATH:
         return
 
+    conn = None
     try:
         conn = _connect_db()
         cursor = conn.cursor()
@@ -369,7 +391,9 @@ def remove_document_from_index(document_id: str):
             "DELETE FROM documents_fts WHERE document_id = ?", (document_id,)
         )
         conn.commit()
-        conn.close()
         logger.info(f"Document {document_id} removed from search index")
     except Exception as e:
         logger.error(f"Failed to remove document from index: {e}")
+    finally:
+        if conn:
+            conn.close()

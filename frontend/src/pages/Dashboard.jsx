@@ -984,6 +984,8 @@ export default function Dashboard() {
                     <input
                       ref={kgSearchInputRef}
                       type="text"
+                      value={searchTerm}
+                      onChange={(e) => _setSearchTerm(e.target.value)}
                       placeholder="Search nodes... (Ctrl+K)"
                       className={SEARCH_INPUT}
                     />
