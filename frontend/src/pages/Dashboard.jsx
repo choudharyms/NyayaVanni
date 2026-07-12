@@ -200,7 +200,7 @@ const CHAT_INPUT = `flex-1 bg-slate-100 dark:bg-slate-950
   placeholder-slate-500 dark:placeholder-slate-400 
   focus:bg-white dark:focus:bg-slate-950 
   focus:border-nyaya-500 focus:ring-2 focus:ring-nyaya-500/20 
-  rounded-full px-5 outline-none transition-all py-3 text-sm`;
+  rounded-xl px-5 outline-none transition-all py-3 text-sm resize-none overflow-y-auto`;
 
 const SEND_BUTTON = `bg-nyaya-600 text-white w-12 h-12 rounded-full 
   flex items-center justify-center hover:bg-nyaya-700 
@@ -1141,12 +1141,23 @@ export default function Dashboard() {
             </div>
 
             <form onSubmit={handleChat} className={CHAT_FORM}>
-              <input
-                type="text"
+              <textarea
                 value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+                onChange={(e) => {
+                  setChatInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!chatInput.trim() || chatLoading) return;
+                    handleChat(e);
+                  }
+                }}
                 placeholder={t('chat.placeholder')}
                 className={CHAT_INPUT}
+                rows={1}
               />
               <button
                 type="submit"
