@@ -16,5 +16,3 @@ gunicorn
 reportlab
 python-docx
 slowapi
-reportlab
-python-docx
