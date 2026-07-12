@@ -167,6 +167,7 @@ export default function ContactUs() {
                     name="name"
                     value={formData.name}
                     onChange={handleChange}
+                    maxLength={200}
                     className={`px-4 py-3 rounded-xl border ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
                     placeholder={
                       language === 'en'
@@ -192,6 +193,7 @@ export default function ContactUs() {
                     name="email"
                     value={formData.email}
                     onChange={handleChange}
+                    maxLength={320}
                     className={`px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
                     placeholder={
                       CONTACT_PLACEHOLDERS.CONTACT_EMAIL || 'john@example.com'
@@ -210,19 +212,20 @@ export default function ContactUs() {
                 >
                   {L.SUBJECT}
                 </label>
-                <input
-                  type="text"
-                  id="subject"
-                  name="subject"
-                  value={formData.subject}
-                  onChange={handleChange}
-                  className={`px-4 py-3 rounded-xl border ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
-                  placeholder={
-                    language === 'en'
-                      ? CONTACT_PLACEHOLDERS.HELP_EN
-                      : CONTACT_PLACEHOLDERS.HELP_HI
-                  }
-                />
+                  <input
+                    type="text"
+                    id="subject"
+                    name="subject"
+                    value={formData.subject}
+                    onChange={handleChange}
+                    maxLength={500}
+                    className={`px-4 py-3 rounded-xl border ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
+                    placeholder={
+                      language === 'en'
+                        ? CONTACT_PLACEHOLDERS.HELP_EN
+                        : CONTACT_PLACEHOLDERS.HELP_HI
+                    }
+                  />
                 {errors.subject && (
                   <span className="text-red-500 text-xs">{errors.subject}</span>
                 )}
@@ -235,19 +238,20 @@ export default function ContactUs() {
                 >
                   {L.MESSAGE}
                 </label>
-                <textarea
-                  id="message"
-                  name="message"
-                  rows="5"
-                  value={formData.message}
-                  onChange={handleChange}
-                  className={`px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all resize-none`}
-                  placeholder={
-                    language === 'en'
-                      ? CONTACT_PLACEHOLDERS.ISSUE_EN
-                      : CONTACT_PLACEHOLDERS.ISSUE_HI
-                  }
-                />
+                  <textarea
+                    id="message"
+                    name="message"
+                    rows="5"
+                    value={formData.message}
+                    onChange={handleChange}
+                    maxLength={10000}
+                    className={`px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all resize-none`}
+                    placeholder={
+                      language === 'en'
+                        ? CONTACT_PLACEHOLDERS.ISSUE_EN
+                        : CONTACT_PLACEHOLDERS.ISSUE_HI
+                    }
+                  />
                 {errors.message && (
                   <span className="text-red-500 text-xs">{errors.message}</span>
                 )}
