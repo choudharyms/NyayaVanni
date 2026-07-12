@@ -87,6 +87,20 @@ export const ConversationHistoryProvider = ({ children }) => {
     }
   };
 
+  const renameConversation = async (id, newTitle) => {
+    try {
+      await conversationDB.updateConversation(id, {
+        title: newTitle,
+        updatedAt: new Date().toISOString(),
+      });
+      await loadConversations();
+    } catch (err) {
+      console.error('Failed to rename conversation:', err);
+      setError('Failed to rename conversation');
+      throw err;
+    }
+  };
+
   const clearAllConversations = async () => {
     try {
       await conversationDB.clearAllConversations();
@@ -131,6 +145,7 @@ export const ConversationHistoryProvider = ({ children }) => {
     saveConversation,
     updateConversation,
     deleteConversation,
+    renameConversation,
     clearAllConversations,
     searchConversations,
     getConversation,

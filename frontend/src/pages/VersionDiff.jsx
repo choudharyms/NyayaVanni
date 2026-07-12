@@ -23,6 +23,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import { VERSION_DIFF, MESSAGES, HEADERS } from '../constants';
+import { ensureSessionId } from '../utils/session';
 
 const API_BASE = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
@@ -450,9 +451,12 @@ export default function VersionDiff() {
     form.append('new_document', newFile);
 
     try {
+      await ensureSessionId(API_BASE);
+
       const { data } = await axios.post(`${API_BASE}/api/diff-analysis`, form, {
         headers: HEADERS.CONTENT_TYPE_MULTIPART,
         timeout: 120000,
+        withCredentials: true,
       });
       setResult(data);
     } catch (err) {

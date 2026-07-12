@@ -21,6 +21,7 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
     searchConversations,
     isLoading,
     error,
+    renameConversation,
   } = useConversationHistory();
 
   const [isOpen, setIsOpen] = useState(true);
@@ -54,6 +55,14 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
       await deleteConversation(id);
     } catch (err) {
       console.error('Failed to delete conversation:', err);
+    }
+  };
+
+  const handleRename = async (id, newTitle) => {
+    try {
+      await renameConversation(id, newTitle);
+    } catch (err) {
+      console.error('Failed to rename conversation:', err);
     }
   };
 
@@ -153,6 +162,7 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
                   isActive={activeConversationId === conversation.id}
                   onSelect={handleSelectConversation}
                   onDelete={handleDelete}
+                  onRename={handleRename}
                 />
               ))}
             </div>

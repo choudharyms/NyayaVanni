@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NyayaVanni ToS Analyzer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* Reset & Base Styles */
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+    body {
+      font-family: 'Inter', sans-serif;
+      background: linear-gradient(135deg, #0b0f19 0%, #060913 100%);
+      color: #f5f6fa;
+      width: 380px;
+      height: 560px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    /* Scrollbar Styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.02);
+    }
+    ::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.15);
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: rgba(255, 255, 255, 0.3);
+    }
+
+    /* Layout & Header */
+    header {
+      background: rgba(18, 25, 47, 0.7);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      padding: 16px 20px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+    .logo-container {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .logo-container h1 {
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      background: linear-gradient(90deg, #ff8a00, #e52e71);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .logo-container span {
+      font-size: 10px;
+      background: rgba(255, 255, 255, 0.08);
+      padding: 2px 6px;
+      border-radius: 4px;
+      color: #a0aec0;
+      font-weight: 500;
+    }
+    .icon-btn {
+      background: none;
+      border: none;
+      color: #a0aec0;
+      cursor: pointer;
+      padding: 4px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: all 0.2s ease;
+    }
+    .icon-btn:hover {
+      color: #f5f6fa;
+      background: rgba(255, 255, 255, 0.08);
+      transform: rotate(30deg);
+    }
+
+    /* Main Container */
+    main {
+      flex: 1;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Card Component */
+    .card {
+      background: rgba(25, 32, 56, 0.4);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 12px;
+      padding: 20px;
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      margin-bottom: 20px;
+      transition: border-color 0.3s ease;
+    }
+    .card:hover {
+      border-color: rgba(255, 255, 255, 0.12);
+    }
+
+    /* Button Styling */
+    .btn {
+      background: linear-gradient(90deg, #ff8a00, #e52e71);
+      color: #ffffff;
+      border: none;
+      padding: 12px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      width: 100%;
+      box-shadow: 0 4px 15px rgba(229, 46, 113, 0.3);
+    }
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 6px 20px rgba(229, 46, 113, 0.5);
+    }
+    .btn:active {
+      transform: translateY(0);
+    }
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f5f6fa;
+      box-shadow: none;
+    }
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.15);
+      box-shadow: none;
+    }
+
+    /* State Screens */
+    .screen {
+      display: none;
+      animation: fadeIn 0.4s ease forwards;
+      height: 100%;
+      flex-direction: column;
+    }
+    .screen.active {
+      display: flex;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Welcome Screen */
+    #screen-welcome {
+      justify-content: center;
+      text-align: center;
+    }
+    .welcome-icon {
+      font-size: 48px;
+      margin-bottom: 16px;
+      animation: pulse 2s infinite;
+    }
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.08); }
+      100% { transform: scale(1); }
+    }
+    #screen-welcome h2 {
+      font-size: 20px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    #screen-welcome p {
+      font-size: 13px;
+      color: #a0aec0;
+      margin-bottom: 24px;
+      line-height: 1.5;
+    }
+
+    /* Loading Screen */
+    #screen-loading {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .spinner {
+      width: 50px;
+      height: 50px;
+      border: 3px solid rgba(255, 255, 255, 0.05);
+      border-radius: 50%;
+      border-top-color: #e52e71;
+      border-left-color: #ff8a00;
+      animation: spin 1s ease-in-out infinite;
+      margin-bottom: 20px;
+      box-shadow: 0 0 15px rgba(229, 46, 113, 0.2);
+    }
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    #screen-loading h3 {
+      font-size: 16px;
+      font-weight: 600;
+      margin-bottom: 6px;
+    }
+    #screen-loading p {
+      font-size: 12px;
+      color: #a0aec0;
+      animation: blink 1.5s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 0.5; }
+      50% { opacity: 1; }
+    }
+
+    /* Results Screen */
+    .results-container {
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+    .badges-row {
+      display: flex;
+      gap: 12px;
+    }
+    .badge {
+      flex: 1;
+      padding: 10px;
+      border-radius: 8px;
+      text-align: center;
+      font-weight: 600;
+      font-size: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .badge span:first-child {
+      font-size: 9px;
+      text-transform: uppercase;
+      font-weight: 500;
+      color: rgba(255, 255, 255, 0.6);
+      letter-spacing: 0.5px;
+    }
+    .badge-risk-low {
+      background: rgba(0, 230, 118, 0.12);
+      border: 1px solid rgba(0, 230, 118, 0.3);
+      color: #00e676;
+    }
+    .badge-risk-medium {
+      background: rgba(255, 170, 0, 0.12);
+      border: 1px solid rgba(255, 170, 0, 0.3);
+      color: #ffaa00;
+    }
+    .badge-risk-high {
+      background: rgba(255, 77, 77, 0.12);
+      border: 1px solid rgba(255, 77, 77, 0.3);
+      color: #ff4d4d;
+    }
+    .badge-timeline {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      color: #f5f6fa;
+    }
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      text-transform: uppercase;
+      color: #a0aec0;
+      letter-spacing: 0.8px;
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .summary-text {
+      font-size: 13px;
+      line-height: 1.6;
+      color: #e2e8f0;
+    }
+
+    /* Custom Navigation Tabs */
+    .tabs {
+      display: flex;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      border-radius: 8px;
+      padding: 3px;
+      margin-bottom: 16px;
+    }
+    .tab-btn {
+      flex: 1;
+      background: none;
+      border: none;
+      color: #a0aec0;
+      padding: 8px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+    .tab-btn.active {
+      background: rgba(255, 255, 255, 0.08);
+      color: #f5f6fa;
+      font-weight: 600;
+    }
+    .tab-content {
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+
+    /* List styling inside tabs */
+    .detail-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    .detail-item {
+      background: rgba(255, 255, 255, 0.02);
+      border-left: 3px solid #e52e71;
+      padding: 10px 12px;
+      border-radius: 0 6px 6px 0;
+      font-size: 12.5px;
+      line-height: 1.5;
+    }
+    .detail-item.consequence {
+      border-left-color: #ffaa00;
+    }
+
+    /* Actions checklist */
+    .action-item {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: flex-start;
+      margin-bottom: 8px;
+    }
+    .action-checkbox {
+      margin-top: 3px;
+      accent-color: #e52e71;
+      cursor: pointer;
+    }
+    .action-content {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .action-title {
+      font-size: 12.5px;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    .action-item.completed .action-title {
+      text-decoration: line-through;
+      color: #718096;
+    }
+    .action-why {
+      font-size: 11px;
+      color: #a0aec0;
+      line-height: 1.4;
+    }
+    .action-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .action-badge {
+      font-size: 9px;
+      padding: 2px 6px;
+      border-radius: 4px;
+      text-transform: uppercase;
+      font-weight: 700;
+    }
+    .action-badge-high {
+      background: rgba(255, 77, 77, 0.15);
+      color: #ff4d4d;
+    }
+    .action-badge-medium {
+      background: rgba(255, 170, 0, 0.15);
+      color: #ffaa00;
+    }
+    .action-badge-low {
+      background: rgba(0, 230, 118, 0.15);
+      color: #00e676;
+    }
+    .action-timeline {
+      font-size: 11px;
+      color: #718096;
+      font-style: italic;
+    }
+
+    /* Settings Screen */
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #a0aec0;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .form-control {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid rgba(255, 255, 255, 0.12);
+      border-radius: 8px;
+      padding: 10px 14px;
+      color: #f5f6fa;
+      font-size: 13.5px;
+      font-family: inherit;
+      width: 100%;
+      transition: border-color 0.2s ease;
+    }
+    .form-control:focus {
+      outline: none;
+      border-color: #e52e71;
+    }
+    .settings-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: auto;
+    }
+
+    /* Error Screen */
+    #screen-error {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .error-icon {
+      font-size: 40px;
+      color: #ff4d4d;
+      margin-bottom: 16px;
+    }
+    #screen-error h2 {
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    #screen-error p {
+      font-size: 13px;
+      color: #a0aec0;
+      line-height: 1.5;
+      margin-bottom: 24px;
+    }
+  </style>
+</head>
+<body>
+  <!-- Header -->
+  <header>
+    <div class="logo-container">
+      <h1>NyayaVanni</h1>
+      <span>AI</span>
+    </div>
+    <button class="icon-btn" id="btn-settings-toggle" title="Settings">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="3"></circle>
+        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+      </svg>
+    </button>
+  </header>
+
+  <!-- Content Container -->
+  <main>
+    
+    <!-- Welcome Screen -->
+    <div class="screen active" id="screen-welcome">
+      <div class="welcome-icon">📜</div>
+      <h2>Analyze Terms of Service</h2>
+      <p>NyayaVanni will extract the website text and run full risk scanning, summary creation, and legal analysis on the fly.</p>
+      <button class="btn" id="btn-start-analysis">
+        <span>Analyze Active Page</span>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="5" y1="12" x2="19" y2="12"></line>
+          <polyline points="12 5 19 12 12 19"></polyline>
+        </svg>
+      </button>
+    </div>
+
+    <!-- Loading Screen -->
+    <div class="screen" id="screen-loading">
+      <div class="spinner"></div>
+      <h3 id="loading-title">Extracting Text</h3>
+      <p id="loading-sub">Running parser on tab content...</p>
+    </div>
+
+    <!-- Results Screen -->
+    <div class="screen" id="screen-results">
+      <div class="results-container">
+        <!-- Badges Row -->
+        <div class="badges-row">
+          <div class="badge" id="result-risk-badge">
+            <span>Risk Level</span>
+            <span id="txt-risk-level">-</span>
+          </div>
+          <div class="badge badge-timeline">
+            <span>Action Deadline</span>
+            <span id="txt-timeline">-</span>
+          </div>
+        </div>
+
+        <!-- Summary -->
+        <div class="card">
+          <div class="section-title">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+              <polyline points="14 2 14 8 20 8"></polyline>
+              <line x1="16" y1="13" x2="8" y2="13"></line>
+              <line x1="16" y1="17" x2="8" y2="17"></line>
+              <polyline points="10 9 9 9 8 9"></polyline>
+            </svg>
+            Summary
+          </div>
+          <p class="summary-text" id="txt-summary">-</p>
+        </div>
+
+        <!-- Detail Tabs -->
+        <div>
+          <div class="tabs">
+            <button class="tab-btn active" data-tab="tab-clauses">Flagged Clauses</button>
+            <button class="tab-btn" data-tab="tab-consequences">Consequences</button>
+            <button class="tab-btn" data-tab="tab-actions">Actions</button>
+          </div>
+
+          <!-- Clauses Tab -->
+          <div class="tab-content active" id="tab-clauses">
+            <ul class="detail-list" id="list-clauses">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+          <!-- Consequences Tab -->
+          <div class="tab-content" id="tab-consequences">
+            <ul class="detail-list" id="list-consequences">
+              <!-- Dynamically populated -->
+            </ul>
+          </div>
+
+          <!-- Actions Tab -->
+          <div class="tab-content" id="tab-actions">
+            <div id="list-actions">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+        </div>
+
+        <button class="btn btn-secondary" id="btn-results-back" style="margin-top: 10px;">
+          <span>Back to Start</span>
+        </button>
+      </div>
+    </div>
+
+    <!-- Settings Screen -->
+    <div class="screen" id="screen-settings">
+      <h2 style="font-size: 16px; font-weight: 700; margin-bottom: 16px;">Connection Settings</h2>
+      
+      <div class="form-group">
+        <label for="input-api-url">NyayaVanni Backend URL</label>
+        <input type="text" id="input-api-url" class="form-control" placeholder="http://localhost:8000">
+      </div>
+
+      <div class="settings-actions">
+        <button class="btn btn-secondary" id="btn-settings-cancel">Cancel</button>
+        <button class="btn" id="btn-settings-save">Save Settings</button>
+      </div>
+    </div>
+
+    <!-- Error Screen -->
+    <div class="screen" id="screen-error">
+      <div class="error-icon">⚠️</div>
+      <h2>Analysis Failed</h2>
+      <p id="txt-error-message">An unexpected error occurred while communicating with the backend.</p>
+      <button class="btn" id="btn-error-back">Try Again</button>
+    </div>
+
+  </main>
+
+  <script src="popup.js"></script>
+</body>
+</html>
