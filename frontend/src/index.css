@@ -120,6 +120,7 @@
 
 
 
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Inter:wght@300;400;500;600;700&display=swap');
 @import "tailwindcss";
 @plugin "@tailwindcss/typography";
 @custom-variant dark (&:where(.dark, .dark *));
@@ -137,7 +138,13 @@
   --color-nyaya-850: #0f5954;
   --color-nyaya-900: #134e4a;
   --color-nyaya-950: #0a3330;
+  --color-court-walnut: #1a1209;
+  --color-court-gold: #d4a820;
+  --color-court-cream: #e8e0d0;
+  --color-court-muted: #bdae98;
+  --color-court-darkrobe: #120c06;
   --font-sans: "Inter", "Roboto", sans-serif;
+  --font-serif: "Playfair Display", Georgia, serif;
 }
 @layer base {
   body {
@@ -154,6 +161,28 @@
   }
   .glass-dark {
     @apply border shadow-2xl bg-slate-900/80 backdrop-blur-xl border-slate-700/50;
+  }
+  .wood-panel {
+    background-color: #1a1209;
+    background-image: linear-gradient(rgba(0, 0, 0, 0.15) 1px, transparent 1px),
+                      linear-gradient(90deg, rgba(0, 0, 0, 0.15) 1px, transparent 1px);
+    background-size: 20px 20px;
+  }
+  .court-vignette {
+    background: radial-gradient(circle, rgba(40,28,15,0.85) 0%, rgba(26,18,9,1) 100%);
+  }
+  .court-card {
+    background: rgba(36, 26, 15, 0.95);
+    border: 1px solid #d4a820;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5), inset 0 0 10px rgba(212, 168, 32, 0.1);
+  }
+  .court-card-gold-hover {
+    transition: all 0.3s ease;
+  }
+  .court-card-gold-hover:hover {
+    border-color: #f7cf53;
+    box-shadow: 0 4px 25px rgba(212, 168, 32, 0.3), inset 0 0 15px rgba(212, 168, 32, 0.2);
+    transform: translateY(-2px);
   }
 }
 @keyframes float {
@@ -187,4 +216,11 @@
 .chat-textarea::-webkit-scrollbar-thumb {
   background: rgba(148,163,184,.4);
   border-radius: 999px;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fadeIn {
+  animation: fadeIn 0.25s ease-out;
 }

@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from typing import Optional
 
 from .database import connect_db
+from .search_service import clear_expired_cache
 
 logger = logging.getLogger(__name__)
 
@@ -421,10 +422,11 @@ def cleanup_expired_documents_once() -> int:
 
 
 async def cleanup_expired_documents():
-    """Periodically clean up expired documents without blocking the event loop."""
+    """Periodically clean up expired documents and search cache without blocking the event loop."""
     while True:
         try:
             await asyncio.to_thread(cleanup_expired_documents_once)
+            await asyncio.to_thread(clear_expired_cache)
         except Exception as e:
             logger.error(f"Error during document cleanup: {e}")
 

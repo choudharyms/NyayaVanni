@@ -71,6 +71,7 @@ export const LanguageProvider = ({ children }) => {
       'dashboard.btn.detailed': 'Request Detailed Analysis',
       'dashboard.consult.title': 'Legal Consultation Recommended',
       'dashboard.consult.btn': 'Find a Lawyer',
+      'dashboard.kg.download': 'Download Image',
       'chat.placeholder': 'Ask a legal question...',
       'lawyers.title': 'Find the Right Legal Expert',
       'lawyers.disclaimer':
@@ -125,6 +126,7 @@ export const LanguageProvider = ({ children }) => {
       'dashboard.btn.detailed': 'विस्तृत विश्लेषण का अनुरोध करें',
       'dashboard.consult.title': 'कानूनी परामर्श की सिफारिश की गई',
       'dashboard.consult.btn': 'वकील खोजें',
+      'dashboard.kg.download': 'छवि डाउनलोड करें',
       'chat.placeholder': 'कानूनी प्रश्न पूछें...',
       'lawyers.title': 'सही कानूनी विशेषज्ञ खोजें',
       'lawyers.disclaimer':
@@ -178,6 +180,7 @@ export const LanguageProvider = ({ children }) => {
       'dashboard.btn.detailed': 'விரிவான பகுப்பாய்வு கோரவும்',
       'dashboard.consult.title': 'சட்ட ஆலோசனை பரிந்துரைக்கப்படுகிறது',
       'dashboard.consult.btn': 'வழக்கறிஞரை கண்டுபிடிக்கவும்',
+      'dashboard.kg.download': 'படத்தைப் பதிவிறக்குக',
       'chat.placeholder': 'சட்ட கேள்வி கேளுங்கள்...',
       'lawyers.title': 'சரியான சட்ட நிபுணரை கண்டுபிடிக்கவும்',
       'lawyers.disclaimer':

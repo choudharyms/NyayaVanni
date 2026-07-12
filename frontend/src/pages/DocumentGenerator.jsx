@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Loader2, Scale, Sparkles } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from "../components/Footer";
+import { ensureSessionId } from '../utils/session';
 
 const FIELD_CONFIG = [
   {
@@ -105,6 +106,8 @@ export default function DocumentGenerator() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      await ensureSessionId(apiUrl);
+
       const response = await fetch(`${apiUrl}/api/generate-document`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
