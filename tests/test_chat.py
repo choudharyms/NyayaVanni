@@ -42,7 +42,7 @@ def test_general_chat_empty_message_returns_400(test_client):
     )
 
     assert response.status_code == 400
-    assert response.json()["detail"] == "Message cannot be empty"
+    assert response.json()["error"]["message"] == "Message cannot be empty"
 
 
 def test_general_chat_missing_user_message_returns_422(test_client):
