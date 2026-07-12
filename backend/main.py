@@ -1,5 +1,8 @@
 import asyncio
+import logging
 import os
+
+logger = logging.getLogger(__name__)
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request

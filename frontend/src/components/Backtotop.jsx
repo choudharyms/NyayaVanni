@@ -29,7 +29,7 @@ export default function BackToTop() {
     const easeInOut = (t) =>
       t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
 
-    const step = (currentTime: number) => {
+    const step = (currentTime) => {
       const elapsed = currentTime - startTime;
       const progress = Math.min(elapsed / duration, 1);
       window.scrollTo(0, startPos * (1 - easeInOut(progress)));
