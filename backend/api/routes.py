@@ -21,9 +21,9 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
+
+from ..middleware.rate_limit import limiter
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -71,7 +71,6 @@ graph_builder = LegalKnowledgeGraphBuilder()
 #   RATE_LIMIT_ANALYZE  (default: 10/minute)  heavy Gemini + OCR call
 #   RATE_LIMIT_CHAT     (default: 30/minute)  streaming chat call
 # ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 

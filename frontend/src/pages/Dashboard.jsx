@@ -915,15 +915,53 @@ export default function Dashboard() {
 
               <div className="mt-8 flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => {
-                    setChatInput(
-                      'Please provide a detailed, paragraph-by-paragraph analysis of this document.'
-                    );
-                    document
-                      .querySelector('form')
-                      .dispatchEvent(
-                        new Event('submit', { cancelable: true, bubbles: true })
-                      );
+                  onClick={async () => {
+                    const text = 'Please provide a detailed, paragraph-by-paragraph analysis of this document.';
+                    if (!text.trim()) return;
+                    const userMsg = { role: 'user', message: text };
+                    const newHistory = [...chatHistory, userMsg];
+                    setChatHistory(newHistory);
+                    setChatInput('');
+                    setChatLoading(true);
+                    try {
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                      const sessionId = await ensureSessionId(apiUrl);
+                      const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Session-Id': sessionId },
+                        credentials: 'include',
+                        body: JSON.stringify({ user_message: text, chat_history: chatHistory, language }),
+                      });
+                      if (!response.ok) throw new Error('Chat failed');
+                      const reader = response.body.getReader();
+                      const decoder = new TextDecoder();
+                      let done = false;
+                      let assistantMsg = '';
+                      setChatHistory([...newHistory, { role: 'assistant', message: '' }]);
+                      setChatLoading(false);
+                      while (!done) {
+                        const { value, done: doneReading } = await reader.read();
+                        done = doneReading;
+                        if (value) {
+                          assistantMsg += decoder.decode(value);
+                          setChatHistory((prev) => {
+                            const updated = [...prev];
+                            if (updated.length > 0) updated[updated.length - 1] = { role: 'assistant', message: assistantMsg };
+                            return updated;
+                          });
+                        }
+                      }
+                    } catch {
+                      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                      let msg = 'This is a fallback response. The backend might not be running correctly.';
+                      if (apiUrl.includes('localhost') && window.location.hostname !== 'localhost') {
+                        msg = 'Configuration Error: API URL is still set to localhost. Fix this in Vercel Environment Variables.';
+                      }
+                      setChatHistory([...newHistory, { role: 'assistant', message: msg }]);
+                      setChatLoading(false);
+                    } finally {
+                      setChatLoading(false);
+                    }
                   }}
                   className={DETAILED_BUTTON}
                 >
