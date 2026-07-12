@@ -27,6 +27,7 @@ export default function GeneralChat() {
     updateConversation,
     getConversation,
     setActiveConversationId,
+    deleteConversation,
   } = useConversationHistory();
 
   const [chatInput, setChatInput] = useState('');
@@ -153,35 +154,13 @@ export default function GeneralChat() {
 
       if (!response.ok) throw new Error('Chat failed');
 
-      // Set up a stream reader to consume the plaintext chunks
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let done = false;
-      let assistantMsg = '';
+      const data = await response.json();
+      const assistantMsg = data?.response || '';
 
-      // Add a placeholder assistant message that will be progressively populated
-      setChatHistory([...newHistory, { role: 'assistant', message: '' }]);
-      setChatLoading(false); // Turn off loading state once streaming begins
-
-      while (!done) {
-        const { value, done: doneReading } = await reader.read();
-        done = doneReading;
-        if (value) {
-          const chunkValue = decoder.decode(value);
-          assistantMsg += chunkValue;
-
-          setChatHistory((prev) => {
-            const updated = [...prev];
-            if (updated.length > 0) {
-              updated[updated.length - 1] = {
-                role: 'assistant',
-                message: assistantMsg,
-              };
-            }
-            return updated;
-          });
-        }
-      }
+      setChatHistory([
+        ...newHistory,
+        { role: 'assistant', message: assistantMsg },
+      ]);
     } catch {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -245,27 +224,35 @@ export default function GeneralChat() {
   };
 
   const handleDownload = () => {
-    let content = 'NyayaVanni Legal Assistant - Consultation History\n';
-    content += '=================================================\n\n';
+    let content = '# NyayaVanni Legal Assistant - Consultation History\n\n';
+    content += `*Generated on ${new Date().toLocaleDateString()}*\n\n`;
+    content += '---\n\n';
 
     chatHistory.forEach((msg) => {
-      const role = msg.role === 'user' ? 'You' : 'Assistant';
-      content += `${role}:\n${msg.message}\n\n`;
+      const role = msg.role === 'user' ? '### You' : '### NyayaVanni Assistant';
+      content += `${role}\n\n${msg.message}\n\n---\n\n`;
     });
 
-    const blob = new Blob([content], { type: 'text/plain;charset=utf-8' });
+    const blob = new Blob([content], { type: 'text/markdown;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'nyaya-vanni-chat.txt';
+    a.download = 'nyaya-vanni-consultation.md';
     document.body.appendChild(a);
     a.click();
     document.body.removeChild(a);
     URL.revokeObjectURL(url);
   };
 
-  const handleClearChat = () => {
-    if (window.confirm('Clear all messages in this conversation?')) {
+  const handleClearChat = async () => {
+    if (window.confirm('Clear all messages in this conversation? This will delete it from history.')) {
+      if (currentConversationId) {
+        try {
+          await deleteConversation(currentConversationId);
+        } catch (err) {
+          console.error('Failed to delete active conversation:', err);
+        }
+      }
       setChatHistory([
         {
           role: 'assistant',
@@ -274,6 +261,7 @@ export default function GeneralChat() {
         },
       ]);
       setCurrentConversationId(null);
+      setActiveConversationId(null);
     }
   };
 
@@ -295,7 +283,7 @@ export default function GeneralChat() {
             <button
               onClick={() => navigate('/')}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
-              aria-label="Go back home"
+              aria-label={ARIA_LABELS.GO_BACK_HOME}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>

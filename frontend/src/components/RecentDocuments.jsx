@@ -98,16 +98,19 @@ export default function RecentDocuments({ history, onClear }) {
         className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-800/50 transition-colors"
       >
         <div className="flex items-center gap-2 text-slate-200 font-semibold text-sm">
-          <Clock className="w-4 h-4 text-nyaya-400" />
+          <Clock aria-hidden="true"
+          className="w-4 h-4 text-nyaya-400" />
           Recent Documents
           <span className="ml-1 bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full">
             {history.length}
           </span>
         </div>
         {open ? (
-          <ChevronUp className="w-4 h-4 text-slate-400" />
+          <ChevronUp aria-hidden="true"
+          className="w-4 h-4 text-slate-400" />
         ) : (
-          <ChevronDown className="w-4 h-4 text-slate-400" />
+          <ChevronDown aria-hidden="true"
+          className="w-4 h-4 text-slate-400" />
         )}
       </button>
 
@@ -119,7 +122,8 @@ export default function RecentDocuments({ history, onClear }) {
               onClick={() => navigate(`/dashboard/${entry.documentId}`)}
               className="w-full flex items-start gap-3 px-5 py-3 text-left hover:bg-slate-800/60 transition-colors group"
             >
-              <FileText className="w-4 h-4 mt-0.5 text-slate-500 group-hover:text-nyaya-400 transition-colors flex-shrink-0" />
+              <FileText aria-hidden="true"
+              className="w-4 h-4 mt-0.5 text-slate-500 group-hover:text-nyaya-400 transition-colors flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <p className="text-sm text-slate-200 font-medium truncate group-hover:text-white transition-colors">
                   {entry.fileName}
@@ -147,7 +151,8 @@ export default function RecentDocuments({ history, onClear }) {
               }}
               className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors"
             >
-              <Trash2 className="w-3 h-3" />
+              <Trash2 aria-hidden="true"
+              className="w-3 h-3" />
               Clear History
             </button>
           </div>

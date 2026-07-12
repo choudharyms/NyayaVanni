@@ -44,10 +44,11 @@ def is_invalid_extracted_text(text: str) -> bool:
         if pattern.lower() in cleaned.lower():
             return True
 
-    # Detect heavily garbled OCR text
-    special_chars = len(re.findall(r"[^a-zA-Z0-9\s]", cleaned))
+    # Detect heavily garbled OCR text (exclude Indic and other Unicode script chars)
+    special_chars = len(re.findall(r"[^\w\s]", cleaned))
+    unicode_chars = len(re.findall(r"[\u0900-\u0FFF\u0B80-\u0BFF\u0C00-\u0C7F\u0C80-\u0CFF\u0D00-\u0D7F\u0D80-\u0DFF]", cleaned))
 
-    if len(cleaned) > 0 and (special_chars / len(cleaned)) > 0.40:
+    if len(cleaned) > 0 and unicode_chars == 0 and (special_chars / len(cleaned)) > 0.40:
         return True
 
     return False
@@ -137,6 +138,31 @@ def extract_text_from_pdf(
     return text.strip()
 
 
+# Tesseract language map for Indian scripts
+LANGUAGE_MAP = {
+    "en": "eng",
+    "hi": "hin+eng",
+    "mr": "mar+eng",
+    "ta": "tam+eng",
+    "te": "tel+eng",
+    "bn": "ben+eng",
+    "gu": "guj+eng",
+    "kn": "kan+eng",
+    "ml": "mal+eng",
+    "pa": "pan+eng",
+    "or": "ori+eng",
+}
+
+
+def _resolve_tesseract_lang(language: str) -> str:
+    """Resolve app language code to Tesseract language string."""
+    normalized = language.strip().lower()[:2]
+    for code, tesseract_str in LANGUAGE_MAP.items():
+        if normalized.startswith(code):
+            return tesseract_str
+    return "eng"
+
+
 def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> str:
     """
     Extract text from scanned PDFs using OCR.
@@ -146,7 +172,7 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> st
 
     text = ""
 
-    tesseract_lang = "hin+eng" if language == "hi" else "eng"
+    tesseract_lang = _resolve_tesseract_lang(language)
 
     for page in doc:
         pix = page.get_pixmap()
@@ -176,7 +202,7 @@ def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
         # Improve OCR quality
         img = preprocess_image_for_ocr(img)
 
-        tesseract_lang = "hin+eng" if language == "hi" else "eng"
+        tesseract_lang = _resolve_tesseract_lang(language)
         text = pytesseract.image_to_string(img, lang=tesseract_lang)
 
         # Validate OCR output

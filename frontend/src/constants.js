@@ -9,11 +9,13 @@ export const ARIA_LABELS = {
   CLOSE_SIDEBAR: 'Close sidebar',
   NEW_CHAT: 'Start new chat',
   DELETE_CONVERSATION: 'Delete conversation',
+  SELECT_CONVERSATION: 'Select conversation',
   CLEAR_SEARCH: 'Clear search',
   SEARCH_CONVERSATIONS: 'Search conversations',
   GO_BACK: 'Go back',
   GO_BACK_HOME: 'Go back home',
   DOWNLOAD_CHAT: 'Download Chat History',
+  SEND_MESSAGE: 'Send chat message',
 };
 
 // --- PLACEHOLDERS ---

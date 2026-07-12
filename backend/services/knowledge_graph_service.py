@@ -14,7 +14,19 @@ class LegalKnowledgeGraphBuilder:
 
     def extract_entities(self, text: str) -> Dict:
         """
-        Extract structured legal entities using regex + keyword heuristics.
+        Extract structured legal entities using regex and keyword heuristics.
+
+        Scans the input text for parties, dates, obligations, clauses,
+        legal terms, and financial terms using pattern matching and
+        predefined keyword lists.
+
+        Args:
+            text: Raw legal document text to extract entities from.
+
+        Returns:
+            A dictionary with keys 'parties', 'dates', 'obligations',
+            'clauses', 'legal_terms', and 'financial_terms', each
+            containing a list of unique extracted string values.
         """
 
         entities = {
@@ -120,10 +132,21 @@ class LegalKnowledgeGraphBuilder:
 
     def build_relationships(self, entities: Dict) -> List[Dict]:
         """
-        Build graph edges between entities.
+        Build graph edges between extracted legal entities.
+
+        Creates directed relationships between clauses, obligations,
+        dates, and parties to form a structured knowledge graph.
+
+        Args:
+            entities: Dictionary of extracted entities as returned
+                by extract_entities().
+
+        Returns:
+            A list of relationship dictionaries, each containing
+            'source_label', 'target_label', and 'relationship' keys.
         """
 
-        relationships = []
+        relationships = []  
 
         # Clause -> Obligation
         for clause in entities["clauses"]:
@@ -162,7 +185,19 @@ class LegalKnowledgeGraphBuilder:
 
     def generate_graph(self, text: str) -> Dict:
         """
-        Generate final graph payload.
+        Generate a complete knowledge graph from legal document text.
+
+        Extracts entities and builds relationships, then constructs
+        a graph payload with unique node IDs and labeled edges.
+
+        Args:
+            text: Raw legal document text to process.
+
+        Returns:
+            A dictionary containing:
+                - nodes: List of node dicts with 'id', 'label', and 'type'.
+                - edges: List of edge dicts with 'id', 'source', 'target',
+                  and 'label'.
         """
 
         entities = self.extract_entities(text)

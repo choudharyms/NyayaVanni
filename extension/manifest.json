@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "NyayaVanni ToS Analyzer",
+  "version": "1.0.0",
+  "description": "Analyze Terms of Service and legal agreements on the fly with NyayaVanni.",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "storage"
+  ],
+  "host_permissions": [
+    "http://localhost:8000/*"
+  ],
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

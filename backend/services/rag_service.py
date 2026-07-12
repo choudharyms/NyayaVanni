@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+from datetime import datetime, timezone
 
 import faiss
 import google.generativeai as genai
@@ -129,12 +130,54 @@ def init_index():
 init_index()
 
 
+# Cache expiry in seconds (default 24 hours)
+RAG_CACHE_TTL = int(os.getenv("RAG_CACHE_TTL", str(24 * 3600)))
+_last_refresh = datetime.now(timezone.utc)
+
+
+def _is_cache_stale() -> bool:
+    global _last_refresh
+    elapsed = (datetime.now(timezone.utc) - _last_refresh).total_seconds()
+    return elapsed > RAG_CACHE_TTL
+
+
+def refresh_index_if_stale():
+    """Rebuild the FAISS index if the cache TTL has expired."""
+    global _last_refresh
+    if _is_cache_stale():
+        logger.info("RAG cache expired, refreshing FAISS index...")
+        build_index()
+        if index is not None:
+            faiss.write_index(index, INDEX_PATH)
+        _last_refresh = datetime.now(timezone.utc)
+        logger.info("RAG index refresh complete.")
+
+
+def schedule_rag_refresh():
+    """Background task that periodically refreshes the RAG index."""
+    import asyncio
+
+    async def _refresh_loop():
+        while True:
+            await asyncio.sleep(RAG_CACHE_TTL)
+            refresh_index_if_stale()
+
+    import threading
+    thread = threading.Thread(target=lambda: asyncio.run(_refresh_loop()), daemon=True)
+    thread.start()
+
+
+# Start background refresh on import
+schedule_rag_refresh()
+
+
 def retrieve_relevant_laws(query_text: str, k=2) -> list:
     """
     Retrieve the most relevant legal corpus entries for a given query.
 
     Embeds the query text and searches the FAISS index for the closest
-    matching legal documents using L2 distance.
+    matching legal documents using L2 distance. Automatically refreshes
+    the index if the cache TTL has expired.
 
     Args:
         query_text: The legal query or document text to search against.
@@ -144,6 +187,7 @@ def retrieve_relevant_laws(query_text: str, k=2) -> list:
         A list of relevant legal corpus strings. Returns an empty list
         if the index is unavailable or retrieval fails.
     """
+    refresh_index_if_stale()
     if index is None or index.ntotal == 0:
         logger.warning(
             "RAG system degraded: FAISS index unavailable or empty. "

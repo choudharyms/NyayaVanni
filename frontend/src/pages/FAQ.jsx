@@ -45,17 +45,19 @@ export default function FAQ() {
             {faqs.map((item, idx) => (
               <details
                 key={idx}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 p-5 hover:border-slate-350 dark:hover:border-slate-700 transition duration-300 group"
+                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 p-5 hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300 group open:shadow-lg open:border-slate-300 dark:open:border-slate-600"
               >
                 <summary className="cursor-pointer list-none flex items-center justify-between gap-4 font-semibold text-slate-850 dark:text-white">
                   <span>{item.q}</span>
-                  <span className="text-slate-400 dark:text-slate-500 transition-transform group-open:rotate-45">
+                  <span className="text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-45 text-lg leading-none">
                     +
                   </span>
                 </summary>
-                <p className="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed text-sm">
-                  {item.a}
-                </p>
+                <div className="overflow-hidden">
+                  <p className="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed text-sm animate-fadeIn">
+                    {item.a}
+                  </p>
+                </div>
               </details>
             ))}
           </div>
