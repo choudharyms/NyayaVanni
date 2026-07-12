@@ -1163,6 +1163,7 @@ export default function Dashboard() {
                 type="submit"
                 disabled={chatLoading || !chatInput.trim()}
                 className={SEND_BUTTON}
+                aria-label={ARIA_LABELS.SEND_MESSAGE}
               >
                 <Send className="w-5 h-5 pl-0.5" />
               </button>

@@ -295,7 +295,7 @@ export default function GeneralChat() {
             <button
               onClick={() => navigate('/')}
               className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
-              aria-label="Go back home"
+              aria-label={ARIA_LABELS.GO_BACK_HOME}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
