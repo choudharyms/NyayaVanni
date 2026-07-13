@@ -24,10 +24,26 @@ CACHE_EXPIRY_SECONDS = 3600
 
 
 def _sanitize_fts_query(query: str) -> str:
-    """Strip FTS5 special characters to prevent syntax errors."""
+    """Strip FTS5 special characters to prevent syntax errors and injection."""
     sanitized = re.sub(r'["*(){}^:+\-]', " ", query)
     sanitized = re.sub(r"\s+", " ", sanitized).strip()
+    sanitized = sanitized[:500]
     return sanitized
+
+
+_INJECTION_PATTERNS = re.compile(
+    r"(?i)(\b|\$)(where|ne|eq|gt|gte|lt|lte|in|nin|regex|exists|type|text|search|"
+    r"match|not|nor|or|and|all|elemMatch|mod|geoNear|near|"
+    r"select|union|drop|delete|insert|exec|eval|sleep|\$\$|\$func)",
+)
+
+
+def sanitize_user_query(query: str) -> str:
+    """Strip MongoDB/NoSQL operator patterns and escape special characters."""
+    stripped = re.sub(r"[\${}()\[\]]", " ", query)
+    stripped = _INJECTION_PATTERNS.sub(" ", stripped)
+    stripped = re.sub(r"\s+", " ", stripped).strip()
+    return stripped[:2000]
 
 
 def _connect_db():

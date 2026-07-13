@@ -28,6 +28,7 @@ from ..middleware.rate_limit import limiter
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
     DELETE_RATE_LIMIT,
+    LOGIN_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
 )
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
@@ -46,6 +47,7 @@ from ..services.rag_service import retrieve_relevant_laws
 from ..services.search_service import (
     index_document,
     remove_document_from_index,
+    sanitize_user_query,
     search_documents,
 )
 from ..services.storage_service import (
@@ -231,7 +233,7 @@ async def contact_us(request: Request, body: ContactRequest):
 
 
 @api_router.get("/session")
-@limiter.limit("10/minute")
+@limiter.limit(LOGIN_RATE_LIMIT)
 async def create_session(request: Request, response: Response):
     """Create or reuse a session cookie for the current user.
 
@@ -588,6 +590,7 @@ def chat_stream_sse(
     if not user_message or not user_message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
+    user_message = sanitize_user_query(user_message)
     session_id = require_session_id(request)
     _log_access(request, "chat-stream", session_id)
 
@@ -643,6 +646,7 @@ def chat_general(request: Request, chat_request: ChatRequest):
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
+        chat_request.user_message = sanitize_user_query(chat_request.user_message)
         _log_access(request, "chat-general")
 
         analysis = {}
@@ -685,6 +689,7 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
         session_id = require_session_id(request)
         _log_access(request, "chat-document", session_id, f"doc={document_id}")
         require_document_owner(document_id, session_id)
+        chat_request.user_message = sanitize_user_query(chat_request.user_message)
         cached = get_cached_analysis(document_id, session_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
 
@@ -956,6 +961,7 @@ def search_documents_endpoint(
         if not isinstance(page_size, int) or page_size < 1 or page_size > 100:
             page_size = 10
 
+        q = sanitize_user_query(q)
         result = search_documents(q, page=page, page_size=page_size, use_cache=True)
 
         if "error" in result:

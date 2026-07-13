@@ -38,7 +38,7 @@ from google.api_core.exceptions import DeadlineExceeded
 query_optimizer = LegalQueryOptimizer()
 
 GEMINI_MODEL_NAME = os.getenv("GEMINI_MODEL_NAME", "gemini-2.0-flash-001")
-GEMINI_TIMEOUT = float(os.getenv("GEMINI_TIMEOUT", "30.0"))
+GEMINI_TIMEOUT = float(os.getenv("GEMINI_TIMEOUT", "10.0"))
 
 generation_config = {
     "temperature": 0.3,

@@ -1,3 +1,5 @@
+import asyncio
+import logging
 import os
 import re
 
@@ -13,6 +15,33 @@ from .middleware.rate_limit import limiter, rate_limit_handler
 from .services.storage_service import cleanup_expired_documents
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
+
+_SENSITIVE_PATTERNS = [
+    (re.compile(r"(?i)(authorization|bearer|token|apikey|api_key|secret|password|passwd)\s*[:=]\s*\S+"), r"\1=***"),
+    (re.compile(r"(?i)(ghp_|gho_|ghu_|ghs_|ghr_)[\w-]+"), "token=***"),
+    (re.compile(r"(?i)(sk-[a-zA-Z0-9]{20,})"), "sk-***"),
+]
+
+
+class RedactSensitiveFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        if isinstance(record.msg, str):
+            for pattern, replacement in _SENSITIVE_PATTERNS:
+                record.msg = pattern.sub(replacement, record.msg)
+        if record.args:
+            cleaned = []
+            for arg in record.args:
+                if isinstance(arg, str):
+                    for pattern, replacement in _SENSITIVE_PATTERNS:
+                        arg = pattern.sub(replacement, arg)
+                cleaned.append(arg)
+            record.args = tuple(cleaned)
+        return True
+
+
+logging.getLogger().addFilter(RedactSensitiveFilter())
 
 app = FastAPI(title="NyayaVanni API", description="Legal Document Analyzer API")
 

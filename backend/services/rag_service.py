@@ -67,6 +67,7 @@ def get_embeddings(texts: list) -> np.ndarray:
             model="models/gemini-embedding-001",
             content=texts,
             task_type="retrieval_document",
+            request_options={"timeout": 10.0},
         )
         return np.array(result["embedding"], dtype=np.float32)
     except Exception as e:
@@ -156,6 +157,7 @@ def retrieve_relevant_laws(query_text: str, k=2) -> list:
             model="models/gemini-embedding-001",
             content=query_text,
             task_type="retrieval_query",
+            request_options={"timeout": 10.0},
         )
 
         query_vec = np.array([query_embed["embedding"]], dtype=np.float32)
