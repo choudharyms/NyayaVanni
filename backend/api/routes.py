@@ -485,14 +485,11 @@ def chat_stream_sse(
 
     analysis = {}
     if document_id:
-        try:
-            session_id = require_session_id(request)
-            require_document_owner(document_id, session_id)
-            cached = get_cached_analysis(document_id, session_id, language)
-            if cached:
-                analysis = cached.get("analysis", {})
-        except HTTPException:
-            pass
+        session_id = require_session_id(request)
+        require_document_owner(document_id, session_id)
+        cached = get_cached_analysis(document_id, session_id, language)
+        if cached:
+            analysis = cached.get("analysis", {})
 
     def event_generator():
         try:
@@ -676,12 +673,13 @@ Provide a JSON response matching this exact schema:
 }}
 """
         from google.api_core.exceptions import DeadlineExceeded
+        from ..services.gemini_service import _parse_structured_response
 
         model = genai.GenerativeModel("gemini-2.0-flash")
         response = model.generate_content(
             prompt, request_options={"timeout": GEMINI_TIMEOUT}
         )
-        result = json.loads(response.text)
+        result = _parse_structured_response(response)
         return result
 
     except RateLimitExceeded:
