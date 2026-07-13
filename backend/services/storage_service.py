@@ -222,6 +222,26 @@ def validate_session(session_id: str) -> bool:
             conn.close()
 
 
+def invalidate_session(session_id: str) -> bool:
+    if not session_id or not session_id.strip():
+        return False
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Session invalidation failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 def cleanup_expired_sessions_once() -> int:
     now = datetime.now(timezone.utc).isoformat()
     conn = None
@@ -250,9 +270,12 @@ init_db()
 
 def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
     """Save a file locally and return the document ID and local path"""
-    ext = filename.split(".")[-1]
+    safe = "".join(ch for ch in os.path.basename(filename) if ch.isalnum() or ch in ("._-"))
+    ext = safe.split(".")[-1] if "." in safe else ""
     doc_id = str(uuid.uuid4())
-    local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+    local_path = os.path.normpath(os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}"))
+    if not local_path.startswith(os.path.normpath(UPLOAD_DIR)):
+        raise ValueError("Path traversal detected in upload_to_local")
 
     try:
         with open(local_path, "wb") as f:

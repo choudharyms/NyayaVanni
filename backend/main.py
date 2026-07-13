@@ -39,9 +39,26 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
         return await call_next(request)
 
 
+# Configure CORS as the outermost middleware so preflight OPTIONS work correctly.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
+    allow_credentials=True,
+    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_headers=[
+        "Content-Type",
+        "Authorization",
+        "X-Session-Id",
+        "Accept",
+        "Origin",
+    ],
+)
+
 # Set global limit to 11MB to safely allow the 10MB document uploads.
 @app.middleware("http")
 async def validate_origin(request, call_next):
+    if request.method == "OPTIONS":
+        return await call_next(request)
     origin = request.headers.get("origin", "")
     if request.method in ("POST", "PUT", "DELETE", "PATCH"):
         if origin and "nyayavanni" not in origin and "localhost" not in origin:
@@ -88,22 +105,6 @@ async def sanitized_exception_handler(request: Request, exc: Exception):
 async def startup_event() -> None:
     """Initialize background tasks on application startup."""
     asyncio.create_task(cleanup_expired_documents())
-
-
-# Configure CORS for React frontend
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
-    allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
-    allow_headers=[
-        "Content-Type",
-        "Authorization",
-        "X-Session-Id",
-        "Accept",
-        "Origin",
-    ],
-)
 
 
 @app.get("/")

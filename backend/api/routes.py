@@ -54,6 +54,7 @@ from ..services.storage_service import (
     delete_document_and_cache,
     get_cached_analysis,
     get_document_record,
+    invalidate_session,
     save_cached_analysis,
     save_document_record,
     upload_to_local,
@@ -193,6 +194,30 @@ async def create_session(request: Request, response: Response):
     return {"status": "Session active"}
 
 
+@api_router.post("/logout")
+async def logout(request: Request, response: Response):
+    """Invalidate the current session and clear the session cookie.
+
+    Args:
+        request: The incoming HTTP request.
+        response: The outgoing HTTP response used to clear the cookie.
+
+    Returns:
+        dict: A status message confirming logout.
+    """
+    session_id = request.cookies.get("session_id")
+    if session_id:
+        invalidate_session(session_id)
+    session_secure = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    response.delete_cookie(
+        key="session_id",
+        httponly=True,
+        samesite="lax",
+        secure=session_secure,
+    )
+    return {"status": "Logged out"}
+
+
 @api_router.post("/upload")
 @limiter.limit(UPLOAD_RATE_LIMIT)
 async def upload_document(request: Request, file: UploadFile = File(...)):
@@ -262,7 +287,11 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             )
 
         doc_id = str(uuid.uuid4())
-        local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+        local_path = os.path.normpath(os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}"))
+        if not local_path.startswith(os.path.normpath(UPLOAD_DIR)):
+            raise HTTPException(
+                status_code=400, detail="Invalid file path detected."
+            )
 
         try:
             with open(local_path, "wb") as buffer:
