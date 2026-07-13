@@ -107,10 +107,8 @@ def require_session_id(request: Request) -> str:
         HTTPException 401: If the session_id cookie is missing or invalid.
     """
     session_id = request.cookies.get("session_id")
-    if not session_id:
-        raise HTTPException(status_code=401, detail="Missing session_id cookie")
-    if not validate_session(session_id):
-        raise HTTPException(status_code=401, detail="Invalid or expired session")
+    if not session_id or not validate_session(session_id):
+        raise HTTPException(status_code=401, detail="Authentication required")
     return session_id
 
 
@@ -134,6 +132,74 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
     if record.get("session_id") != session_id:
         raise HTTPException(status_code=403, detail="Access denied for this document")
     return record
+
+
+def _validate_upload_file(file: UploadFile, raw_bytes: bytes):
+    """Validate file size and content type before processing.
+
+    Args:
+        file: The uploaded file.
+        raw_bytes: The raw file content.
+
+    Raises:
+        HTTPException 413: If the file exceeds the maximum allowed size.
+        HTTPException 400: If the file format or content is invalid.
+    """
+    if len(raw_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File size exceeds the maximum allowed limit of 10MB.",
+        )
+
+    filename = file.filename or ""
+    ext = filename.lower().rsplit(".", 1)[-1] if "." in filename else ""
+
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+        )
+
+    if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file content type. Only PDF, DOCX, and image files are allowed.",
+        )
+
+    if not validate_file_magic_bytes(raw_bytes, ext):
+        actual_mime = detect_actual_mime(raw_bytes)
+        logger.warning(
+            "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
+            file.content_type,
+            actual_mime,
+            ext,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="File content does not match the claimed file type. Upload rejected.",
+        )
+
+
+def _log_access(request: Request, endpoint: str, session_id: str = "", extra: str = ""):
+    """Log access to sensitive endpoints.
+
+    Args:
+        request: The incoming HTTP request.
+        endpoint: The endpoint name being accessed.
+        session_id: The session ID (truncated for privacy).
+        extra: Optional extra context.
+    """
+    client_host = request.client.host if request.client else "unknown"
+    user_agent = request.headers.get("user-agent", "unknown")[:100]
+    sid = session_id[:8] if session_id else "none"
+    logger.info(
+        "ACCESS %s | ip=%s sid=%s agent=%s %s",
+        endpoint,
+        client_host,
+        sid,
+        user_agent,
+        extra,
+    )
 
 
 @api_router.post("/contact")
@@ -206,6 +272,7 @@ async def logout(request: Request, response: Response):
         dict: A status message confirming logout.
     """
     session_id = request.cookies.get("session_id")
+    _log_access(request, "logout", session_id or "")
     if session_id:
         invalidate_session(session_id)
     session_secure = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
@@ -237,6 +304,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
     """
     try:
         session_id = require_session_id(request)
+        _log_access(request, "upload", session_id)
 
         filename = file.filename
         if not filename:
@@ -365,6 +433,7 @@ def _analyze_document_sync(
 
     try:
         session_id = require_session_id(request)
+        _log_access(request, "analyze", session_id, f"doc={document_id}")
         record = require_document_owner(document_id, session_id)
 
         if not force_ocr:
@@ -403,7 +472,8 @@ def _analyze_document_sync(
                 )
         else:
             contents = file.file.read()
-            filename = file.filename
+            filename = file.filename or ""
+            _validate_upload_file(file, contents)
 
         text = extract_document(
             contents, filename, force_ocr=force_ocr, language=language
@@ -519,6 +589,7 @@ def chat_stream_sse(
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
     session_id = require_session_id(request)
+    _log_access(request, "chat-stream", session_id)
 
     analysis = {}
     if document_id:
@@ -572,6 +643,8 @@ def chat_general(request: Request, chat_request: ChatRequest):
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
+        _log_access(request, "chat-general")
+
         analysis = {}
         history = [
             {"role": msg.role, "message": msg.message}
@@ -610,6 +683,7 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
     """
     try:
         session_id = require_session_id(request)
+        _log_access(request, "chat-document", session_id, f"doc={document_id}")
         require_document_owner(document_id, session_id)
         cached = get_cached_analysis(document_id, session_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
@@ -660,8 +734,12 @@ def diff_analysis(
     try:
         session_id = require_session_id(request)
 
+        _log_access(request, "diff-analysis", session_id)
+
         old_contents = old_document.file.read()
         new_contents = new_document.file.read()
+        _validate_upload_file(old_document, old_contents)
+        _validate_upload_file(new_document, new_contents)
 
         old_text = extract_document(old_contents, old_document.filename or "old.pdf")
         new_text = extract_document(new_contents, new_document.filename or "new.pdf")
@@ -751,6 +829,7 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
     """
     try:
         session_id = require_session_id(request)
+        _log_access(request, "generate-document", session_id)
 
         buffer = io.BytesIO()
         c = canvas.Canvas(buffer, pagesize=letter)
@@ -825,6 +904,7 @@ async def delete_document(document_id: str, request: Request):
         HTTPException 404: If the document is not found.
     """
     session_id = require_session_id(request)
+    _log_access(request, "delete-document", session_id, f"doc={document_id}")
     require_document_owner(document_id, session_id)
 
     deleted = delete_document_and_cache(document_id)
@@ -864,6 +944,7 @@ def search_documents_endpoint(
     """
     try:
         session_id = require_session_id(request)
+        _log_access(request, "search", session_id, f"q={q[:50]}")
 
         if not q or not q.strip() or len(q.strip()) < 2:
             raise HTTPException(
