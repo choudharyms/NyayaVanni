@@ -61,6 +61,8 @@ from ..services.auth_service import (
     force_reset_password,
     get_user_by_id,
     register_user,
+    request_password_reset,
+    reset_password_with_token,
     send_verification_email,
     update_avatar_url,
     user_requires_password_reset,
@@ -79,6 +81,7 @@ from ..services.storage_service import (
     get_document_record,
     save_cached_analysis,
     save_document_record,
+    update_session_ip,
     upload_to_local,
     validate_session,
 )
@@ -175,12 +178,25 @@ async def read_upload_with_size_limit(file: UploadFile, max_size: int) -> bytes:
     return b"".join(chunks)
 
 
+class DocumentUpdateRequest(BaseModel):
+    filename: str = Field(..., min_length=1, max_length=255)
+
+
 class DocumentGenerationRequest(BaseModel):
     effective_date: str = Field(..., max_length=100)
     party_one_name: str = Field(..., max_length=500)
     party_two_name: str = Field(..., max_length=500)
     consideration_amount: str = Field(..., max_length=500)
     jurisdiction: str = Field(..., max_length=200)
+
+
+def _get_client_ip(request: Request) -> str:
+    if request.client:
+        return request.client.host
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return ""
 
 
 def require_session_id(request: Request) -> str:
@@ -202,7 +218,8 @@ def require_session_id(request: Request) -> str:
         session_id = request.headers.get("x-session-id")
     if not session_id:
         raise HTTPException(status_code=401, detail="Missing session_id cookie or header")
-    if not validate_session(session_id):
+    ip = _get_client_ip(request)
+    if not validate_session(session_id, ip):
         raise HTTPException(status_code=401, detail="Invalid or expired session")
     return session_id
 
@@ -319,6 +336,9 @@ async def login(request: Request, body: LoginRequest):
             detail="Invalid email or password.",
         )
     update_session_user_id(session_id, user["user_id"])
+    client_ip = _get_client_ip(request)
+    if client_ip:
+        update_session_ip(session_id, client_ip)
     log_action(
         STORAGE_DB_PATH,
         "user_login",
@@ -353,6 +373,45 @@ async def change_password_endpoint(request: Request, body: ChangePasswordRequest
         "user",
         user_id,
         session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+    return {"status": "ok", "message": message}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., max_length=320)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@api_router.post("/auth/forgot-password")
+@limiter.limit(PASSWORD_RESET_RATE_LIMIT)
+async def forgot_password(request: Request, body: ForgotPasswordRequest):
+    token = request_password_reset(body.email)
+    if token:
+        send_verification_email(body.email, token)
+    return {
+        "status": "ok",
+        "message": "If the email exists, a password reset link has been sent.",
+    }
+
+
+@api_router.post("/auth/reset-password")
+@limiter.limit(PASSWORD_RESET_RATE_LIMIT)
+async def reset_password(request: Request, body: ResetPasswordRequest):
+    success, message = reset_password_with_token(body.token, body.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    log_action(
+        STORAGE_DB_PATH,
+        "password_reset_token",
+        "user",
+        None,
+        None,
         None,
         request.client.host if request.client else None,
     )
@@ -698,6 +757,20 @@ def _analyze_document_sync(
                     status_code=400, detail="Stored document has unsupported file type"
                 )
         else:
+            if not file.filename:
+                raise HTTPException(
+                    status_code=400, detail="Uploaded file must have a valid filename."
+                )
+            safe_filename = os.path.basename(file.filename)
+            safe_filename = "".join(
+                ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+            )
+            ext = safe_filename.split(".")[-1].lower() if "." in safe_filename else ""
+            if ext not in ALLOWED_EXTENSIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+                )
             contents = file.file.read()
             filename = file.filename
 
@@ -1290,6 +1363,55 @@ async def generate_document(request: Request, payload: DocumentGenerationRequest
     except Exception as e:
         logger.error(f"Failed to generate document: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate document")
+
+
+@api_router.patch("/documents/{document_id}")
+@limiter.limit("10/minute")
+async def update_document(document_id: str, request: Request, body: DocumentUpdateRequest):
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    safe_filename = os.path.basename(body.filename)
+    safe_filename = "".join(
+        ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+    )
+    if not safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    conn = None
+    try:
+        from ..services.storage_service import _connect_db
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET filename = ? WHERE document_id = ?",
+            (safe_filename, document_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Document not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update document {document_id}: {e}")
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update document")
+    finally:
+        if conn:
+            conn.close()
+
+    log_action(
+        STORAGE_DB_PATH,
+        "document_update",
+        "document",
+        document_id,
+        session_id,
+        {"filename": safe_filename},
+        request.client.host if request.client else None,
+    )
+
+    return {"documentId": document_id, "filename": safe_filename, "updated": True}
 
 
 @api_router.delete("/documents/{document_id}")

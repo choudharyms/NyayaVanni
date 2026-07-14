@@ -358,4 +358,115 @@ def user_requires_password_reset(user_id: str) -> bool:
     return bool(user and user.get("must_reset_password"))
 
 
+# ---------------------------------------------------------------------------
+# Password reset tokens (secure, email-based flow)
+# ---------------------------------------------------------------------------
+
+PASSWORD_RESET_TOKENS_TABLE = "password_reset_tokens"
+
+
+def init_password_reset_tokens_table() -> None:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {PASSWORD_RESET_TOKENS_TABLE} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id TEXT NOT NULL,
+                token TEXT NOT NULL UNIQUE,
+                expires_at TEXT NOT NULL,
+                used INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (user_id) REFERENCES {USERS_TABLE}(user_id)
+            )
+        """)
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to initialize password reset tokens table: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+init_password_reset_tokens_table()
+
+
+def request_password_reset(email: str) -> Optional[str]:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT user_id FROM {USERS_TABLE} WHERE email = ? AND is_active = 1",
+            (email,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        user_id = row[0]
+        token = secrets.token_urlsafe(48)
+        now = datetime.now(timezone.utc)
+        expires_at = now + timedelta(hours=1)
+
+        cursor.execute(
+            f"INSERT INTO {PASSWORD_RESET_TOKENS_TABLE} (user_id, token, expires_at, created_at) VALUES (?, ?, ?, ?)",
+            (user_id, token, expires_at.isoformat(), now.isoformat()),
+        )
+        conn.commit()
+        return token
+    except Exception as e:
+        logger.error(f"Failed to create password reset token: {e}")
+        if conn:
+            conn.rollback()
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def reset_password_with_token(token: str, new_password: str) -> tuple[bool, str]:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"SELECT id, user_id, expires_at, used FROM {PASSWORD_RESET_TOKENS_TABLE} WHERE token = ?",
+            (token,),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return False, "Invalid or expired reset token"
+        token_id, user_id, expires_at_str, used = row
+        if used:
+            return False, "Reset token has already been used"
+        expires_at = datetime.fromisoformat(expires_at_str)
+        if expires_at < datetime.now(timezone.utc):
+            return False, "Reset token has expired"
+        new_hash = _hash_password(new_password)
+        now_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            f"UPDATE {USERS_TABLE} SET password_hash = ?, must_reset_password = 0, updated_at = ? WHERE user_id = ?",
+            (new_hash, now_iso, user_id),
+        )
+        cursor.execute(
+            f"UPDATE {PASSWORD_RESET_TOKENS_TABLE} SET used = 1 WHERE id = ?",
+            (token_id,),
+        )
+        conn.commit()
+        logger.info(f"Password reset via token for user {user_id}")
+        return True, "Password reset successfully"
+    except Exception as e:
+        logger.error(f"Password reset with token failed: {e}")
+        if conn:
+            conn.rollback()
+        return False, "An internal error occurred"
+    finally:
+        if conn:
+            conn.close()
+
+
 init_users_table()
