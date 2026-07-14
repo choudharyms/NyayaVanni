@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -14,6 +15,8 @@ from .middleware.security import SecurityHeadersMiddleware
 from .services.storage_service import cleanup_expired_documents
 
 load_dotenv()
+
+logger = logging.getLogger(__name__)
 
 app = FastAPI(title="NyayaVanni API", description="Legal Document Analyzer API")
 
@@ -52,6 +55,10 @@ from .services.search_service import init_search_service
 from .services.storage_service import DB_PATH as STORAGE_DB_PATH
 
 init_search_service(STORAGE_DB_PATH)
+
+from .services.audit_service import init_audit_table
+
+init_audit_table(STORAGE_DB_PATH)
 
 app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)

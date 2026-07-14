@@ -165,7 +165,7 @@ def _ensure_sessions_table(cursor):
     """)
 
 
-SESSION_TTL = timedelta(days=30)
+SESSION_TTL = timedelta(days=int(os.getenv("SESSION_TTL_DAYS", "30")))
 
 
 def create_session_id() -> str:
@@ -240,6 +240,35 @@ def cleanup_expired_sessions_once() -> int:
             conn.rollback()
         logger.error(f"Session cleanup failed: {e}")
         return 0
+    finally:
+        if conn:
+            conn.close()
+
+
+def invalidate_session(session_id: str) -> bool:
+    """Invalidate a session server-side by deleting it from the database.
+
+    Args:
+        session_id: The session to invalidate.
+
+    Returns:
+        True if the session was found and deleted, False otherwise.
+    """
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+        deleted = cursor.rowcount
+        conn.commit()
+        if deleted:
+            logger.info(f"Session invalidated: {session_id}")
+        return deleted > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Session invalidation failed: {e}")
+        return False
     finally:
         if conn:
             conn.close()

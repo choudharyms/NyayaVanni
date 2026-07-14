@@ -52,15 +52,19 @@ from ..services.search_service import (
 )
 from ..services.storage_service import (
     UPLOAD_DIR,
+    DB_PATH as STORAGE_DB_PATH,
+    SESSION_TTL,
     create_session_id,
     delete_document_and_cache,
     get_cached_analysis,
     get_document_record,
+    invalidate_session,
     save_cached_analysis,
     save_document_record,
     upload_to_local,
     validate_session,
 )
+from ..services.audit_service import log_audit_event
 
 logger = logging.getLogger(__name__)
 
@@ -103,6 +107,13 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
         raise HTTPException(
             status_code=400,
             detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+        )
+
+    # Validate MIME type against the allowlist to prevent content-type spoofing
+    if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported MIME type '{file.content_type}'. Only PDF, PNG, JPG, and DOCX are allowed.",
         )
 
     raw_bytes = await file.read()
@@ -235,9 +246,39 @@ async def create_session(request: Request, response: Response):
             httponly=True,
             samesite="strict",
             secure=session_secure,
-            max_age=30 * 24 * 60 * 60,  # 30 days
+            max_age=int(SESSION_TTL.total_seconds()),
         )
     return {"status": "Session active", "sessionId": session_id}
+
+
+@api_router.post("/session/logout")
+@limiter.limit("10/minute")
+async def logout_session(request: Request, response: Response):
+    """Invalidate the current session server-side and clear the cookie.
+
+    Args:
+        request: The incoming HTTP request.
+        response: The outgoing HTTP response used to clear the cookie.
+
+    Returns:
+        dict: A status message confirming the session was invalidated.
+    """
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = request.headers.get("X-Session-Id") or request.headers.get("x-session-id")
+
+    if session_id:
+        invalidate_session(session_id)
+
+    response.delete_cookie(key="session_id")
+    log_audit_event(
+        STORAGE_DB_PATH,
+        action="logout",
+        session_id=session_id,
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+    return {"status": "Session invalidated"}
 
 
 @api_router.post("/upload")
@@ -282,6 +323,13 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
             )
 
+        # Validate MIME type against the allowlist to prevent content-type spoofing
+        if file.content_type and file.content_type not in ALLOWED_MIME_TYPES:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Unsupported MIME type '{file.content_type}'. Only PDF, PNG, JPG, and DOCX are allowed.",
+            )
+
         raw_bytes = await file.read()
         if len(raw_bytes) > MAX_FILE_SIZE:
             raise HTTPException(
@@ -318,6 +366,17 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             )
 
         save_document_record(session_id, doc_id, filename, local_path)
+
+        log_audit_event(
+            STORAGE_DB_PATH,
+            action="upload",
+            session_id=session_id,
+            document_id=doc_id,
+            details=f"filename={filename}",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
+
         return {"documentId": doc_id, "message": "Uploaded successfully"}
 
     except HTTPException as http_err:
@@ -441,6 +500,16 @@ def _analyze_document_sync(
         classification = classify_document(text)
         knowledge_graph = graph_builder.generate_graph(text)
         save_cached_analysis(document_id, session_id, language, text, analysis_result)
+
+        log_audit_event(
+            STORAGE_DB_PATH,
+            action="analyze",
+            session_id=session_id,
+            document_id=document_id,
+            details=f"language={language}, force_ocr={force_ocr}",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
 
         return {
             "documentId": document_id,
@@ -618,6 +687,16 @@ def _analyze_text_sync(request: Request, text: str, language: str = "en"):
 
         # Cache the analysis result
         save_cached_analysis(doc_id, session_id, language, text, analysis_result)
+
+        log_audit_event(
+            STORAGE_DB_PATH,
+            action="analyze_text",
+            session_id=session_id,
+            document_id=doc_id,
+            details=f"language={language}, text_length={len(text)}",
+            ip_address=request.client.host if request.client else None,
+            user_agent=request.headers.get("user-agent"),
+        )
 
         return {
             "documentId": doc_id,
@@ -1018,6 +1097,16 @@ async def delete_document(document_id: str, request: Request):
     # Remove document from search index
     remove_document_from_index(document_id)
 
+    log_audit_event(
+        STORAGE_DB_PATH,
+        action="delete",
+        session_id=session_id,
+        document_id=document_id,
+        details="document deleted",
+        ip_address=request.client.host if request.client else None,
+        user_agent=request.headers.get("user-agent"),
+    )
+
     return {"documentId": document_id, "deleted": True}
 
 
@@ -1063,7 +1152,10 @@ def search_documents_endpoint(
         result = search_documents(q, page=page, page_size=page_size, use_cache=True)
 
         if "error" in result:
-            raise HTTPException(status_code=500, detail=result["error"])
+            error_msg = result["error"]
+            if "empty" in error_msg.lower() or "query" in error_msg.lower():
+                raise HTTPException(status_code=400, detail=error_msg)
+            raise HTTPException(status_code=500, detail=error_msg)
 
         return result
 
