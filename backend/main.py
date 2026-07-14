@@ -74,6 +74,22 @@ app.add_middleware(SecurityHeadersMiddleware)
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
+_SQL_PATTERNS = [
+    "SELECT ", "INSERT ", "UPDATE ", "DELETE ", "DROP ", "ALTER ",
+    "CREATE ", "TRUNCATE ", "EXEC ", "EXECUTE ", " UNION ", " OR ",
+    " sqlite_master", "information_schema", " pg_",
+]
+
+
+def _strip_sql(msg: str) -> str:
+    if not isinstance(msg, str):
+        return msg
+    lowered = msg.upper()
+    for pat in _SQL_PATTERNS:
+        if pat.upper() in lowered:
+            return "An internal error occurred"
+    return msg
+
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
@@ -84,7 +100,7 @@ async def http_exception_handler(request, exc):
             "success": False,
             "error": {
                 "code": exc.status_code,
-                "message": exc.detail,
+                "message": _strip_sql(exc.detail),
             },
             "request_id": req_id,
         },
@@ -94,6 +110,13 @@ async def http_exception_handler(request, exc):
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
     req_id = getattr(request.state, "request_id", None)
+    errors = exc.errors()
+    sanitized = []
+    for err in errors:
+        e = dict(err)
+        if "msg" in e:
+            e["msg"] = _strip_sql(e["msg"])
+        sanitized.append(e)
     return JSONResponse(
         status_code=422,
         content={
@@ -101,7 +124,7 @@ async def validation_exception_handler(request, exc):
             "error": {
                 "code": 422,
                 "message": "Validation error",
-                "details": exc.errors(),
+                "details": sanitized,
             },
             "request_id": req_id,
         },

@@ -2,8 +2,8 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import sqlite3
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
@@ -15,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Render ephemeral storage / local temp directory
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+QUARANTINE_DIR = os.path.join(UPLOAD_DIR, "quarantine")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(QUARANTINE_DIR, exist_ok=True)
 
 # SQLite Database setup
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "nyayavanni.db")
@@ -186,7 +188,7 @@ SESSION_TTL = timedelta(hours=24)
 
 
 def create_session_id(ip_address: str = "") -> str:
-    session_id = str(uuid.uuid4())
+    session_id = secrets.token_hex(32)
     now = datetime.now(timezone.utc)
     expires_at = now + SESSION_TTL
     conn = None

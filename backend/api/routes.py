@@ -76,9 +76,11 @@ from ..services.storage_service import (
 )
 from ..services.storage_service import (
     DB_PATH as STORAGE_DB_PATH,
+    QUARANTINE_DIR,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
+    delete_document_history,
     get_cached_analysis,
     get_document_record,
     save_cached_analysis,
@@ -147,7 +149,24 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
 
     raw_bytes = await read_upload_with_size_limit(file, MAX_FILE_SIZE)
 
+    # Save to quarantine before validation
+    quarantine_id = str(uuid.uuid4())
+    quarantine_path = os.path.join(QUARANTINE_DIR, f"{quarantine_id}.{ext}")
+    try:
+        with open(quarantine_path, "wb") as buffer:
+            buffer.write(raw_bytes)
+    except Exception as e:
+        if os.path.exists(quarantine_path):
+            os.remove(quarantine_path)
+        logger.error("File save to quarantine failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while saving the file.",
+        )
+
     if not validate_file_magic_bytes(raw_bytes, ext):
+        if os.path.exists(quarantine_path):
+            os.remove(quarantine_path)
         actual_mime = detect_actual_mime(raw_bytes)
         logger.warning(
             "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
@@ -159,6 +178,10 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
             status_code=400,
             detail="File content does not match the claimed file type. Upload rejected.",
         )
+
+    # Validation passed — remove from quarantine
+    if os.path.exists(quarantine_path):
+        os.remove(quarantine_path)
 
     return raw_bytes, safe_filename
 
@@ -684,15 +707,27 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             )
 
         doc_id = str(uuid.uuid4())
-        local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+        quarantine_path = os.path.join(QUARANTINE_DIR, f"{doc_id}.{ext}")
 
         try:
-            with open(local_path, "wb") as buffer:
+            with open(quarantine_path, "wb") as buffer:
                 buffer.write(raw_bytes)
         except Exception as e:
-            if os.path.exists(local_path):
-                os.remove(local_path)
-            logger.error("File save failed: %s", e, exc_info=True)
+            if os.path.exists(quarantine_path):
+                os.remove(quarantine_path)
+            logger.error("File save to quarantine failed: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail="An internal error occurred while saving the file.",
+            )
+
+        local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+        try:
+            os.rename(quarantine_path, local_path)
+        except Exception as e:
+            if os.path.exists(quarantine_path):
+                os.remove(quarantine_path)
+            logger.error("File move from quarantine failed: %s", e, exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail="An internal error occurred while saving the file.",
@@ -1490,6 +1525,60 @@ async def delete_document(document_id: str, request: Request):
     )
 
     return {"documentId": document_id, "deleted": True}
+
+
+class BulkDeleteRequest(BaseModel):
+    confirm: bool = Field(..., description="Must be true to confirm bulk deletion")
+
+
+@api_router.delete("/documents/history")
+@limiter.limit("3/minute")
+async def delete_document_history_endpoint(
+    request: Request, body: BulkDeleteRequest
+):
+    """Delete all documents and analysis history for the current session.
+
+    Requires confirmation via `confirm: true` in the request body.
+
+    Args:
+        request: The incoming HTTP request.
+        body: The bulk delete request with confirmation flag.
+
+    Returns:
+        dict: Confirmation with the number of deleted records.
+
+    Raises:
+        HTTPException 400: If confirmation is not provided.
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 500: If the bulk delete operation fails.
+    """
+    if not body.confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="Confirmation is required to delete document history. Set confirm=true.",
+        )
+
+    session_id = require_session_id(request)
+
+    try:
+        deleted = delete_document_history(session_id)
+    except Exception as e:
+        logger.error("Bulk document delete failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to delete document history"
+        )
+
+    log_action(
+        STORAGE_DB_PATH,
+        "document_history_delete",
+        "document",
+        None,
+        session_id,
+        {"deleted_count": deleted},
+        request.client.host if request.client else None,
+    )
+
+    return {"deleted": True, "deleted_count": deleted}
 
 
 @api_router.get("/search")
