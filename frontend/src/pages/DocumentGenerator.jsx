@@ -97,12 +97,17 @@ export default function DocumentGenerator() {
     return Object.keys(nextErrors).length === 0;
   };
 
+  const DOWNLOAD_TIMEOUT_MS = 30_000;
+
   const handleGenerate = async (e) => {
     e.preventDefault();
     if (!validate()) return;
 
     setIsGenerating(true);
     setSubmitError('');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), DOWNLOAD_TIMEOUT_MS);
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
@@ -113,6 +118,7 @@ export default function DocumentGenerator() {
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
         body: JSON.stringify(formData),
+        signal: controller.signal,
       });
 
       if (!response.ok) {
@@ -132,8 +138,15 @@ export default function DocumentGenerator() {
       link.remove();
       window.URL.revokeObjectURL(downloadUrl);
     } catch (error) {
-      setSubmitError(error.message || 'An unexpected error occurred.');
+      if (error.name === 'AbortError') {
+        setSubmitError(
+          'Request timed out. The server took too long to generate the document. Please try again.'
+        );
+      } else {
+        setSubmitError(error.message || 'An unexpected error occurred.');
+      }
     } finally {
+      clearTimeout(timeoutId);
       setIsGenerating(false);
     }
   };

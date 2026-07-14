@@ -8,7 +8,7 @@ def test_analyze_document_timeout(test_client, monkeypatch):
     the endpoint returns 504 Gateway Timeout.
     """
     # Mock extract_document and retrieve_relevant_laws to avoid external dependencies
-    monkeypatch.setattr("backend.api.routes.extract_document", lambda *args, **kwargs: "Mocked text content")
+    monkeypatch.setattr("backend.api.routes.extract_document", lambda *args, **kwargs: "Mocked text content that is long enough to pass the 50 character validation check in NyayaVanni.")
     monkeypatch.setattr("backend.api.routes.retrieve_relevant_laws", lambda *args, **kwargs: [])
     monkeypatch.setattr("backend.api.routes.get_cached_analysis", lambda *args, **kwargs: None)
     monkeypatch.setattr("backend.api.routes.require_session_id", lambda *args, **kwargs: "session-123")
