@@ -45,6 +45,7 @@ from ..services.gemini_service import (
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
+from ..services.reupload_validation import validate_analysis_reupload
 from ..services.search_service import (
     index_document,
     remove_document_from_index,
@@ -414,8 +415,13 @@ def _analyze_document_sync(
                     status_code=400, detail="Stored document has unsupported file type"
                 )
         else:
-            contents = file.file.read()
-            filename = file.filename
+            contents = file.file.read(MAX_FILE_SIZE + 1)
+            filename, contents = validate_analysis_reupload(
+                file.filename,
+                contents,
+                max_file_size=MAX_FILE_SIZE,
+                allowed_extensions=ALLOWED_EXTENSIONS,
+            )
 
         text = extract_document(
             contents, filename, force_ocr=force_ocr, language=language
