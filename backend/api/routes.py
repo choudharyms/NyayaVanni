@@ -392,7 +392,14 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 detail="Unsupported file content type. Only PDF, DOCX, and image files are allowed.",
             )
 
-        raw_bytes = await file.read()
+        try:
+            raw_bytes = await asyncio.wait_for(file.read(), timeout=30.0)
+        except asyncio.TimeoutError:
+            raise HTTPException(
+                status_code=408,
+                detail="Upload timed out. Please try again with a smaller file or a faster connection.",
+            )
+
         if len(raw_bytes) > MAX_FILE_SIZE:
             raise HTTPException(
                 status_code=413,

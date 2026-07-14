@@ -21,6 +21,7 @@ logger = logging.getLogger(__name__)
 
 _SENSITIVE_PATTERNS = [
     (re.compile(r"(?i)(authorization|bearer|token|apikey|api_key|secret|password|passwd)\s*[:=]\s*\S+"), r"\1=***"),
+    (re.compile(r'(?i)("(?:new_|confirm_)?password"\s*:\s*)"[^"]*"'), r'\1"***"'),
     (re.compile(r"(?i)(ghp_|gho_|ghu_|ghs_|ghr_)[\w-]+"), "token=***"),
     (re.compile(r"(?i)(sk-[a-zA-Z0-9]{20,})"), "sk-***"),
 ]
@@ -48,15 +49,15 @@ app = FastAPI(title="NyayaVanni API", description="Legal Document Analyzer API")
 
 
 class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_upload_size: int):
+    def __init__(self, app, max_body_size: int):
         super().__init__(app)
-        self.max_upload_size = max_upload_size
+        self.max_body_size = max_body_size
 
     async def dispatch(self, request: Request, call_next):
         content_length = request.headers.get("content-length")
         if content_length:
             try:
-                if int(content_length) > self.max_upload_size:
+                if int(content_length) > self.max_body_size:
                     return JSONResponse(
                         status_code=413,
                         content={
@@ -85,6 +86,73 @@ app.add_middleware(
 )
 
 # Set global limit to 11MB to safely allow the 10MB document uploads.
+app.add_middleware(LimitUploadSizeMiddleware, max_body_size=11 * 1024 * 1024)
+
+
+import json as _json
+
+
+class RequestBodySizeLimitMiddleware:
+    def __init__(self, app, max_body_size: int):
+        self.app = app
+        self.max_body_size = max_body_size
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http":
+            await self.app(scope, receive, send)
+            return
+
+        headers = dict(scope.get("headers", []))
+        content_length = headers.get(b"content-length")
+        if content_length:
+            try:
+                if int(content_length) > self.max_body_size:
+                    body = _json.dumps({
+                        "detail": "Payload Too Large: The request body exceeds the maximum allowed limit."
+                    }).encode()
+                    await send({
+                        "type": "http.response.start",
+                        "status": 413,
+                        "headers": [(b"content-type", b"application/json")],
+                    })
+                    await send({
+                        "type": "http.response.body",
+                        "body": body,
+                    })
+                    return
+            except (ValueError, TypeError):
+                pass
+
+        total = 0
+
+        async def wrapped_receive():
+            nonlocal total
+            message = await receive()
+            if message["type"] == "http.request":
+                total += len(message.get("body", b""))
+                if total > self.max_body_size:
+                    while message.get("more_body"):
+                        await receive()
+                    message = {
+                        "type": "http.request",
+                        "body": b"",
+                        "more_body": False,
+                    }
+            return message
+
+        await self.app(scope, wrapped_receive, send)
+
+
+app.add_middleware(RequestBodySizeLimitMiddleware, max_body_size=11 * 1024 * 1024)
+
+
+@app.middleware("http")
+async def strip_server_header(request, call_next):
+    response = await call_next(request)
+    response.headers.pop("server", None)
+    return response
+
+
 @app.middleware("http")
 async def validate_origin(request, call_next):
     if request.method == "OPTIONS":
@@ -96,7 +164,6 @@ async def validate_origin(request, call_next):
             return JSONResponse(status_code=403, content={"detail": "Forbidden"})
     return await call_next(request)
 
-app.add_middleware(LimitUploadSizeMiddleware, max_upload_size=11 * 1024 * 1024)
 
 from .services.search_service import init_search_service
 # Initialize search service with full-text indexing
