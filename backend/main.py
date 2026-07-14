@@ -2,46 +2,20 @@ import asyncio
 import os
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Request
+from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
-from starlette.middleware.base import BaseHTTPMiddleware
 
 from .middleware.rate_limit import limiter, rate_limit_handler
 from .middleware.security import SecurityHeadersMiddleware
+from .middleware.upload_limit import LimitUploadSizeMiddleware
 from .services.storage_service import cleanup_expired_documents
 
 load_dotenv()
 
 app = FastAPI(title="NyayaVanni API", description="Legal Document Analyzer API")
-
-
-class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
-    def __init__(self, app, max_upload_size: int):
-        super().__init__(app)
-        self.max_upload_size = max_upload_size
-
-    async def dispatch(self, request: Request, call_next):
-        content_length = request.headers.get("content-length")
-        if content_length:
-            try:
-                if int(content_length) > self.max_upload_size:
-                    return JSONResponse(
-                        status_code=413,
-                        content={
-                            "success": False,
-                            "error": {
-                                "code": 413,
-                                "message": "Payload Too Large: The request body exceeds the maximum allowed limit.",
-                            },
-                        },
-                    )
-            except ValueError:
-                pass
-
-        return await call_next(request)
 
 
 # Set global limit to 11MB to safely allow the 10MB document uploads.
