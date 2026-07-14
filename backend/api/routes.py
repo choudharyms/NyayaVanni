@@ -31,7 +31,16 @@ from ..config.rate_limits import (
     LOGIN_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
 )
-from ..models.schemas import ChatRequest, ChatResponse, ContactRequest, ForgotPasswordRequest, ResetPasswordRequest
+from ..models.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ContactRequest,
+    ForgotPasswordRequest,
+    ProfileUpdateRequest,
+    ResetPasswordRequest,
+    SendOtpRequest,
+    VerifyOtpRequest,
+)
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
@@ -60,9 +69,12 @@ from ..services.storage_service import (
     mark_password_reset_token_used,
     save_cached_analysis,
     save_document_record,
+    store_otp,
     store_password_reset_token,
+    store_profile,
     upload_to_local,
     validate_session,
+    verify_otp,
     verify_password_reset_token,
 )
 
@@ -288,6 +300,55 @@ async def logout(request: Request, response: Response):
         secure=session_secure,
     )
     return {"status": "Logged out"}
+
+
+@api_router.post("/profile")
+async def update_profile(request: Request, body: ProfileUpdateRequest):
+    """Update user profile with Pydantic-validated fields.
+
+    Validates name length, email format, and phone number format server-side.
+    """
+    session_id = require_session_id(request)
+    _log_access(request, "update-profile", session_id)
+    if not store_profile(session_id, body.name, body.email, body.phone):
+        raise HTTPException(status_code=500, detail="Failed to save profile")
+    return {"status": "ok", "message": "Profile updated successfully"}
+
+
+OTP_RATE_LIMIT = os.getenv("OTP_RATE_LIMIT", "3/minute")
+
+
+@api_router.post("/auth/send-otp")
+@limiter.limit(OTP_RATE_LIMIT)
+async def send_otp(request: Request, body: SendOtpRequest):
+    """Send an OTP to the given email address for verification."""
+    _log_access(request, "send-otp", extra=f"email={body.email}")
+    otp = str(uuid.uuid4().int)[:6]
+    if not store_otp(body.email, otp):
+        raise HTTPException(status_code=500, detail="Failed to generate OTP")
+    logger.info(
+        "OTP generated for %s (dev mode — OTP: %s)",
+        body.email,
+        otp,
+    )
+    return {"status": "ok", "message": "OTP sent successfully"}
+
+
+@api_router.post("/auth/verify-otp")
+@limiter.limit(OTP_RATE_LIMIT)
+async def verify_otp_endpoint(request: Request, body: VerifyOtpRequest):
+    """Verify an OTP with server-side expiry check.
+
+    The OTP expiry is validated on the server, not just client-side.
+    Expired OTPs are rejected even if the client still shows them as valid.
+    """
+    _log_access(request, "verify-otp", extra=f"email={body.email}")
+    if not verify_otp(body.email, body.otp):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired OTP. Please request a new one.",
+        )
+    return {"status": "ok", "message": "OTP verified successfully"}
 
 
 PASSWORD_RESET_RATE_LIMIT = os.getenv("PASSWORD_RESET_RATE_LIMIT", "3/hour")

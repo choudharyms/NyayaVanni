@@ -172,6 +172,29 @@ def _ensure_sessions_table(cursor):
             used INTEGER NOT NULL DEFAULT 0
         )
     """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS profiles (
+            session_id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            email TEXT NOT NULL,
+            phone TEXT,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS otp_codes (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            email TEXT NOT NULL,
+            otp_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER NOT NULL DEFAULT 0
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_otp_codes_email
+        ON otp_codes(email)
+    """)
 
 
 SESSION_TTL = timedelta(days=30)
@@ -625,6 +648,111 @@ def get_cached_analysis(doc_id: str, session_id: str, language: str) -> Optional
     except Exception as e:
         logger.error(f"SQLite analysis cache retrieve failed: {e}")
         return None
+    finally:
+        if conn:
+            conn.close()
+
+
+OTP_TTL = timedelta(minutes=10)
+
+
+def store_profile(session_id: str, name: str, email: str, phone: Optional[str]) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        now = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT OR REPLACE INTO profiles (session_id, name, email, phone, updated_at) VALUES (?, ?, ?, ?, ?)",
+            (session_id, name, email, phone, now),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Profile store failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_profile(session_id: str) -> Optional[dict]:
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT name, email, phone, updated_at FROM profiles WHERE session_id = ?",
+            (session_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            return dict(row)
+        return None
+    except Exception as e:
+        logger.error(f"Profile retrieve failed: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def store_otp(email: str, otp: str) -> bool:
+    conn = None
+    try:
+        otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+        now = datetime.now(timezone.utc)
+        expires_at = now + OTP_TTL
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO otp_codes (email, otp_hash, created_at, expires_at, used) VALUES (?, ?, ?, ?, 0)",
+            (email, otp_hash, now.isoformat(), expires_at.isoformat()),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"OTP store failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def verify_otp(email: str, otp: str) -> bool:
+    otp_hash = hashlib.sha256(otp.encode()).hexdigest()
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT expires_at, used FROM otp_codes WHERE email = ? AND otp_hash = ? ORDER BY created_at DESC LIMIT 1",
+            (email, otp_hash),
+        )
+        row = cursor.fetchone()
+        if not row:
+            return False
+        expires_at, used = row
+        if used:
+            logger.warning("OTP already used")
+            return False
+        if datetime.fromisoformat(expires_at) < datetime.now(timezone.utc):
+            logger.warning("OTP expired")
+            return False
+        cursor.execute(
+            "UPDATE otp_codes SET used = 1 WHERE email = ? AND otp_hash = ?",
+            (email, otp_hash),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        logger.error(f"OTP verify failed: {e}")
+        return False
     finally:
         if conn:
             conn.close()

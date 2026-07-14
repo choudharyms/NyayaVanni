@@ -1,7 +1,7 @@
 import re
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatMessage(BaseModel):
@@ -33,6 +33,31 @@ class DocumentGenerationRequest(BaseModel):
     effective_date: str
     consideration_amount: str
     jurisdiction: str
+
+
+class ProfileUpdateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    phone: Optional[str] = Field(None, max_length=20)
+
+    @field_validator("phone")
+    @classmethod
+    def validate_phone(cls, v: Optional[str]) -> Optional[str]:
+        if v is not None and v.strip():
+            cleaned = re.sub(r"[\s\-\(\)]+", "", v)
+            if not re.match(r"^\+?\d{7,15}$", cleaned):
+                raise ValueError("Invalid phone number format")
+            return cleaned
+        return v
+
+
+class SendOtpRequest(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+
+
+class VerifyOtpRequest(BaseModel):
+    email: str = Field(..., pattern=r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
+    otp: str = Field(..., min_length=4, max_length=8)
 
 
 class ForgotPasswordRequest(BaseModel):

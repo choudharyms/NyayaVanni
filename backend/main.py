@@ -8,7 +8,7 @@ import time
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, RedirectResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -73,9 +73,12 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
 
 
 # Configure CORS as the outermost middleware so preflight OPTIONS work correctly.
+# Restrict to specific origins — never use wildcard in production.
+_allowed_origins_str = os.getenv("ALLOWED_ORIGINS", os.getenv("FRONTEND_URL", "http://localhost:5173"))
+_allowed_origins = [o.strip() for o in _allowed_origins_str.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
     allow_headers=[
@@ -86,6 +89,24 @@ app.add_middleware(
         "Origin",
     ],
 )
+
+
+class HTTPSRedirectMiddleware(BaseHTTPMiddleware):
+    """Redirect HTTP requests to HTTPS in production environments."""
+
+    async def dispatch(self, request: Request, call_next):
+        if os.getenv("ENV", "").lower() in ("production", "prod"):
+            forwarded_proto = request.headers.get("x-forwarded-proto", "").lower()
+            if forwarded_proto == "http" or (
+                not forwarded_proto and request.url.scheme == "http"
+            ):
+                https_url = request.url.replace(scheme="https")
+                return RedirectResponse(url=str(https_url), status_code=307)
+        return await call_next(request)
+
+
+# HTTP-to-HTTPS redirect (registered early so it runs before other middleware)
+app.add_middleware(HTTPSRedirectMiddleware)
 
 # Set global limit to 11MB to safely allow the 10MB document uploads.
 app.add_middleware(LimitUploadSizeMiddleware, max_body_size=11 * 1024 * 1024)
