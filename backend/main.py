@@ -1,4 +1,5 @@
 import asyncio
+import logging
 import os
 
 from dotenv import load_dotenv
@@ -8,6 +9,8 @@ from fastapi.responses import JSONResponse
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
+
+logger = logging.getLogger(__name__)
 
 from .middleware.rate_limit import limiter, rate_limit_handler
 from .middleware.security import SecurityHeadersMiddleware
@@ -117,7 +120,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=[
         "Content-Type",
         "Authorization",

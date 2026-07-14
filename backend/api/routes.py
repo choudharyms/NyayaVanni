@@ -1,8 +1,11 @@
 import asyncio
+import hashlib
+import hmac
 import io
 import json
 import logging
 import os
+import secrets
 import uuid
 
 import google.generativeai as genai
@@ -28,6 +31,7 @@ from ..middleware.rate_limit import limiter
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
     DELETE_RATE_LIMIT,
+    PASSWORD_RESET_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
@@ -50,7 +54,26 @@ from ..services.search_service import (
     remove_document_from_index,
     search_documents,
 )
+from ..services.audit_log_service import log_action
+from ..services.auth_service import (
+    authenticate_user,
+    change_password,
+    force_reset_password,
+    get_user_by_id,
+    register_user,
+    request_password_reset,
+    reset_password_with_token,
+    send_verification_email,
+    update_avatar_url,
+    user_requires_password_reset,
+    verify_email,
+)
 from ..services.storage_service import (
+    get_session_user_id,
+    update_session_user_id,
+)
+from ..services.storage_service import (
+    DB_PATH as STORAGE_DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -58,11 +81,26 @@ from ..services.storage_service import (
     get_document_record,
     save_cached_analysis,
     save_document_record,
+    update_session_ip,
     upload_to_local,
     validate_session,
 )
 
 logger = logging.getLogger(__name__)
+
+CSRF_SECRET = os.getenv("CSRF_SECRET", secrets.token_hex(32))
+
+
+def _generate_csrf_token(session_id: str) -> str:
+    msg = f"{session_id}:{CSRF_SECRET}"
+    return hmac.new(
+        CSRF_SECRET.encode(), msg.encode(), hashlib.sha256
+    ).hexdigest()
+
+
+def _verify_csrf_token(session_id: str, token: str) -> bool:
+    expected = _generate_csrf_token(session_id)
+    return hmac.compare_digest(expected, token)
 
 api_router = APIRouter()
 graph_builder = LegalKnowledgeGraphBuilder()
@@ -105,12 +143,7 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
             detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
         )
 
-    raw_bytes = await file.read()
-    if len(raw_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="File size exceeds the maximum allowed limit of 10MB.",
-        )
+    raw_bytes = await read_upload_with_size_limit(file, MAX_FILE_SIZE)
 
     if not validate_file_magic_bytes(raw_bytes, ext):
         actual_mime = detect_actual_mime(raw_bytes)
@@ -128,12 +161,42 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
     return raw_bytes, safe_filename
 
 
+async def read_upload_with_size_limit(file: UploadFile, max_size: int) -> bytes:
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File size exceeds the maximum allowed limit of {max_size // (1024*1024)}MB.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
+
+
+class DocumentUpdateRequest(BaseModel):
+    filename: str = Field(..., min_length=1, max_length=255)
+
+
 class DocumentGenerationRequest(BaseModel):
     effective_date: str = Field(..., max_length=100)
     party_one_name: str = Field(..., max_length=500)
     party_two_name: str = Field(..., max_length=500)
     consideration_amount: str = Field(..., max_length=500)
     jurisdiction: str = Field(..., max_length=200)
+
+
+def _get_client_ip(request: Request) -> str:
+    if request.client:
+        return request.client.host
+    forwarded = request.headers.get("X-Forwarded-For")
+    if forwarded:
+        return forwarded.split(",")[0].strip()
+    return ""
 
 
 def require_session_id(request: Request) -> str:
@@ -155,7 +218,8 @@ def require_session_id(request: Request) -> str:
         session_id = request.headers.get("x-session-id")
     if not session_id:
         raise HTTPException(status_code=401, detail="Missing session_id cookie or header")
-    if not validate_session(session_id):
+    ip = _get_client_ip(request)
+    if not validate_session(session_id, ip):
         raise HTTPException(status_code=401, detail="Invalid or expired session")
     return session_id
 
@@ -182,6 +246,278 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
     return record
 
 
+# ---------------------------------------------------------------------------
+# CSRF token endpoint
+# ---------------------------------------------------------------------------
+
+
+@api_router.get("/csrf-token")
+async def get_csrf_token(request: Request):
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = request.headers.get("X-Session-Id")
+    if not session_id:
+        session_id = request.headers.get("x-session-id")
+    if not session_id:
+        session_id = create_session_id()
+        response = Response()
+        session_secure = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            samesite="strict",
+            secure=session_secure,
+            max_age=24 * 60 * 60,
+        )
+        update_session_user_id(session_id, None)
+    token = _generate_csrf_token(session_id)
+    return {"csrf_token": token}
+
+
+# ---------------------------------------------------------------------------
+# Auth endpoints
+# ---------------------------------------------------------------------------
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., max_length=320)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: str = Field("", max_length=200)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., max_length=320)
+    password: str = Field(..., max_length=128)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@api_router.post("/auth/register")
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest):
+    session_id = require_session_id(request)
+    is_default = body.password == "default123"
+    user = register_user(
+        email=body.email,
+        password=body.password,
+        display_name=body.display_name or None,
+        is_default_password=is_default,
+    )
+    if not user:
+        raise HTTPException(status_code=409, detail="Email already registered")
+    update_session_user_id(session_id, user["user_id"])
+    verification_token = user.pop("verification_token", None)
+    if verification_token:
+        send_verification_email(user["email"], verification_token)
+    log_action(
+        STORAGE_DB_PATH,
+        "user_register",
+        "user",
+        user["user_id"],
+        session_id,
+        {"email": body.email},
+        request.client.host if request.client else None,
+    )
+    return user
+
+
+@api_router.post("/auth/login")
+@limiter.limit("20/minute")
+async def login(request: Request, body: LoginRequest):
+    session_id = require_session_id(request)
+    user = authenticate_user(body.email, body.password)
+    if not user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid email or password.",
+        )
+    update_session_user_id(session_id, user["user_id"])
+    client_ip = _get_client_ip(request)
+    if client_ip:
+        update_session_ip(session_id, client_ip)
+    log_action(
+        STORAGE_DB_PATH,
+        "user_login",
+        "user",
+        user["user_id"],
+        session_id,
+        {"email": body.email},
+        request.client.host if request.client else None,
+    )
+    if user["must_reset_password"]:
+        raise HTTPException(
+            status_code=426,
+            detail="Password reset required. Please change your password.",
+            headers={"X-Password-Reset-Required": "true"},
+        )
+    return user
+
+
+@api_router.post("/auth/change-password")
+@limiter.limit("5/minute")
+async def change_password_endpoint(request: Request, body: ChangePasswordRequest):
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    success, message = change_password(user_id, body.current_password, body.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    log_action(
+        STORAGE_DB_PATH,
+        "password_change",
+        "user",
+        user_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+    return {"status": "ok", "message": message}
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., max_length=320)
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@api_router.post("/auth/forgot-password")
+@limiter.limit(PASSWORD_RESET_RATE_LIMIT)
+async def forgot_password(request: Request, body: ForgotPasswordRequest):
+    token = request_password_reset(body.email)
+    if token:
+        send_verification_email(body.email, token)
+    return {
+        "status": "ok",
+        "message": "If the email exists, a password reset link has been sent.",
+    }
+
+
+@api_router.post("/auth/reset-password")
+@limiter.limit(PASSWORD_RESET_RATE_LIMIT)
+async def reset_password(request: Request, body: ResetPasswordRequest):
+    success, message = reset_password_with_token(body.token, body.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    log_action(
+        STORAGE_DB_PATH,
+        "password_reset_token",
+        "user",
+        None,
+        None,
+        None,
+        request.client.host if request.client else None,
+    )
+    return {"status": "ok", "message": message}
+
+
+@api_router.post("/auth/force-reset-password")
+@limiter.limit(PASSWORD_RESET_RATE_LIMIT)
+async def force_reset_password_endpoint(request: Request, body: ChangePasswordRequest):
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    success, message = force_reset_password(user_id, body.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    log_action(
+        STORAGE_DB_PATH,
+        "force_password_reset",
+        "user",
+        user_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+    return {"status": "ok", "message": message}
+
+
+@api_router.get("/auth/verify-email")
+@limiter.limit("10/minute")
+async def verify_email_endpoint(request: Request, token: str):
+    """Verify a user's email address using the token sent at registration."""
+    if not token or not token.strip():
+        raise HTTPException(status_code=400, detail="Verification token is required")
+    success = verify_email(token.strip())
+    if not success:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid or expired verification token. Please register again.",
+        )
+    return {"status": "ok", "message": "Email verified successfully. You can now log in."}
+
+
+@api_router.get("/auth/me")
+async def get_current_user(request: Request):
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    user = get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
+AVATAR_MAX_SIZE = 2 * 1024 * 1024  # 2 MB
+ALLOWED_AVATAR_TYPES = {"image/jpeg", "image/png", "image/gif", "image/webp"}
+
+
+@api_router.post("/auth/avatar")
+@limiter.limit("5/minute")
+async def upload_avatar(request: Request, file: UploadFile = File(...)):
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    if not file.content_type or file.content_type not in ALLOWED_AVATAR_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported image format. Allowed: JPEG, PNG, GIF, WebP.",
+        )
+
+    raw_bytes = await read_upload_with_size_limit(file, AVATAR_MAX_SIZE)
+
+    avatar_dir = os.path.join(UPLOAD_DIR, "avatars")
+    os.makedirs(avatar_dir, exist_ok=True)
+    ext = file.filename.split(".")[-1] if file.filename else "png"
+    avatar_filename = f"{user_id}.{ext}"
+    avatar_path = os.path.join(avatar_dir, avatar_filename)
+
+    try:
+        with open(avatar_path, "wb") as f:
+            f.write(raw_bytes)
+    except Exception as e:
+        logger.error(f"Avatar save failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=500,
+            detail="An internal error occurred while saving the avatar.",
+        )
+
+    update_avatar_url(user_id, f"/uploads/avatars/{avatar_filename}")
+
+    log_action(
+        STORAGE_DB_PATH,
+        "avatar_upload",
+        "user",
+        user_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+
+    return {"status": "ok", "avatar_url": f"/uploads/avatars/{avatar_filename}"}
+
+
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
@@ -197,6 +533,18 @@ async def contact_us(request: Request, body: ContactRequest):
     Raises:
         HTTPException 429: If the rate limit is exceeded.
     """
+    session_id = None
+    try:
+        session_id = require_session_id(request)
+    except HTTPException:
+        session_id = None
+
+    csrf_token = request.headers.get("X-CSRF-Token")
+    if session_id and csrf_token:
+        if not _verify_csrf_token(session_id, csrf_token):
+            logger.warning("CSRF token validation failed for contact form")
+            raise HTTPException(status_code=403, detail="Invalid CSRF token")
+
     logger.info(
         "Contact submission from %s: name=%s email=%s subject=%s",
         request.client.host if request.client else "unknown",
@@ -235,7 +583,7 @@ async def create_session(request: Request, response: Response):
             httponly=True,
             samesite="strict",
             secure=session_secure,
-            max_age=30 * 24 * 60 * 60,  # 30 days
+            max_age=24 * 60 * 60,  # 24 hours
         )
     return {"status": "Session active", "sessionId": session_id}
 
@@ -282,12 +630,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
             )
 
-        raw_bytes = await file.read()
-        if len(raw_bytes) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail="File size exceeds the maximum allowed limit of 10MB.",
-            )
+        raw_bytes = await read_upload_with_size_limit(file, MAX_FILE_SIZE)
 
         if not validate_file_magic_bytes(raw_bytes, ext):
             actual_mime = detect_actual_mime(raw_bytes)
@@ -414,6 +757,20 @@ def _analyze_document_sync(
                     status_code=400, detail="Stored document has unsupported file type"
                 )
         else:
+            if not file.filename:
+                raise HTTPException(
+                    status_code=400, detail="Uploaded file must have a valid filename."
+                )
+            safe_filename = os.path.basename(file.filename)
+            safe_filename = "".join(
+                ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+            )
+            ext = safe_filename.split(".")[-1].lower() if "." in safe_filename else ""
+            if ext not in ALLOWED_EXTENSIONS:
+                raise HTTPException(
+                    status_code=400,
+                    detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+                )
             contents = file.file.read()
             filename = file.filename
 
@@ -914,9 +1271,61 @@ Provide a JSON response matching this exact schema:
         raise HTTPException(status_code=500, detail="Diff analysis failed")
 
 
+DOCUMENT_GENERATION_TIMEOUT = 30
+
+
+def _generate_pdf_sync(payload: DocumentGenerationRequest) -> io.BytesIO:
+    """Generate a PDF NDA document synchronously and return the buffer."""
+    buffer = io.BytesIO()
+    c = canvas.Canvas(buffer, pagesize=letter)
+    width, height = letter
+
+    c.setFont("Helvetica-Bold", 16)
+    c.drawCentredString(width / 2.0, height - 50, "NON-DISCLOSURE AGREEMENT")
+
+    c.setFont("Helvetica", 12)
+    text = c.beginText(50, height - 100)
+
+    template_text = (
+        f'This Non-Disclosure Agreement (the "Agreement") is entered into on {payload.effective_date} '
+        f'by and between {payload.party_one_name} ("Disclosing Party") and {payload.party_two_name} '
+        f'("Receiving Party").\n\n'
+        f"1. Confidential Information: The Receiving Party agrees to keep confidential any proprietary "
+        f"information disclosed by the Disclosing Party.\n\n"
+        f"2. Consideration: In consideration for the obligations set forth herein, the parties acknowledge "
+        f"the receipt and sufficiency of {payload.consideration_amount}.\n\n"
+        f"3. Jurisdiction: This Agreement shall be governed by the laws of {payload.jurisdiction}.\n\n"
+        f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
+    )
+
+    lines = template_text.split("\n")
+    for line in lines:
+        if not line:
+            continue
+        import textwrap
+
+        wrapped_lines = textwrap.wrap(line, width=75)
+        for wline in wrapped_lines:
+            text.textLine(wline)
+        text.textLine("")
+
+    c.drawText(text)
+    c.setFont("Helvetica-Oblique", 10)
+    c.drawCentredString(
+        width / 2.0,
+        30,
+        "Generated by NyayaVanni - For informational purposes only.",
+    )
+
+    c.showPage()
+    c.save()
+    buffer.seek(0)
+    return buffer
+
+
 @api_router.post("/generate-document")
 @limiter.limit("10/minute")
-def generate_document(request: Request, payload: DocumentGenerationRequest):
+async def generate_document(request: Request, payload: DocumentGenerationRequest):
     """Generate a standard NDA document as a downloadable PDF.
 
     Args:
@@ -934,61 +1343,75 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
     try:
         session_id = require_session_id(request)
 
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
-
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2.0, height - 50, "NON-DISCLOSURE AGREEMENT")
-
-        c.setFont("Helvetica", 12)
-        text = c.beginText(50, height - 100)
-
-        template_text = (
-            f'This Non-Disclosure Agreement (the "Agreement") is entered into on {payload.effective_date} '
-            f'by and between {payload.party_one_name} ("Disclosing Party") and {payload.party_two_name} '
-            f'("Receiving Party").\n\n'
-            f"1. Confidential Information: The Receiving Party agrees to keep confidential any proprietary "
-            f"information disclosed by the Disclosing Party.\n\n"
-            f"2. Consideration: In consideration for the obligations set forth herein, the parties acknowledge "
-            f"the receipt and sufficiency of {payload.consideration_amount}.\n\n"
-            f"3. Jurisdiction: This Agreement shall be governed by the laws of {payload.jurisdiction}.\n\n"
-            f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
+        buffer = await asyncio.wait_for(
+            asyncio.to_thread(_generate_pdf_sync, payload),
+            timeout=DOCUMENT_GENERATION_TIMEOUT,
         )
-
-        lines = template_text.split("\n")
-        for line in lines:
-            if not line:
-                continue
-            import textwrap
-
-            wrapped_lines = textwrap.wrap(line, width=75)
-            for wline in wrapped_lines:
-                text.textLine(wline)
-            text.textLine("")
-
-        c.drawText(text)
-        c.setFont("Helvetica-Oblique", 10)
-        c.drawCentredString(
-            width / 2.0,
-            30,
-            "Generated by NyayaVanni - For informational purposes only.",
-        )
-
-        c.showPage()
-        c.save()
-        buffer.seek(0)
 
         return StreamingResponse(
             buffer,
             media_type="application/pdf",
             headers={"Content-Disposition": 'attachment; filename="NDA_Document.pdf"'},
         )
+    except asyncio.TimeoutError:
+        logger.error("Document generation timed out")
+        raise HTTPException(
+            status_code=504, detail="Document generation timed out. Please try again."
+        )
     except HTTPException as http_err:
         raise http_err
     except Exception as e:
         logger.error(f"Failed to generate document: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate document")
+
+
+@api_router.patch("/documents/{document_id}")
+@limiter.limit("10/minute")
+async def update_document(document_id: str, request: Request, body: DocumentUpdateRequest):
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    safe_filename = os.path.basename(body.filename)
+    safe_filename = "".join(
+        ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+    )
+    if not safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid filename")
+
+    conn = None
+    try:
+        from ..services.storage_service import _connect_db
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET filename = ? WHERE document_id = ?",
+            (safe_filename, document_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Document not found")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update document {document_id}: {e}")
+        if conn:
+            conn.rollback()
+        raise HTTPException(status_code=500, detail="Failed to update document")
+    finally:
+        if conn:
+            conn.close()
+
+    log_action(
+        STORAGE_DB_PATH,
+        "document_update",
+        "document",
+        document_id,
+        session_id,
+        {"filename": safe_filename},
+        request.client.host if request.client else None,
+    )
+
+    return {"documentId": document_id, "filename": safe_filename, "updated": True}
 
 
 @api_router.delete("/documents/{document_id}")
@@ -1011,12 +1434,22 @@ async def delete_document(document_id: str, request: Request):
     session_id = require_session_id(request)
     require_document_owner(document_id, session_id)
 
-    deleted = delete_document_and_cache(document_id)
+    deleted = delete_document_and_cache(document_id, session_id)
     if not deleted:
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Remove document from search index
     remove_document_from_index(document_id)
+
+    log_action(
+        STORAGE_DB_PATH,
+        "document_delete",
+        "document",
+        document_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
 
     return {"documentId": document_id, "deleted": True}
 
