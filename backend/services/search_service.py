@@ -206,13 +206,16 @@ def search_documents(
         if not safe_query:
             return {"results": [], "total_count": 0, "from_cache": False}
 
+        # Wrap the FTS5 query in quotes to prevent syntax errors from special characters
+        fts_query = f'"{safe_query}"'
+
         # Count total matching documents
         cursor.execute(
             """
             SELECT COUNT(*) as count FROM documents_fts
             WHERE documents_fts MATCH ?
         """,
-            (safe_query,),
+            (fts_query,),
         )
         total_count = cursor.fetchone()["count"]
 
@@ -225,7 +228,7 @@ def search_documents(
             ORDER BY rank
             LIMIT ? OFFSET ?
         """,
-            (safe_query, page_size, offset),
+            (fts_query, page_size, offset),
         )
 
         results = [dict(row) for row in cursor.fetchall()]
@@ -254,6 +257,14 @@ def search_documents(
 
         return response
 
+    except sqlite3.OperationalError as e:
+        logger.error(f"FTS5 query error for '{query}': {e}")
+        return {
+            "results": [],
+            "total_count": 0,
+            "error": f"Invalid search query: {query.strip()[:50]}",
+            "from_cache": False,
+        }
     except Exception as e:
         logger.error(f"Search failed for query '{query}': {e}")
         return {"results": [], "total_count": 0, "error": str(e), "from_cache": False}
