@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from .audit_log_service import init_audit_log_table
 from .database import connect_db
 from .search_service import clear_expired_cache
 
@@ -56,6 +57,8 @@ def init_db(raise_on_error: bool = False):
         _ensure_sessions_table(cursor)
 
         conn.commit()
+
+        init_audit_log_table(DB_PATH)
     except Exception as e:
         if conn:
             conn.rollback()

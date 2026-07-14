@@ -1,8 +1,11 @@
 import asyncio
+import hashlib
+import hmac
 import io
 import json
 import logging
 import os
+import secrets
 import uuid
 
 import google.generativeai as genai
@@ -50,7 +53,17 @@ from ..services.search_service import (
     remove_document_from_index,
     search_documents,
 )
+from ..services.audit_log_service import log_action
+from ..services.auth_service import (
+    authenticate_user,
+    change_password,
+    force_reset_password,
+    get_user_by_id,
+    register_user,
+    user_requires_password_reset,
+)
 from ..services.storage_service import (
+    DB_PATH as STORAGE_DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -63,6 +76,20 @@ from ..services.storage_service import (
 )
 
 logger = logging.getLogger(__name__)
+
+CSRF_SECRET = os.getenv("CSRF_SECRET", secrets.token_hex(32))
+
+
+def _generate_csrf_token(session_id: str) -> str:
+    msg = f"{session_id}:{CSRF_SECRET}"
+    return hmac.new(
+        CSRF_SECRET.encode(), msg.encode(), hashlib.sha256
+    ).hexdigest()
+
+
+def _verify_csrf_token(session_id: str, token: str) -> bool:
+    expected = _generate_csrf_token(session_id)
+    return hmac.compare_digest(expected, token)
 
 api_router = APIRouter()
 graph_builder = LegalKnowledgeGraphBuilder()
@@ -105,12 +132,7 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
             detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
         )
 
-    raw_bytes = await file.read()
-    if len(raw_bytes) > MAX_FILE_SIZE:
-        raise HTTPException(
-            status_code=413,
-            detail="File size exceeds the maximum allowed limit of 10MB.",
-        )
+    raw_bytes = await read_upload_with_size_limit(file, MAX_FILE_SIZE)
 
     if not validate_file_magic_bytes(raw_bytes, ext):
         actual_mime = detect_actual_mime(raw_bytes)
@@ -126,6 +148,23 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
         )
 
     return raw_bytes, safe_filename
+
+
+async def read_upload_with_size_limit(file: UploadFile, max_size: int) -> bytes:
+    chunks = []
+    total = 0
+    while True:
+        chunk = await file.read(1024 * 1024)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_size:
+            raise HTTPException(
+                status_code=413,
+                detail=f"File size exceeds the maximum allowed limit of {max_size // (1024*1024)}MB.",
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 class DocumentGenerationRequest(BaseModel):
@@ -182,6 +221,156 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
     return record
 
 
+# ---------------------------------------------------------------------------
+# CSRF token endpoint
+# ---------------------------------------------------------------------------
+
+
+@api_router.get("/csrf-token")
+async def get_csrf_token(request: Request):
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = request.headers.get("X-Session-Id")
+    if not session_id:
+        session_id = request.headers.get("x-session-id")
+    if not session_id:
+        session_id = create_session_id()
+        response = Response()
+        session_secure = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
+        response.set_cookie(
+            key="session_id",
+            value=session_id,
+            httponly=True,
+            samesite="strict",
+            secure=session_secure,
+            max_age=30 * 24 * 60 * 60,
+        )
+    token = _generate_csrf_token(session_id)
+    return {"csrf_token": token}
+
+
+# ---------------------------------------------------------------------------
+# Auth endpoints
+# ---------------------------------------------------------------------------
+
+
+class RegisterRequest(BaseModel):
+    email: str = Field(..., max_length=320)
+    password: str = Field(..., min_length=8, max_length=128)
+    display_name: str = Field("", max_length=200)
+
+
+class LoginRequest(BaseModel):
+    email: str = Field(..., max_length=320)
+    password: str = Field(..., max_length=128)
+
+
+class ChangePasswordRequest(BaseModel):
+    current_password: str = Field(..., max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@api_router.post("/auth/register")
+@limiter.limit("5/minute")
+async def register(request: Request, body: RegisterRequest):
+    session_id = require_session_id(request)
+    is_default = body.password == "default123"
+    user = register_user(
+        email=body.email,
+        password=body.password,
+        display_name=body.display_name or None,
+        is_default_password=is_default,
+    )
+    if not user:
+        raise HTTPException(status_code=409, detail="Email already registered")
+    log_action(
+        STORAGE_DB_PATH,
+        "user_register",
+        "user",
+        user["user_id"],
+        session_id,
+        {"email": body.email},
+        request.client.host if request.client else None,
+    )
+    return user
+
+
+@api_router.post("/auth/login")
+@limiter.limit("20/minute")
+async def login(request: Request, body: LoginRequest):
+    session_id = require_session_id(request)
+    user = authenticate_user(body.email, body.password)
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    log_action(
+        STORAGE_DB_PATH,
+        "user_login",
+        "user",
+        user["user_id"],
+        session_id,
+        {"email": body.email},
+        request.client.host if request.client else None,
+    )
+    if user["must_reset_password"]:
+        raise HTTPException(
+            status_code=426,
+            detail="Password reset required. Please change your password.",
+            headers={"X-Password-Reset-Required": "true"},
+        )
+    return user
+
+
+@api_router.post("/auth/change-password")
+@limiter.limit("5/minute")
+async def change_password_endpoint(request: Request, body: ChangePasswordRequest):
+    session_id = require_session_id(request)
+    user = get_user_by_id(session_id)
+    user_id = user["user_id"] if user else session_id
+    success, message = change_password(user_id, body.current_password, body.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    log_action(
+        STORAGE_DB_PATH,
+        "password_change",
+        "user",
+        user_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+    return {"status": "ok", "message": message}
+
+
+@api_router.post("/auth/force-reset-password")
+@limiter.limit("3/minute")
+async def force_reset_password_endpoint(request: Request, body: ChangePasswordRequest):
+    session_id = require_session_id(request)
+    user = get_user_by_id(session_id)
+    user_id = user["user_id"] if user else session_id
+    success, message = force_reset_password(user_id, body.new_password)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+    log_action(
+        STORAGE_DB_PATH,
+        "force_password_reset",
+        "user",
+        user_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+    return {"status": "ok", "message": message}
+
+
+@api_router.get("/auth/me")
+async def get_current_user(request: Request):
+    session_id = require_session_id(request)
+    user = get_user_by_id(session_id)
+    if not user:
+        raise HTTPException(status_code=401, detail="User not found")
+    return user
+
+
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
@@ -197,6 +386,18 @@ async def contact_us(request: Request, body: ContactRequest):
     Raises:
         HTTPException 429: If the rate limit is exceeded.
     """
+    session_id = None
+    try:
+        session_id = require_session_id(request)
+    except HTTPException:
+        session_id = None
+
+    csrf_token = request.headers.get("X-CSRF-Token")
+    if session_id and csrf_token:
+        if not _verify_csrf_token(session_id, csrf_token):
+            logger.warning("CSRF token validation failed for contact form")
+            raise HTTPException(status_code=403, detail="Invalid CSRF token")
+
     logger.info(
         "Contact submission from %s: name=%s email=%s subject=%s",
         request.client.host if request.client else "unknown",
@@ -282,12 +483,7 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
             )
 
-        raw_bytes = await file.read()
-        if len(raw_bytes) > MAX_FILE_SIZE:
-            raise HTTPException(
-                status_code=413,
-                detail="File size exceeds the maximum allowed limit of 10MB.",
-            )
+        raw_bytes = await read_upload_with_size_limit(file, MAX_FILE_SIZE)
 
         if not validate_file_magic_bytes(raw_bytes, ext):
             actual_mime = detect_actual_mime(raw_bytes)
@@ -1017,6 +1213,16 @@ async def delete_document(document_id: str, request: Request):
 
     # Remove document from search index
     remove_document_from_index(document_id)
+
+    log_action(
+        STORAGE_DB_PATH,
+        "document_delete",
+        "document",
+        document_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
 
     return {"documentId": document_id, "deleted": True}
 
