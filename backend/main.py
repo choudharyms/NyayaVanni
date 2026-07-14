@@ -1,5 +1,7 @@
 import asyncio
+import logging
 import os
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request
@@ -9,6 +11,8 @@ from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
+logger = logging.getLogger(__name__)
+
 from .middleware.rate_limit import limiter, rate_limit_handler
 from .middleware.security import SecurityHeadersMiddleware
 from .services.storage_service import cleanup_expired_documents
@@ -16,6 +20,12 @@ from .services.storage_service import cleanup_expired_documents
 load_dotenv()
 
 app = FastAPI(title="NyayaVanni API", description="Legal Document Analyzer API")
+
+
+class RequestIDMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next):
+        request.state.request_id = str(uuid.uuid4())
+        return await call_next(request)
 
 
 class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
@@ -28,6 +38,7 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
         if content_length:
             try:
                 if int(content_length) > self.max_upload_size:
+                    req_id = getattr(request.state, "request_id", None)
                     return JSONResponse(
                         status_code=413,
                         content={
@@ -36,6 +47,7 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
                                 "code": 413,
                                 "message": "Payload Too Large: The request body exceeds the maximum allowed limit.",
                             },
+                            "request_id": req_id,
                         },
                     )
             except ValueError:
@@ -45,6 +57,7 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
 
 
 # Set global limit to 11MB to safely allow the 10MB document uploads.
+app.add_middleware(RequestIDMiddleware)
 app.add_middleware(LimitUploadSizeMiddleware, max_upload_size=11 * 1024 * 1024)
 
 from .services.search_service import init_search_service
@@ -64,6 +77,7 @@ from starlette.exceptions import HTTPException as StarletteHTTPException
 
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request, exc):
+    req_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=exc.status_code,
         content={
@@ -72,12 +86,14 @@ async def http_exception_handler(request, exc):
                 "code": exc.status_code,
                 "message": exc.detail,
             },
+            "request_id": req_id,
         },
     )
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request, exc):
+    req_id = getattr(request.state, "request_id", None)
     return JSONResponse(
         status_code=422,
         content={
@@ -87,13 +103,15 @@ async def validation_exception_handler(request, exc):
                 "message": "Validation error",
                 "details": exc.errors(),
             },
+            "request_id": req_id,
         },
     )
 
 
 @app.exception_handler(Exception)
 async def unhandled_exception_handler(request, exc):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True)
+    req_id = getattr(request.state, "request_id", None)
+    logger.error(f"Unhandled exception [request_id={req_id}]: {exc}", exc_info=True)
     return JSONResponse(
         status_code=500,
         content={
@@ -102,6 +120,7 @@ async def unhandled_exception_handler(request, exc):
                 "code": 500,
                 "message": "An internal server error occurred",
             },
+            "request_id": req_id,
         },
     )
 
@@ -117,7 +136,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[os.getenv("FRONTEND_URL", "http://localhost:5173")],
     allow_credentials=True,
-    allow_methods=["GET", "POST", "DELETE", "OPTIONS"],
+    allow_methods=["GET", "POST", "PATCH", "DELETE", "OPTIONS"],
     allow_headers=[
         "Content-Type",
         "Authorization",
