@@ -58,9 +58,9 @@ def init_search_service(db_path: str):
     _create_fts_index()
 
 
-def _get_query_hash(query: str, page: int, page_size: int) -> str:
+def _get_query_hash(query: str, page: int, page_size: int, session_id: str = "") -> str:
     """Generate a hash of the search query for caching purposes."""
-    key = f"{query}:{page}:{page_size}"
+    key = f"{query}:{page}:{page_size}:{session_id}"
     return hashlib.md5(key.encode()).hexdigest()
 
 
@@ -149,7 +149,11 @@ def index_document(document_id: str, filename: str, content: str):
 
 
 def search_documents(
-    query: str, page: int = 1, page_size: int = 10, use_cache: bool = True
+    query: str,
+    page: int = 1,
+    page_size: int = 10,
+    use_cache: bool = True,
+    session_id: str = "",
 ) -> Dict[str, Any]:
     """
     Search documents using full-text search with caching.
@@ -188,7 +192,7 @@ def search_documents(
     if page_size < 1 or page_size > 100:
         page_size = 10
 
-    query_hash = _get_query_hash(query.strip(), page, page_size)
+    query_hash = _get_query_hash(query.strip(), page, page_size, session_id)
 
     # Try to get cached result
     if use_cache:
@@ -206,26 +210,30 @@ def search_documents(
         if not safe_query:
             return {"results": [], "total_count": 0, "from_cache": False}
 
-        # Count total matching documents
+        # Count total matching documents visible to the requesting session
         cursor.execute(
             """
-            SELECT COUNT(*) as count FROM documents_fts
-            WHERE documents_fts MATCH ?
+            SELECT COUNT(*) as count
+            FROM documents_fts
+            JOIN documents AS d ON d.document_id = documents_fts.document_id
+            WHERE documents_fts MATCH ? AND d.session_id = ?
         """,
-            (safe_query,),
+            (safe_query, session_id),
         )
         total_count = cursor.fetchone()["count"]
 
-        # Fetch paginated results with relevance ranking
+        # Fetch paginated results with relevance ranking, scoped to the session
         offset = (page - 1) * page_size
         cursor.execute(
             """
-            SELECT document_id, filename, rank FROM documents_fts
-            WHERE documents_fts MATCH ?
+            SELECT documents_fts.document_id, documents_fts.filename, documents_fts.rank
+            FROM documents_fts
+            JOIN documents AS d ON d.document_id = documents_fts.document_id
+            WHERE documents_fts MATCH ? AND d.session_id = ?
             ORDER BY rank
             LIMIT ? OFFSET ?
         """,
-            (safe_query, page_size, offset),
+            (safe_query, session_id, page_size, offset),
         )
 
         results = [dict(row) for row in cursor.fetchall()]
