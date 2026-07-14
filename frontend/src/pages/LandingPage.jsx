@@ -67,7 +67,6 @@ export default function LandingPage() {
     if (!file) return;
     setLoading(true);
 
-    // Simulate MVP File Upload -> Fast API
     try {
       const formData = new FormData();
       formData.append('file', file);
@@ -81,11 +80,23 @@ export default function LandingPage() {
         body: formData,
       });
 
-      if (!response.ok) throw new Error('Upload failed');
+      if (!response.ok) {
+        let errMessage = 'Upload failed';
+        try {
+          const errData = await response.json();
+          errMessage = errData.detail || errMessage;
+        } catch {
+          try {
+            const errText = await response.text();
+            if (errText) errMessage = errText;
+          } catch {}
+        }
+        throw new Error(errMessage);
+      }
       const data = await response.json();
 
       // Navigate to Dashboard with the document ID
-      navigate(`/dashboard/${data.documentId}`, { state: { file } }); // Pass file for MVP purely to avoid re-downloading if needed
+      navigate(`/dashboard/${data.documentId}`, { state: { file } });
     } catch (error) {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       // Check if we're in production but still pointing to localhost
@@ -105,41 +116,43 @@ export default function LandingPage() {
       setLoading(false);
     }
   };
-  //  Shared hover styles for footer navigation links
+
   const footerLinkClass =
-    ' group text-left transition-all duration-300 ease-out hover:text-nyaya-400  hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(45,212,191,0.4)]';
+    ' group text-left transition-all duration-300 ease-out hover:text-court-gold hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(212,168,32,0.4)]';
 
   return (
-    <div className="relative flex flex-col items-center overflow-x-clip bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
-      {/* Background Gradients */}
-      <div className="absolute top-[-10%] left-[-10%] w-[50%] h-[50%] bg-nyaya-500/10 dark:bg-nyaya-500/30 rounded-full blur-[120px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
-      <div className="absolute bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[150px] mix-blend-multiply dark:mix-blend-screen pointer-events-none"></div>
+    <div className="relative flex flex-col min-h-screen bg-court-walnut text-court-cream wood-panel transition-colors duration-300 font-sans">
+      {/* Radial vignette backdrop */}
+      <div className="absolute inset-0 court-vignette opacity-95 pointer-events-none z-0"></div>
 
-      <nav className="sticky top-0 z-30 w-full border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300">
-        <div className="flex items-center justify-between w-full px-6 py-6 mx-auto max-w-7xl">
+      {/* Courtroom Theme Header */}
+      <nav className="relative z-20 w-full border-b border-court-gold/25 bg-court-walnut/90 backdrop-blur-xl transition-all duration-300">
+        <div className="flex items-center justify-between w-full px-6 py-5 mx-auto max-w-7xl">
           <div
-            className="flex items-center gap-2 text-2xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer"
+            className="flex items-center gap-2.5 text-2xl font-bold tracking-tight text-court-cream cursor-pointer"
             onClick={() => navigate('/')}
           >
-            <Scale className="w-8 h-8 text-nyaya-500" />
+            <span className="inline-flex items-center justify-center w-10 h-10 border rounded-full bg-court-gold/15 border-court-gold/30 shadow-[0_0_10px_rgba(212,168,32,0.1)]">
+              <Scale className="w-5 h-5 text-court-gold" />
+            </span>
             <span>
-              Nyaya<span className="text-nyaya-500">Vanni</span>
+              Nyaya<span className="text-court-gold font-semibold">Vanni</span>
             </span>
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-6">
             <button
               onClick={() => navigate('/lawyers')}
-              className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+              className="hidden px-4 py-2 font-medium text-court-cream hover:text-court-gold transition-colors sm:block cursor-pointer"
             >
               {t('nav.hire')}
             </button>
             <button
               onClick={() => navigate('/contact')}
-              className="hidden px-5 py-2 font-medium text-slate-700 hover:text-nyaya-600 dark:text-white dark:hover:text-nyaya-400 transition-colors rounded-full sm:block cursor-pointer"
+              className="hidden px-4 py-2 font-medium text-court-cream hover:text-court-gold transition-colors sm:block cursor-pointer"
             >
               {t('nav.contact')}
             </button>
-            <button className="px-5 py-2 font-medium text-slate-800 hover:bg-slate-100 dark:text-white dark:hover:bg-white/20 border border-slate-200 dark:border-white/10 bg-white/50 dark:bg-white/10 rounded-full backdrop-blur-md transition-all">
+            <button className="px-5 py-2 font-semibold text-court-walnut bg-court-gold hover:bg-yellow-500 rounded-full shadow-lg shadow-court-gold/10 transition-all cursor-pointer">
               {t('nav.signin')}
             </button>
             <ThemeToggle />
@@ -147,164 +160,151 @@ export default function LandingPage() {
         </div>
       </nav>
 
-      <main className="z-10 flex flex-col items-center justify-center flex-1 w-full max-w-7xl px-6 pt-12 pb-24 mx-auto text-center">
-        <div className="inline-block mb-6 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-400 font-medium text-sm animate-pulse-soft">
-          Powered by Advanced AI
-        </div>
-        <h1 className="mb-6 text-5xl font-extrabold leading-tight tracking-tight md:text-7xl text-slate-900 dark:text-white">
-          {t('landing.hero.title1')} <br /> {t('landing.hero.title2')}{' '}
-          <span className="text-transparent bg-clip-text bg-linear-to-r from-nyaya-500 to-blue-500 dark:from-nyaya-400 dark:to-blue-400">
-            {t('landing.hero.title3')}
-          </span>
-        </h1>
-        <p className="max-w-2xl mb-12 text-lg md:text-xl text-slate-600 dark:text-slate-400">
-          {t('landing.hero.subtitle')}
-        </p>
-
-        {/* Actions Area — 4-card grid */}
-        <div className="relative z-10 grid justify-center w-full max-w-6xl grid-cols-1 gap-8 md:grid-cols-2 lg:grid-cols-4">
-          {/* Upload Document Card */}
-          <div
-            className="relative w-full animate-float group"
-            style={{ animationDelay: '0s' }}
-          >
-            <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-nyaya-500/10 dark:from-nyaya-500/20 to-blue-500/10 dark:to-blue-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
-            <div
-              className={`h-full bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl p-10 border-2 transition-all duration-300 flex flex-col items-center justify-center min-h-90
-                ${dragActive ? 'border-nyaya-500 shadow-[0_0_30px_rgba(37,99,235,0.2)]' : 'border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 hover:-translate-y-2 cursor-pointer'}`}
-              onDragEnter={handleDrag}
-              onDragLeave={handleDrag}
-              onDragOver={handleDrag}
-              onDrop={handleDrop}
-            >
-              <input
-                ref={inputRef}
-                type="file"
-                className="hidden"
-                accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/png,image/jpeg"
-                onChange={handleChange}
-              />
-
-              {!file ? (
-                <>
-                  <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
-                    <UploadCloud className="w-8 h-8 text-slate-500 dark:text-nyaya-400 group-hover:text-nyaya-600 dark:group-hover:text-nyaya-300" />
-                  </div>
-                  <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">
-                    {t('landing.upload.title')}
-                  </h3>
-                  <p className="flex-1 mb-8 text-base whitespace-pre-line text-slate-600 dark:text-slate-400">
-                    {t('landing.upload.desc')}
-                  </p>
-                  <button
-                    onClick={onButtonClick}
-                    className="flex items-center justify-center w-full gap-2 px-8 py-3 font-semibold transition-all bg-slate-900 hover:bg-slate-850 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-full shadow-lg sm:w-auto hover:scale-105"
-                  >
-                    <FileText className="w-5 h-5" /> {t('landing.upload.btn')}
-                  </button>
-                </>
-              ) : (
-                <div className="flex flex-col items-center justify-center w-full h-full">
-                  <div className="flex items-center justify-center w-16 h-16 mb-6 rounded-full bg-nyaya-500/15 dark:bg-nyaya-500/20 ring-1 ring-nyaya-500/30 dark:ring-nyaya-500/50">
-                    <ShieldCheck className="w-8 h-8 text-nyaya-600 dark:text-nyaya-400" />
-                  </div>
-                  <h3
-                    className="mb-2 text-xl font-bold text-slate-850 dark:text-white truncate max-w-50"
-                    title={file.name}
-                  >
-                    {file.name}
-                  </h3>
-                  <p className="mb-10 text-sm text-slate-500 dark:text-slate-400">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB • Ready for
-                    analysis
-                  </p>
-
-                  <div className="flex flex-col justify-center w-full gap-4 sm:flex-row">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setFile(null);
-                      }}
-                      className="px-6 py-3 font-medium transition-colors rounded-full hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-600 dark:text-slate-300"
-                      disabled={loading}
-                    >
-                      {t('landing.upload.cancel')}
-                    </button>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        handleAnalyze();
-                      }}
-                      disabled={loading}
-                      className="flex items-center justify-center gap-2 px-8 py-3 font-semibold text-white transition-all rounded-full shadow-lg bg-nyaya-500 hover:bg-nyaya-400 shadow-nyaya-500/15 dark:shadow-nyaya-500/25 disabled:opacity-70 hover:scale-105"
-                    >
-                      {loading ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />{' '}
-                          {t('landing.upload.analyzing')}
-                        </>
-                      ) : (
-                        <>
-                          {t('landing.upload.analyze')}{' '}
-                          <ArrowRight className="w-5 h-5" />
-                        </>
-                      )}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+      {/* Main Two-Panel Split Layout Grid */}
+      <main className="relative z-10 flex-1 flex flex-col lg:flex-row w-full max-w-7xl px-6 py-8 md:py-12 mx-auto gap-8 items-stretch">
+        
+        {/* Left Panel: Content, Descriptions and 2x2 Grid of Actions */}
+        <div className="w-full lg:w-[62%] flex flex-col justify-center text-left lg:pr-8">
+          <div className="inline-block mb-5 px-4 py-1.5 rounded-full bg-court-gold/10 border border-court-gold/20 text-court-gold font-medium text-xs max-w-fit animate-pulse-soft">
+            ⚖️ AUTHORITATIVE LEGAL INTELLIGENCE
           </div>
+          <h1 className="mb-6 text-4xl sm:text-5xl md:text-6xl font-bold font-serif leading-tight text-court-cream">
+            {t('landing.hero.title1')} <br /> {t('landing.hero.title2')}{' '}
+            <span className="text-court-gold block sm:inline font-style-italic">
+              {t('landing.hero.title3')}
+            </span>
+          </h1>
+          <p className="max-w-2xl mb-10 text-base sm:text-lg text-court-muted leading-relaxed">
+            {t('landing.hero.subtitle')}
+          </p>
 
-          {/* Chat with Bot Card */}
-          <div
-            className="relative w-full animate-float group"
-            style={{ animationDelay: '0.2s' }}
-          >
-            <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-purple-500/10 dark:from-purple-500/20 to-pink-500/10 dark:to-pink-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
+          {/* Structured Actions: 2x2 Courtroom Cards Grid */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full mb-8">
+            
+            {/* Card 1: Upload Document */}
+            <div className="relative group">
+              <div
+                className={`h-full court-card court-card-gold-hover rounded-3xl p-8 flex flex-col items-center justify-center min-h-[340px] text-center cursor-pointer
+                  ${dragActive ? 'border-yellow-400 shadow-[0_0_25px_rgba(212,168,32,0.35)]' : ''}`}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+              >
+                <input
+                  ref={inputRef}
+                  type="file"
+                  className="hidden"
+                  accept="application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,.docx,image/png,image/jpeg"
+                  onChange={handleChange}
+                />
+
+                {!file ? (
+                  <>
+                    <div className="flex items-center justify-center w-14 h-14 mb-5 rounded-full bg-court-walnut border border-court-gold/40 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                      <UploadCloud className="w-7 h-7 text-court-gold" />
+                    </div>
+                    <h3 className="mb-2 text-xl font-bold font-serif text-court-cream">
+                      {t('landing.upload.title')}
+                    </h3>
+                    <p className="flex-1 mb-6 text-sm text-court-muted leading-relaxed">
+                      {t('landing.upload.desc')}
+                    </p>
+                    <button
+                      onClick={onButtonClick}
+                      className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold bg-court-gold hover:bg-yellow-500 text-court-walnut rounded-full shadow-lg shadow-court-gold/10 hover:scale-105 transition-all text-sm"
+                    >
+                      <FileText className="w-4 h-4" /> {t('landing.upload.btn')}
+                    </button>
+                  </>
+                ) : (
+                  <div className="flex flex-col items-center justify-center w-full h-full">
+                    <div className="flex items-center justify-center w-14 h-14 mb-5 rounded-full bg-court-gold/15 border border-court-gold/30">
+                      <ShieldCheck className="w-7 h-7 text-court-gold" />
+                    </div>
+                    <h3 className="mb-1 text-lg font-bold text-court-cream truncate max-w-[200px]" title={file.name}>
+                      {file.name}
+                    </h3>
+                    <p className="mb-8 text-xs text-court-muted">
+                      {(file.size / 1024 / 1024).toFixed(2)} MB • Ready
+                    </p>
+
+                    <div className="flex flex-col sm:flex-row justify-center w-full gap-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setFile(null);
+                        }}
+                        className="px-5 py-2 font-semibold text-court-muted hover:text-court-cream hover:bg-white/5 rounded-full transition-colors text-sm"
+                        disabled={loading}
+                      >
+                        {t('landing.upload.cancel')}
+                      </button>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleAnalyze();
+                        }}
+                        disabled={loading}
+                        className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold bg-court-gold hover:bg-yellow-500 text-court-walnut rounded-full shadow-lg hover:scale-105 transition-all text-sm"
+                      >
+                        {loading ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin" />{' '}
+                            {t('landing.upload.analyzing')}
+                          </>
+                        ) : (
+                          <>
+                            {t('landing.upload.analyze')}{' '}
+                            <ArrowRight className="w-4 h-4" />
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Card 2: Chat with Bot */}
             <div
-              className="flex flex-col items-center justify-center h-full p-10 transition-all duration-300 border-2 cursor-pointer bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 min-h-90 hover:-translate-y-2"
+              className="court-card court-card-gold-hover rounded-3xl p-8 flex flex-col items-center justify-center min-h-[340px] text-center cursor-pointer group"
               onClick={() => navigate('/chat')}
             >
-              <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
-                <Bot className="w-8 h-8 text-purple-650 dark:text-purple-400 group-hover:text-purple-750 dark:group-hover:text-purple-300" />
+              <div className="flex items-center justify-center w-14 h-14 mb-5 rounded-full bg-court-walnut border border-court-gold/40 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                <Bot className="w-7 h-7 text-court-gold" />
               </div>
-              <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">
+              <h3 className="mb-2 text-xl font-bold font-serif text-court-cream">
                 {t('landing.chat.title')}
               </h3>
-              <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
+              <p className="flex-1 mb-6 text-sm text-court-muted leading-relaxed">
                 {t('landing.chat.desc')}
               </p>
 
-              <div className="flex flex-col gap-3 w-full max-w-62.5 mb-8">
+              <div className="flex flex-col gap-2 w-full mb-6">
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate('/chat', {
-                      state: {
-                        initialPrompt: 'I need to draft a legal notice.',
-                      },
+                      state: { initialPrompt: 'I need to draft a legal notice.' },
                     });
                   }}
-                  className="flex items-center justify-between px-4 py-2 text-sm text-left transition-colors border rounded-lg bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-700/50 dark:border-slate-700 dark:text-slate-300 group/btn"
+                  className="flex items-center justify-between px-4 py-1.5 text-xs text-left border rounded-lg bg-court-walnut/30 border-court-gold/20 hover:border-court-gold/50 text-court-muted hover:text-court-cream transition-all group/btn"
                 >
                   {t('landing.chat.draftNotice')}{' '}
-                  <ArrowRight className="w-4 h-4 transition-opacity opacity-0 group-hover/btn:opacity-100" />
+                  <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                 </button>
                 <button
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate('/chat', {
-                      state: {
-                        initialPrompt:
-                          'I need to draft a reply to a legal notice.',
-                      },
+                      state: { initialPrompt: 'I need to draft a reply to a legal notice.' },
                     });
                   }}
-                  className="flex items-center justify-between px-4 py-2 text-sm text-left transition-colors border rounded-lg bg-slate-50 hover:bg-slate-100 border-slate-200 text-slate-700 dark:bg-slate-800/50 dark:hover:bg-slate-700/50 dark:border-slate-700 dark:text-slate-300 group/btn"
+                  className="flex items-center justify-between px-4 py-1.5 text-xs text-left border rounded-lg bg-court-walnut/30 border-court-gold/20 hover:border-court-gold/50 text-court-muted hover:text-court-cream transition-all group/btn"
                 >
                   {t('landing.chat.replyNotice')}{' '}
-                  <ArrowRight className="w-4 h-4 transition-opacity opacity-0 group-hover/btn:opacity-100" />
+                  <ArrowRight className="w-3.5 h-3.5 opacity-0 group-hover/btn:opacity-100 transition-opacity" />
                 </button>
               </div>
 
@@ -313,111 +313,156 @@ export default function LandingPage() {
                   e.stopPropagation();
                   navigate('/chat');
                 }}
-                className="w-full sm:w-auto bg-linear-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(168,85,247,0.15)] dark:shadow-[0_0_20px_rgba(168,85,247,0.3)] flex items-center justify-center gap-2 hover:scale-105"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold bg-court-gold hover:bg-yellow-500 text-court-walnut rounded-full shadow-lg hover:scale-105 transition-all text-sm"
               >
-                <MessageSquare className="w-5 h-5" /> {t('landing.chat.btn')}
+                <MessageSquare className="w-4 h-4" /> {t('landing.chat.btn')}
               </button>
             </div>
-          </div>
 
-          {/* Scam Detector Card */}
-          <div
-            className="relative w-full animate-float group"
-            style={{ animationDelay: '0.4s' }}
-          >
-            <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-emerald-500/10 dark:from-emerald-500/20 to-cyan-500/10 dark:to-cyan-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
-
+            {/* Card 3: Scam Detector */}
             <div
-              className="flex flex-col items-center justify-center h-full p-10 transition-all duration-300 border-2 cursor-pointer bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 min-h-90 hover:-translate-y-2"
+              className="court-card court-card-gold-hover rounded-3xl p-8 flex flex-col items-center justify-center min-h-[340px] text-center cursor-pointer group"
               onClick={() => navigate('/scam-detector')}
             >
-              <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
-                <ShieldCheck className="w-8 h-8 text-emerald-600 dark:text-emerald-400 group-hover:text-emerald-555 dark:group-hover:text-emerald-300" />
+              <div className="flex items-center justify-center w-14 h-14 mb-5 rounded-full bg-court-walnut border border-court-gold/40 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                <ShieldCheck className="w-7 h-7 text-court-gold" />
               </div>
-
-              <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">
+              <h3 className="mb-2 text-xl font-bold font-serif text-court-cream">
                 Scam Detector
               </h3>
-              <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
-                Analyze suspicious legal SMS, WhatsApp, or email text and get a
-                risk score with clear explanations.
+              <p className="flex-1 mb-6 text-sm text-court-muted leading-relaxed">
+                Analyze suspicious legal SMS, WhatsApp messages, or emails and receive risk scores with clear explanations.
               </p>
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate('/scam-detector');
                 }}
-                className="w-full sm:w-auto bg-linear-to-r from-emerald-600 to-cyan-600 hover:from-emerald-500 hover:to-cyan-500 text-white px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(16,185,129,0.15)] dark:shadow-[0_0_20px_rgba(16,185,129,0.25)] flex items-center justify-center gap-2 hover:scale-105"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold bg-court-gold hover:bg-yellow-500 text-court-walnut rounded-full shadow-lg hover:scale-105 transition-all text-sm"
               >
-                Try Scam Detector <ArrowRight className="w-5 h-5" />
+                Scan Text <ArrowRight className="w-4 h-4" />
               </button>
             </div>
-          </div>
 
-          {/* Version Difference Analysis Card */}
-          <div
-            className="relative w-full animate-float group"
-            style={{ animationDelay: '0.6s' }}
-          >
-            <div className="absolute inset-0 transition-all duration-500 transform translate-x-1 translate-y-2 bg-linear-to-r from-blue-500/10 dark:from-blue-500/20 to-violet-500/10 dark:to-violet-500/20 rounded-4xl blur-xl -z-10 group-hover:blur-2xl group-hover:scale-105"></div>
-
+            {/* Card 4: Version Difference Analysis */}
             <div
-              className="flex flex-col items-center justify-center h-full p-10 transition-all duration-300 border-2 cursor-pointer bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl rounded-4xl border-slate-200 dark:border-slate-700/50 hover:border-slate-350 dark:hover:border-slate-600 hover:bg-slate-50 dark:hover:bg-slate-800/80 min-h-90 hover:-translate-y-2"
+              className="court-card court-card-gold-hover rounded-3xl p-8 flex flex-col items-center justify-center min-h-[340px] text-center cursor-pointer group"
               onClick={() => navigate('/version-diff')}
             >
-              <div className="flex items-center justify-center w-16 h-16 mb-6 transition-all duration-300 rounded-full shadow-inner bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 group-hover:scale-110 group-hover:bg-slate-200 dark:group-hover:bg-slate-700">
-                <GitCompare className="w-8 h-8 text-blue-600 dark:text-blue-400 group-hover:text-violet-600 dark:group-hover:text-violet-300" />
+              <div className="flex items-center justify-center w-14 h-14 mb-5 rounded-full bg-court-walnut border border-court-gold/40 shadow-inner group-hover:scale-105 transition-transform duration-300">
+                <GitCompare className="w-7 h-7 text-court-gold" />
               </div>
-
-              <h3 className="mb-3 text-2xl font-bold text-slate-850 dark:text-white">
+              <h3 className="mb-2 text-xl font-bold font-serif text-court-cream">
                 Version Diff Analysis
               </h3>
-              <p className="flex-1 max-w-xs mb-8 text-base text-center text-slate-600 dark:text-slate-400">
-                Compare two document versions. Spot added obligations, higher
-                penalties, reduced rights, and hidden changes.
+              <p className="flex-1 mb-6 text-sm text-court-muted leading-relaxed">
+                Compare two document versions side-by-side. Instantly spot new obligations, increased penalties, or hidden terms.
               </p>
-
               <button
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate('/version-diff');
                 }}
-                className="w-full sm:w-auto bg-linear-to-r from-blue-600 to-violet-600 hover:from-blue-500 hover:to-violet-500 text-white px-8 py-3 rounded-full font-semibold transition-all shadow-[0_0_20px_rgba(37,99,235,0.15)] dark:shadow-[0_0_20px_rgba(37,99,235,0.25)] flex items-center justify-center gap-2 hover:scale-105"
+                className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold bg-court-gold hover:bg-yellow-500 text-court-walnut rounded-full shadow-lg hover:scale-105 transition-all text-sm"
               >
-                Compare Versions <ArrowRight className="w-5 h-5" />
+                Compare Versions <ArrowRight className="w-4 h-4" />
               </button>
             </div>
           </div>
         </div>
-        {/* Recent Documents History */}
-        {history.length > 0 && (
-          <div className="w-full max-w-lg mx-auto mt-8">
-            <RecentDocuments history={history} onClear={clearHistory} />
+
+        {/* Right Panel: Stylized Barrister / Justice SVG Illustration */}
+        <div className="w-full lg:w-[38%] flex items-center justify-center p-6 sm:p-12 relative overflow-hidden select-none">
+          <div className="absolute inset-0 bg-radial-gradient from-court-gold/10 via-transparent to-transparent opacity-30 pointer-events-none"></div>
+
+          <div className="w-full max-w-[340px] lg:max-w-full flex justify-center items-center relative animate-float">
+            
+            {/* Detailed Barrister SVG Illustration */}
+            <svg viewBox="0 0 400 700" fill="none" xmlns="http://www.w3.org/2000/svg" className="w-full h-auto max-h-[80vh]">
+              {/* Radial glow around justice scale */}
+              <circle cx="280" cy="210" r="100" fill="url(#scale-glow)" opacity="0.45" />
+
+              {/* Silhouette outline of the Barrister */}
+              <path
+                d="M50 700 C80 570 120 440 150 400 C140 350 145 310 150 260 C130 260 110 280 100 310 L70 340 C60 320 65 290 85 260 C110 220 140 210 170 210 C160 175 165 150 180 130 C195 110 215 110 230 130 C245 150 250 175 240 210 C270 210 300 225 315 250 L345 230 C360 250 355 270 340 290 L310 310 C312 330 310 350 300 400 C330 440 370 570 400 700 Z"
+                fill="#120c06"
+              />
+
+              {/* Delicate gold robe contour markings */}
+              <path
+                d="M150 400 C165 490 175 600 185 700"
+                stroke="#d4a820"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.25"
+              />
+              <path
+                d="M250 400 C235 490 225 600 215 700"
+                stroke="#d4a820"
+                strokeWidth="1.5"
+                strokeLinecap="round"
+                opacity="0.25"
+              />
+
+              {/* Courtroom Collar & White Tabs */}
+              <path d="M194 210 L189 250 L199 250 Z M214 210 L219 250 L209 250 Z" fill="#e8e0d0" />
+              <path d="M184 210 C194 195 214 195 224 210 Z" fill="#e8e0d0" stroke="#120c06" strokeWidth="1.5" />
+
+              {/* Arm extending upward to support the scale */}
+              <path d="M240 210 C260 180 280 140 280 110 C280 100 275 95 270 100 L260 120 C250 140 240 185 240 210 Z" fill="#120c06" />
+              <circle cx="280" cy="100" r="8" fill="#d4a820" />
+
+              {/* Balanced Gold Scales of Justice (Libra) */}
+              <path d="M200 120 L360 120" stroke="#d4a820" strokeWidth="4.5" strokeLinecap="round" />
+              <path d="M280 100 L280 180" stroke="#d4a820" strokeWidth="4.5" strokeLinecap="round" />
+              <circle cx="280" cy="120" r="6" fill="#d4a820" />
+
+              {/* Left hanging pan */}
+              <path d="M200 120 L185 170 M200 120 L215 170" stroke="#d4a820" strokeWidth="1.2" />
+              <path d="M180 170 C180 177 220 177 220 170 Z" fill="#d4a820" />
+
+              {/* Right hanging pan */}
+              <path d="M360 120 L345 170 M360 120 L375 170" stroke="#d4a820" strokeWidth="1.2" />
+              <path d="M340 170 C340 177 380 177 380 170 Z" fill="#d4a820" />
+
+              <defs>
+                <radialGradient id="scale-glow" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+                  <stop offset="0%" stopColor="#d4a820" stopOpacity="0.45" />
+                  <stop offset="100%" stopColor="#d4a820" stopOpacity="0" />
+                </radialGradient>
+              </defs>
+            </svg>
           </div>
-        )}
+        </div>
       </main>
 
-      {/* FAQ + Footer */}
-      <section className="z-10 w-full pb-0">
+      {/* Recent Activity history section */}
+      {history.length > 0 && (
+        <section className="relative z-10 w-full max-w-7xl px-6 mb-8 mx-auto">
+          <RecentDocuments history={history} onClear={clearHistory} />
+        </section>
+      )}
+
+      {/* Accordion FAQ + Courtroom Footer Section */}
+      <section className="relative z-10 w-full pb-0 mt-8">
         <div className="w-full px-6 mx-auto max-w-7xl">
-          {/* FAQ */}
+          {/* Courtroom Styled FAQ */}
           <div
             id="faq"
-            className="p-8 mt-6 border bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl border-slate-200 dark:border-slate-800 rounded-4xl md:p-10 transition-colors duration-300"
+            className="p-8 border bg-court-walnut/90 border-court-gold/25 rounded-3xl md:p-10 shadow-2xl transition-colors duration-300"
           >
             <div className="flex items-start justify-between gap-6 mb-8">
               <div>
-                <h2 className="text-3xl font-extrabold text-slate-850 dark:text-white md:text-4xl">
+                <h2 className="text-3xl font-bold font-serif text-court-cream md:text-4xl">
                   {t('faq.title')}
                 </h2>
-                <p className="max-w-2xl mt-2 text-slate-600 dark:text-slate-400">
+                <p className="max-w-2xl mt-2 text-court-muted">
                   {t('faq.desc')}
                 </p>
               </div>
             </div>
 
-            <div className="columns-1 md:columns-2 gap-4 space-y-4">
+            <div className="columns-1 md:columns-2 gap-6 space-y-4">
               {[
                 { q: t('faq.q1'), a: t('faq.a1') },
                 { q: t('faq.q2'), a: t('faq.a2') },
@@ -426,27 +471,25 @@ export default function LandingPage() {
               ].map((item, idx) => (
                 <div
                   key={idx}
-                  className="mb-4 break-inside-avoid p-5 transition-all duration-300 border rounded-xl border-slate-200 dark:border-slate-700/50 bg-white/50 dark:bg-slate-950/40 hover:border-slate-350 dark:hover:border-slate-650"
+                  className="mb-4 break-inside-avoid p-5 transition-all duration-300 border rounded-xl border-court-gold/20 bg-court-walnut/50 hover:border-court-gold/45"
                 >
                   <button
                     type="button"
                     onClick={() => setOpenFaq(openFaq === idx ? null : idx)}
                     className="flex items-center justify-between w-full gap-4 text-left cursor-pointer"
                   >
-                    <span className="font-semibold text-slate-800 dark:text-white">
+                    <span className="font-semibold text-court-cream">
                       {item.q}
                     </span>
 
                     <span
-                      className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 border transition-all duration-300 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 ${
+                      className={`flex items-center justify-center w-8 h-8 rounded-full shrink-0 border transition-all duration-300 bg-court-walnut/30 border-court-gold/20 ${
                         openFaq === idx
-                          ? 'rotate-45 bg-slate-200 dark:bg-white/10'
+                          ? 'rotate-45 bg-court-gold/10 border-court-gold/40'
                           : ''
                       }`}
                     >
-                      <span className="text-slate-600 dark:text-slate-300">
-                        +
-                      </span>
+                      <span className="text-court-gold">+</span>
                     </span>
                   </button>
 
@@ -457,7 +500,7 @@ export default function LandingPage() {
                         : 'max-h-0 opacity-0'
                     }`}
                   >
-                    <p className="leading-relaxed text-slate-600 dark:text-slate-400">
+                    <p className="leading-relaxed text-court-muted text-sm">
                       {item.a}
                     </p>
                   </div>
@@ -467,33 +510,33 @@ export default function LandingPage() {
           </div>
         </div>
 
-        {/* Footer */}
-        <footer className="w-full mt-10 border-t border-slate-200 bg-white dark:border-slate-700/50 dark:bg-slate-900/90 backdrop-blur-xl z-20">
-          <div className="mx-auto max-w-7xl px-6 py-8 md:px-10 md:py-10">
+        {/* Premium Courtroom Footer */}
+        <footer className="w-full mt-12 border-t border-court-gold/25 bg-court-walnut/95 backdrop-blur-xl z-20">
+          <div className="mx-auto max-w-7xl px-6 py-10 md:px-10 md:py-12">
             <div className="flex flex-col gap-8 md:flex-row md:items-start md:justify-between">
-              {/* Brand */}
+              
+              {/* Branding and Description */}
               <div className="max-w-md">
-                <div className="flex items-center gap-2 text-xl font-bold text-slate-800 dark:text-white">
-                  <span className="inline-flex items-center justify-center w-10 h-10 border rounded-full bg-nyaya-500/15 border-nyaya-500/25">
-                    <Scale className="w-5 h-5 text-nyaya-400" />
+                <div className="flex items-center gap-2.5 text-xl font-bold text-court-cream">
+                  <span className="inline-flex items-center justify-center w-9 h-9 border rounded-full bg-court-gold/15 border-court-gold/25">
+                    <Scale className="w-4.5 h-4.5 text-court-gold" />
                   </span>
                   <span>
-                    Nyaya<span className="text-nyaya-400">Vanni</span>
+                    Nyaya<span className="text-court-gold font-semibold">Vanni</span>
                   </span>
                 </div>
-                <p className="mt-3 text-slate-600 dark:text-slate-400">
-                  Understand Indian legal documents in simple language. Upload
-                  contracts or notices and get clearer insights fast.
+                <p className="mt-3.5 text-sm text-court-muted leading-relaxed">
+                  Understand Indian legal documents in simple language. Upload contracts or notices and get clearer insights fast.
                 </p>
               </div>
 
-              {/* Links */}
-              <div className="grid w-full grid-cols-2 gap-6 sm:grid-cols-3 md:w-auto">
+              {/* Links Sections */}
+              <div className="grid w-full grid-cols-2 gap-8 sm:grid-cols-3 md:w-auto">
                 <div>
-                  <p className="mb-3 text-sm font-semibold text-slate-800  dark:text-white">
+                  <p className="mb-4 text-sm font-semibold text-court-cream tracking-wide uppercase">
                     Product
                   </p>
-                  <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col gap-2.5 text-sm text-court-muted">
                     <button
                       onClick={() => navigate('/chat')}
                       className={`${footerLinkClass} flex items-center gap-1`}
@@ -536,10 +579,10 @@ export default function LandingPage() {
                 </div>
 
                 <div>
-                  <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">
+                  <p className="mb-4 text-sm font-semibold text-court-cream tracking-wide uppercase">
                     Resources
                   </p>
-                  <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col gap-2.5 text-sm text-court-muted">
                     <button
                       onClick={() => navigate('/faq')}
                       className={`${footerLinkClass} flex items-center gap-1`}
@@ -565,17 +608,17 @@ export default function LandingPage() {
                 </div>
 
                 <div>
-                  <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white">
+                  <p className="mb-4 text-sm font-semibold text-court-cream tracking-wide uppercase">
                     Contact
                   </p>
-                  <div className="flex flex-col gap-2 text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col gap-2.5 text-sm text-court-muted">
                     <a
                       href="mailto:support@nyayavanni.com"
-                      className="transition-all duration-300 ease-out hover:text-nyaya-400 hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(45,212,191,0.4)]"
+                      className="transition-all duration-300 ease-out hover:text-court-gold hover:translate-x-1 hover:[text-shadow:0_0_4px_rgba(212,168,32,0.4)]"
                     >
                       support@nyayavanni.com
                     </a>
-                    <span className="text-sm text-slate-600 dark:text-slate-500">
+                    <span className="text-xs text-court-muted/70">
                       Mon–Fri, 10AM–6PM
                     </span>
                   </div>
@@ -583,44 +626,44 @@ export default function LandingPage() {
               </div>
             </div>
 
-            <div className="flex flex-col items-center sm:items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-700/50 sm:flex-row">
-              <p className="text-sm text-slate-600 dark:text-slate-500 text-center sm:text-left mt-1">
+            <div className="flex flex-col items-center sm:items-start justify-between gap-4 pt-6 mt-8 border-t border-court-gold/20 sm:flex-row">
+              <p className="text-xs text-court-muted text-center sm:text-left mt-1">
                 © {new Date().getFullYear()} NyayaVanni. All rights reserved.
               </p>
 
-              {/* Social Links */}
+              {/* Gold Accented Social Links */}
               <div className="flex items-center gap-5">
                 <a
                   href="#"
-                  className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
+                  className="text-court-muted hover:text-court-gold transition-all duration-300 hover:-translate-y-1 hover:scale-110"
                   aria-label="Twitter"
                 >
-                  <Twitter className="w-5 h-5" />
+                  <Twitter className="w-4.5 h-4.5" />
                 </a>
                 <a
                   href="#"
-                  className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
+                  className="text-court-muted hover:text-court-gold transition-all duration-300 hover:-translate-y-1 hover:scale-110"
                   aria-label="GitHub"
                 >
-                  <Github className="w-5 h-5" />
+                  <Github className="w-4.5 h-4.5" />
                 </a>
                 <a
                   href="#"
-                  className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
+                  className="text-court-muted hover:text-court-gold transition-all duration-300 hover:-translate-y-1 hover:scale-110"
                   aria-label="LinkedIn"
                 >
-                  <Linkedin className="w-5 h-5" />
+                  <Linkedin className="w-4.5 h-4.5" />
                 </a>
                 <a
                   href="#"
-                  className="text-slate-500 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-all duration-300 hover:-translate-y-1 hover:scale-110"
+                  className="text-court-muted hover:text-court-gold transition-all duration-300 hover:-translate-y-1 hover:scale-110"
                   aria-label="Instagram"
                 >
-                  <Instagram className="w-5 h-5" />
+                  <Instagram className="w-4.5 h-4.5" />
                 </a>
               </div>
 
-              <p className="text-sm text-slate-600 dark:text-slate-500 text-center sm:text-right mt-1">
+              <p className="text-xs text-court-muted text-center sm:text-right mt-1 italic">
                 Not legal advice. For professional help, consult a lawyer.
               </p>
             </div>

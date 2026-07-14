@@ -21,14 +21,16 @@ from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
-from slowapi import Limiter
 from slowapi.errors import RateLimitExceeded
-from slowapi.util import get_remote_address
+
+from ..middleware.rate_limit import limiter
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
     DELETE_RATE_LIMIT,
+    SEARCH_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
+    SEARCH_RATE_LIMIT,
 )
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
@@ -66,12 +68,10 @@ api_router = APIRouter()
 graph_builder = LegalKnowledgeGraphBuilder()
 
 # ---------------------------------------------------------------------------
-# Rate limiter â€” keyed by client IP.
-# Override defaults via env vars:
+# Rate limits â€” override via env vars:
 #   RATE_LIMIT_ANALYZE  (default: 10/minute)  heavy Gemini + OCR call
 #   RATE_LIMIT_CHAT     (default: 30/minute)  streaming chat call
 # ---------------------------------------------------------------------------
-limiter = Limiter(key_func=get_remote_address)
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 
@@ -84,6 +84,48 @@ ALLOWED_MIME_TYPES = {
     "image/jpeg",
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
+
+
+async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
+    filename = file.filename
+    if not filename:
+        raise HTTPException(
+            status_code=400, detail="Uploaded file must have a valid filename."
+        )
+
+    safe_filename = os.path.basename(filename)
+    safe_filename = "".join(
+        ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
+    )
+    ext = safe_filename.split(".")[-1].lower() if "." in safe_filename else ""
+
+    if ext not in ALLOWED_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.",
+        )
+
+    raw_bytes = await file.read()
+    if len(raw_bytes) > MAX_FILE_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="File size exceeds the maximum allowed limit of 10MB.",
+        )
+
+    if not validate_file_magic_bytes(raw_bytes, ext):
+        actual_mime = detect_actual_mime(raw_bytes)
+        logger.warning(
+            "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
+            file.content_type,
+            actual_mime,
+            ext,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="File content does not match the claimed file type. Upload rejected.",
+        )
+
+    return raw_bytes, safe_filename
 
 
 class DocumentGenerationRequest(BaseModel):
@@ -108,7 +150,11 @@ def require_session_id(request: Request) -> str:
     """
     session_id = request.cookies.get("session_id")
     if not session_id:
-        raise HTTPException(status_code=401, detail="Missing session_id cookie")
+        session_id = request.headers.get("X-Session-Id")
+    if not session_id:
+        session_id = request.headers.get("x-session-id")
+    if not session_id:
+        raise HTTPException(status_code=401, detail="Missing session_id cookie or header")
     if not validate_session(session_id):
         raise HTTPException(status_code=401, detail="Invalid or expired session")
     return session_id
@@ -182,16 +228,16 @@ async def create_session(request: Request, response: Response):
     session_id = request.cookies.get("session_id")
     if not session_id or not validate_session(session_id):
         session_id = create_session_id()
-        session_secure = os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+        session_secure = os.getenv("SESSION_COOKIE_SECURE", "true").lower() == "true"
         response.set_cookie(
             key="session_id",
             value=session_id,
             httponly=True,
-            samesite="lax",
+            samesite="strict",
             secure=session_secure,
             max_age=30 * 24 * 60 * 60,  # 30 days
         )
-    return {"status": "Session active"}
+    return {"status": "Session active", "sessionId": session_id}
 
 
 @api_router.post("/upload")
@@ -375,6 +421,13 @@ def _analyze_document_sync(
             contents, filename, force_ocr=force_ocr, language=language
         )
 
+        # Validate extracted text quality before analysis
+        if not text or len(text.strip()) < 50:
+            raise HTTPException(
+                status_code=400,
+                detail="Unable to extract sufficient readable text from the document. Please upload a clearer scan or image.",
+            )
+
         # Index document content for full-text search
         index_document(document_id, filename, text)
 
@@ -459,6 +512,173 @@ def _analyze_document_sync(
         raise HTTPException(status_code=500, detail="Document analysis failed")
 
 
+class AnalyzeTextRequest(BaseModel):
+    text: str = Field(..., min_length=1)
+    language: str = "en"
+
+
+@api_router.post("/analyze-text")
+@limiter.limit(RATE_LIMIT_ANALYZE)
+async def analyze_text(request: Request, body: AnalyzeTextRequest):
+    """Trigger analysis directly on raw text sent from client/browser extension."""
+    return await asyncio.to_thread(
+        _analyze_text_sync,
+        request,
+        body.text,
+        body.language,
+    )
+
+
+MOCK_ANALYSIS_RESULT = {
+    "document_type": "Terms of Service",
+    "parties": [
+        {"name": "Website Owner / Service Provider", "role": "First Party"},
+        {"name": "End User / Consumer", "role": "Second Party"}
+    ],
+    "dates": [
+        {"type": "notice_date", "value": "2026-06-29"},
+        {"type": "response_deadline", "value": "2026-07-29"}
+    ],
+    "sections": [
+        "Section 12: Limitation of Liability",
+        "Section 19: Dispute Resolution & Arbitration",
+        "Section 24: User Data Collection & Privacy Policy"
+    ],
+    "clauses": [
+        "Unilateral Modification: The company reserves the right to modify the terms at any time without prior notification.",
+        "Limitation of Liability: The provider is not liable for any direct, indirect, or consequential damages resulting from service outages.",
+        "Class Action Waiver: Users waive their right to participate in class-action lawsuits or class-wide arbitration."
+    ],
+    "summary": "This Terms of Service agreement outlines the rules, guidelines, and legal provisions governing the use of the platform. Key areas of concern include high-risk clauses regarding unilateral modifications of terms and waivers of class-action rights.",
+    "risk_level": "High",
+    "urgency": "Immediate",
+    "consequences": [
+        "Loss of legal recourse due to the class action waiver clause.",
+        "Sudden changes to pricing or service access without advance notice.",
+        "Limited compensation in case of data breaches or service interruption."
+    ],
+    "recommended_timeline": "Respond/Agree within 30 days",
+    "actions": [
+        {
+            "priority": "high",
+            "action": "Review the dispute resolution clause and consider opting out of arbitration if allowed.",
+            "why": "Arbitration clauses restrict your right to sue in court.",
+            "timeline": "Within 30 days of account creation"
+        },
+        {
+            "priority": "medium",
+            "action": "Export and back up your user data regularly.",
+            "why": "The limitation of liability clause protects the provider from data loss liability.",
+            "timeline": "Ongoing / Weekly"
+        }
+    ]
+}
+
+
+def _analyze_text_sync(request: Request, text: str, language: str = "en"):
+    """Run full analysis pipeline on raw text in a sync worker thread."""
+    try:
+        session_id = require_session_id(request)
+
+        # Limit text length to 8000
+        text = text[:8000]
+
+        doc_id = str(uuid.uuid4())
+
+        # Save a document record with mock file path so that require_document_owner passes 
+        # and it is associated with the user session
+        save_document_record(session_id, doc_id, "Terms of Service (Scraped)", "")
+
+        # Index document content for search
+        index_document(doc_id, "Terms of Service (Scraped)", text)
+
+        relevant_laws = []
+        try:
+            relevant_laws = retrieve_relevant_laws(text, k=3)
+        except Exception:
+            logger.warning("RAG retrieval failed. Continuing.")
+
+        # Check for mock query parameter
+        is_mock = request.query_params.get("mock", "false").lower() == "true"
+
+        if is_mock:
+            analysis_result = MOCK_ANALYSIS_RESULT
+            confidence = {"score": 0.85, "reason": "Evaluated based on standard terms"}
+            classification = "terms_of_service"
+            knowledge_graph = {"nodes": [], "edges": []}
+        else:
+            analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+            confidence = ConfidenceService.generate(
+                document_text=text,
+                summary=analysis_result.get("summary", ""),
+                relevant_laws=relevant_laws,
+            )
+            classification = classify_document(text)
+            knowledge_graph = graph_builder.generate_graph(text)
+
+        # Cache the analysis result
+        save_cached_analysis(doc_id, session_id, language, text, analysis_result)
+
+        return {
+            "documentId": doc_id,
+            "analysis": analysis_result,
+            "confidence": confidence,
+            "classification": classification,
+            "knowledge_graph": knowledge_graph,
+            "extracted_text": text[:500] + "...",
+            "cached": False,
+        }
+
+    except RateLimitExceeded:
+        raise
+    except HTTPException as http_err:
+        raise http_err
+    except ValueError as val_err:
+        logger.error("ValueError in text analysis: %s", val_err, exc_info=True)
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid input or configuration in analysis request.",
+        )
+    except Exception as e:
+        from google.api_core.exceptions import (
+            DeadlineExceeded,
+            GoogleAPIError,
+            InvalidArgument,
+            ResourceExhausted,
+        )
+
+        logger.error(f"Text analysis failed: {e}")
+
+        if isinstance(e, DeadlineExceeded):
+            raise HTTPException(
+                status_code=504,
+                detail="AI request timed out. Please try again later.",
+            )
+        elif isinstance(e, ResourceExhausted):
+            raise HTTPException(
+                status_code=429,
+                detail="AI Quota limit reached. Please wait a minute and try again.",
+            )
+        elif isinstance(e, InvalidArgument):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid input structure. The document may be too long for the model.",
+            )
+        elif isinstance(e, GoogleAPIError):
+            raise HTTPException(
+                status_code=502,
+                detail="Upstream AI Service error. Please try again in a few moments.",
+            )
+
+        if not os.getenv("GEMINI_API_KEY"):
+            raise HTTPException(
+                status_code=500,
+                detail="Server configuration issue: GEMINI_API_KEY environment variable is missing.",
+            )
+
+        raise HTTPException(status_code=500, detail="Text analysis failed")
+
+
 @api_router.get("/chat/stream")
 @limiter.limit(RATE_LIMIT_CHAT)
 def chat_stream_sse(
@@ -486,14 +706,11 @@ def chat_stream_sse(
 
     analysis = {}
     if document_id:
-        try:
-            session_id = require_session_id(request)
-            require_document_owner(document_id, session_id)
-            cached = get_cached_analysis(document_id, session_id, language)
-            if cached:
-                analysis = cached.get("analysis", {})
-        except HTTPException:
-            pass
+        session_id = require_session_id(request)
+        require_document_owner(document_id, session_id)
+        cached = get_cached_analysis(document_id, session_id, language)
+        if cached:
+            analysis = cached.get("analysis", {})
 
     def event_generator():
         try:
@@ -602,7 +819,7 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
 
 @api_router.post("/diff-analysis")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-def diff_analysis(
+async def diff_analysis(
     request: Request,
     old_document: UploadFile = File(...),
     new_document: UploadFile = File(...),
@@ -625,11 +842,11 @@ def diff_analysis(
     try:
         session_id = require_session_id(request)
 
-        old_contents = old_document.file.read()
-        new_contents = new_document.file.read()
+        old_contents, old_filename = await read_validated_upload(old_document)
+        new_contents, new_filename = await read_validated_upload(new_document)
 
-        old_text = extract_document(old_contents, old_document.filename or "old.pdf")
-        new_text = extract_document(new_contents, new_document.filename or "new.pdf")
+        old_text = extract_document(old_contents, old_filename)
+        new_text = extract_document(new_contents, new_filename)
 
         old_text = old_text[:8000]
         new_text = new_text[:8000]
@@ -767,6 +984,8 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
             media_type="application/pdf",
             headers={"Content-Disposition": 'attachment; filename="NDA_Document.pdf"'},
         )
+    except HTTPException as http_err:
+        raise http_err
     except Exception as e:
         logger.error(f"Failed to generate document: {e}")
         raise HTTPException(status_code=500, detail="Failed to generate document")
@@ -803,6 +1022,7 @@ async def delete_document(document_id: str, request: Request):
 
 
 @api_router.get("/search")
+@limiter.limit(SEARCH_RATE_LIMIT)
 def search_documents_endpoint(
     request: Request, q: str, page: int = 1, page_size: int = 10
 ):

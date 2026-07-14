@@ -11,76 +11,16 @@ import {
   Scale,
   Copy,
   RefreshCw,
+  Loader2,
 } from 'lucide-react';
+import { useLanguage } from '../contexts/LanguageContext';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
-import { ARIA_LABELS, PLACEHOLDERS, SCAM_TIPS } from '../constants';
-
-const BG_PRIMARY = `absolute top-[-10%] left-[-10%] w-[55%] h-[55%] 
-  bg-nyaya-500/10 dark:bg-nyaya-500/25 rounded-full blur-[140px] 
-  mix-blend-multiply dark:mix-blend-screen pointer-events-none`;
-
-const BG_SECONDARY = `absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] 
-  bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[160px] 
-  mix-blend-multiply dark:mix-blend-screen pointer-events-none`;
-
-const MAIN_CONTAINER = `relative min-h-screen overflow-hidden bg-slate-50 
-  text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300`;
-
-const NAV_BASE = `sticky top-0 z-30 border-b border-slate-200 dark:border-white/10 
-  bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300`;
-
-const NAV_CONTAINER =
-  'max-w-7xl mx-auto px-6 h-16 flex items-center justify-between';
-
-const NAV_BADGE = `hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full 
-  bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 
-  text-slate-700 dark:text-slate-250 text-sm`;
-
-const HEADER_BADGE = `inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full 
-  bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 font-medium text-sm`;
-
-const CARD_BASE = `rounded-[2rem] border border-slate-200 dark:border-white/10 
-  bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-md`;
-
-const ACTION_BUTTON = `h-9 px-3 rounded-full bg-slate-100 dark:bg-white/5 
-  border border-slate-200 dark:border-white/10 hover:bg-slate-250 dark:hover:bg-white/10 
-  transition text-slate-700 dark:text-slate-200 text-sm inline-flex items-center gap-2 cursor-pointer`;
-
-const TEXTAREA_BASE = `w-full p-4 rounded-2xl bg-slate-50 dark:bg-slate-950/40 
-  border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white 
-  placeholder:text-slate-500 dark:placeholder:text-slate-400
-  focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50 transition`;
-
-const ANALYZE_BUTTON = `rounded-2xl px-6 py-3.5 font-semibold text-white
-  bg-gradient-to-r from-nyaya-500 to-blue-600
-  shadow-[0_0_25px_rgba(37,99,235,0.15)] dark:shadow-[0_0_25px_rgba(37,99,235,0.22)]
-  transition-all duration-300
-  hover:scale-[1.02] active:scale-[0.99]
-  disabled:opacity-50 disabled:hover:scale-100 cursor-pointer`;
-
-const BACK_BUTTON = `p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 
-  hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition`;
-
-const LOGO_SPAN = `inline-flex items-center justify-center w-9 h-9 rounded-full 
-  bg-nyaya-500/15 border border-nyaya-500/25`;
-
-const NAV_LOGO_TEXT = `flex items-center gap-2 text-xl font-bold tracking-tight 
-  text-slate-800 dark:text-white cursor-pointer`;
-
-const EMPTY_STATE = `text-center py-10`;
-
-const RISK_LABEL_BASE = `mt-2 inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm font-semibold`;
-
-const RULE_ITEM_BASE = `flex items-center justify-between gap-3 p-3 rounded-xl border transition-all duration-300`;
-
-const WHATS_NEXT_CARD = `mt-6 p-4 rounded-2xl border border-slate-200 dark:border-white/10 
-  bg-slate-100/50 dark:bg-slate-950/30`;
+import { ARIA_LABELS, PLACEHOLDERS } from '../constants';
 
 const RULES = [
   {
     id: 'urgent',
-    label: 'Urgency / pressure language',
     patterns: [
       /urgent/i,
       /immediately/i,
@@ -93,7 +33,6 @@ const RULES = [
   },
   {
     id: 'payment',
-    label: 'Payment / transfer demand',
     patterns: [
       /pay\s+now/i,
       /transfer/i,
@@ -110,7 +49,6 @@ const RULES = [
   },
   {
     id: 'impersonation',
-    label: 'Authority impersonation',
     patterns: [
       /police/i,
       /court/i,
@@ -127,7 +65,6 @@ const RULES = [
   },
   {
     id: 'links',
-    label: 'Suspicious links',
     patterns: [
       /(bit\.ly|tinyurl|t\.co|rb\.gy|cutt\.ly)/i,
       /https?:\/\/[^\s]+/i,
@@ -137,7 +74,6 @@ const RULES = [
   },
   {
     id: 'personal',
-    label: 'Asking for personal data / OTP / passwords',
     patterns: [
       /\botp\b/i,
       /password/i,
@@ -153,7 +89,6 @@ const RULES = [
   },
   {
     id: 'threats',
-    label: 'Threats / intimidation',
     patterns: [
       /arrest/i,
       /warrant/i,
@@ -167,6 +102,85 @@ const RULES = [
     weight: 20,
   },
 ];
+
+const SCAM_LANG = {
+  en: {
+    badge: 'Detect suspicious legal messages',
+    title: 'Scam Detector for Legal Messages',
+    subtitle: 'Paste a message / notice text. You\'ll get a risk score + reasons. (This is not legal advice.)',
+    section_title: 'Message / Notice Text',
+    copied: 'Copied',
+    copy: 'Copy',
+    reset: 'Reset',
+    tip: 'Tip: include links/phone numbers if present (helps detection).',
+    btn_analyze: 'Analyze Message',
+    btn_analyzing: 'Analyzing...',
+    no_analysis_title: 'No analysis yet',
+    no_analysis_desc: 'Paste text and click Analyze.',
+    analyzing_pattern: 'Analyzing message for scam patterns...',
+    risk_score: 'Risk Score',
+    risk_high: 'High Risk',
+    risk_mid: 'Medium Risk',
+    risk_low: 'Low Risk',
+    heuristic_score: 'Heuristic score',
+    reasons_flagged: 'Reasons flagged',
+    what_next: 'What to do next',
+    note: 'Note: This is an assistive tool, not legal advice.',
+    error_empty: 'Please enter some text to analyze.',
+    error_short: 'Message text must be at least 10 characters long.',
+    rules: {
+      urgent: 'Urgency / pressure language',
+      payment: 'Payment / transfer demand',
+      impersonation: 'Authority impersonation',
+      links: 'Suspicious links',
+      personal: 'Asking for personal data / OTP / passwords',
+      threats: 'Threats / intimidation',
+    },
+    tips: [
+      'Do not share OTP/passwords/bank details.',
+      'Verify the sender via official website/number.',
+      'If it\'s serious, consult a lawyer (Hire a Lawyer page).',
+    ],
+  },
+  hi: {
+    badge: 'संदिग्ध कानूनी संदेशों का पता लगाएं',
+    title: 'कानूनी संदेशों के लिए स्कैम डिटेक्टर',
+    subtitle: 'संदेश / नोटिस का पाठ पेस्ट करें। आपको एक जोखिम स्कोर + कारण मिलेंगे। (यह कानूनी सलाह नहीं है।)',
+    section_title: 'संदेश / नोटिस पाठ',
+    copied: 'कॉपी किया गया',
+    copy: 'कॉपी करें',
+    reset: 'रीसेट करें',
+    tip: 'टिप: यदि लिंक/फ़ोन नंबर मौजूद हैं तो उन्हें शामिल करें (पता लगाने में मदद मिलती है)।',
+    btn_analyze: 'संदेश का विश्लेषण करें',
+    btn_analyzing: 'विश्लेषण किया जा रहा है...',
+    no_analysis_title: 'अभी तक कोई विश्लेषण नहीं हुआ है',
+    no_analysis_desc: 'पाठ पेस्ट करें और विश्लेषण पर क्लिक करें।',
+    analyzing_pattern: 'स्कैम पैटर्न के लिए संदेश का विश्लेषण किया जा रहा है...',
+    risk_score: 'जोखिम स्कोर',
+    risk_high: 'उच्च जोखिम',
+    risk_mid: 'मध्यम जोखिम',
+    risk_low: 'कम जोखिम',
+    heuristic_score: 'अनुमानित स्कोर',
+    reasons_flagged: 'चिह्नित किए गए कारण',
+    what_next: 'आगे क्या करना है',
+    note: 'नोट: यह एक सहायक उपकरण है, कानूनी सलाह नहीं है।',
+    error_empty: 'विश्लेषण करने के लिए कृपया कुछ पाठ दर्ज करें।',
+    error_short: 'संदेश पाठ कम से कम 10 वर्णों का होना चाहिए।',
+    rules: {
+      urgent: 'जल्दबाजी / दबाव की भाषा',
+      payment: 'भुगतान / स्थानांतरण की मांग',
+      impersonation: 'प्राधिकरण का रूप धारण करना',
+      links: 'संदिग्ध लिंक',
+      personal: 'व्यक्तिगत डेटा / ओटीपी / पासवर्ड मांगना',
+      threats: 'धमकी / डराना-धमकाना',
+    },
+    tips: [
+      'ओटीपी/पासवर्ड/बैंक विवरण साझा न करें।',
+      'आधिकारिक वेबसाइट/नंबर के माध्यम से प्रेषक को सत्यापित करें।',
+      'यदि यह गंभीर है, तो किसी वकील से परामर्श लें (वकील किराए पर लें पृष्ठ)।',
+    ],
+  },
+};
 
 function clamp(n, min, max) {
   return Math.max(min, Math.min(max, n));
@@ -193,32 +207,43 @@ function scoreText(text) {
   return { score, hits, flags: { hasManyCaps, hasLotsOfSymbols, hasPhone } };
 }
 
-function getRiskLabel(score) {
-  if (score >= 70) return { label: 'High Risk', tone: 'high' };
-  if (score >= 40) return { label: 'Medium Risk', tone: 'mid' };
-  return { label: 'Low Risk', tone: 'low' };
-}
-
 export default function ScamDetector() {
   const navigate = useNavigate();
+  const { language } = useLanguage();
   const [text, setText] = useState('');
   const [lastAnalyzed, setLastAnalyzed] = useState(null);
   const [copied, setCopied] = useState(false);
   const [analyzing, setAnalyzing] = useState(false);
   const [resultCopied, setResultCopied] = useState(false);
+  const [validationError, setValidationError] = useState('');
+
+  const L = SCAM_LANG[language] || SCAM_LANG.en;
 
   const analysis = useMemo(() => {
     if (!lastAnalyzed) return null;
     return scoreText(lastAnalyzed);
   }, [lastAnalyzed]);
+
   const risk = useMemo(() => {
     if (!analysis) return null;
-    return getRiskLabel(analysis.score);
-  }, [analysis]);
+    const score = analysis.score;
+    if (score >= 70) return { label: L.risk_high, tone: 'high' };
+    if (score >= 40) return { label: L.risk_mid, tone: 'mid' };
+    return { label: L.risk_low, tone: 'low' };
+  }, [analysis, L]);
 
   const onAnalyze = () => {
     const trimmed = text.trim();
-    if (!trimmed) return;
+    if (!trimmed) {
+      setValidationError(L.error_empty);
+      return;
+    }
+    if (trimmed.length < 10) {
+      setValidationError(L.error_short);
+      return;
+    }
+
+    setValidationError('');
     setAnalyzing(true);
     setTimeout(() => {
       setLastAnalyzed(trimmed);
@@ -232,8 +257,11 @@ export default function ScamDetector() {
     setCopied(false);
     setAnalyzing(false);
     setResultCopied(false);
+    setValidationError('');
   };
+
   const onCopy = async () => {
+    if (!text.trim()) return;
     try {
       await navigator.clipboard.writeText(text);
       setCopied(true);
@@ -242,10 +270,12 @@ export default function ScamDetector() {
       /* ignore */
     }
   };
+
   const onCopyResult = async () => {
+    if (!analysis) return;
     try {
       const flaggedReasons = analysis.hits
-        .map((id) => RULES.find((r) => r.id === id)?.label)
+        .map((id) => L.rules[id])
         .filter(Boolean)
         .join(', ');
       const summary = `Risk Score: ${analysis.score}/100 (${risk.label})\nFlagged: ${flaggedReasons || 'None'}\n\nAnalyzed Text:\n${lastAnalyzed}`;
@@ -258,35 +288,33 @@ export default function ScamDetector() {
   };
 
   return (
-    <div className={MAIN_CONTAINER}>
-      <div className={BG_PRIMARY} />
-      <div className={BG_SECONDARY} />
+    <div className="relative min-h-screen overflow-hidden bg-court-walnut text-court-cream wood-panel transition-colors duration-300 font-sans">
+      {/* Radial vignette backdrop */}
+      <div className="absolute inset-0 court-vignette opacity-95 pointer-events-none z-0"></div>
 
-      <nav className={NAV_BASE}>
-        <div className={NAV_CONTAINER}>
+      <nav className="sticky top-0 z-30 border-b border-court-gold/25 bg-court-walnut/90 backdrop-blur-xl transition-all duration-300">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className={BACK_BUTTON}
+              className="p-2 rounded-full bg-court-walnut border border-court-gold/30 hover:bg-court-gold hover:text-court-walnut text-court-cream transition cursor-pointer"
               aria-label={ARIA_LABELS.GO_BACK}
             >
               <ArrowLeft className="w-5 h-5" />
             </button>
-            <div className={NAV_LOGO_TEXT} onClick={() => navigate('/')}>
-              <span className={LOGO_SPAN}>
-                <Scale className="text-nyaya-600 dark:text-nyaya-400 w-5 h-5" />
+            <div className="flex items-center gap-2 text-xl font-bold tracking-tight text-court-cream cursor-pointer" onClick={() => navigate('/')}>
+              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-court-gold/15 border border-court-gold/25">
+                <Scale className="text-court-gold w-5 h-5" />
               </span>
               <span>
                 Nyaya
-                <span className="text-nyaya-600 dark:text-nyaya-400">
-                  Vanni
-                </span>
+                <span className="text-court-gold font-semibold">Vanni</span>
               </span>
             </div>
           </div>
           <div className="flex items-center gap-3">
-            <div className={NAV_BADGE}>
-              <Sparkles className="w-4 h-4 text-nyaya-600 dark:text-nyaya-300" />
+            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-court-gold/10 border border-court-gold/25 text-court-gold text-sm font-semibold">
+              <Sparkles className="w-4 h-4 text-court-gold" />
               Scam Detector
             </div>
             <ThemeToggle />
@@ -294,118 +322,141 @@ export default function ScamDetector() {
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-6 pt-10">
+      <main className="relative z-10 max-w-5xl mx-auto px-6 pt-10 pb-16">
         <div className="text-center max-w-3xl mx-auto">
-          <div className={HEADER_BADGE}>
+          <div className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full bg-court-gold/10 border border-court-gold/20 text-court-gold font-medium text-xs animate-pulse-soft">
             <ShieldAlert className="w-4 h-4" />
-            Detect suspicious legal messages
+            {L.badge}
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-850 dark:text-white">
-            Scam Detector for Legal Messages
+          <h1 className="text-4xl md:text-5xl font-bold font-serif text-court-cream leading-tight">
+            {L.title}
           </h1>
-          <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-350">
-            Paste a message / notice text. You'll get a risk score + reasons.
-            (This is not legal advice.)
+          <p className="mt-4 text-base md:text-lg text-court-muted leading-relaxed">
+            {L.subtitle}
           </p>
         </div>
 
-        <div className="mt-10 grid lg:grid-cols-5 gap-6">
-          <div className={`lg:col-span-3 ${CARD_BASE}`}>
-            <div className="flex items-center justify-between gap-3 mb-4">
-              <h2 className="text-lg font-bold text-slate-850 dark:text-white">
-                Message / Notice Text
+        <div className="mt-10 grid lg:grid-cols-5 gap-8 items-start">
+          {/* Left panel: Input Area */}
+          <div className="lg:col-span-3 court-card p-8 rounded-3xl shadow-2xl transition-all duration-300">
+            <div className="flex items-center justify-between gap-3 mb-5">
+              <h2 className="text-xl font-bold font-serif text-court-cream">
+                {L.section_title}
               </h2>
               <div className="flex items-center gap-2">
-                <button onClick={onCopy} className={ACTION_BUTTON}>
+                <button
+                  onClick={onCopy}
+                  disabled={!text.trim() || analyzing}
+                  className="h-9 px-4 rounded-full bg-court-walnut border border-court-gold/25 hover:border-court-gold/50 text-court-muted hover:text-court-cream transition text-xs inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
                   <Copy className="w-4 h-4" />
-                  {copied ? 'Copied' : 'Copy'}
+                  {copied ? L.copied : L.copy}
                 </button>
-                <button onClick={onReset} className={ACTION_BUTTON}>
+                <button
+                  onClick={onReset}
+                  disabled={analyzing}
+                  className="h-9 px-4 rounded-full bg-court-walnut border border-court-gold/25 hover:border-court-gold/50 text-court-muted hover:text-court-cream transition text-xs inline-flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
                   <RefreshCw className="w-4 h-4" />
-                  Reset
+                  {L.reset}
                 </button>
               </div>
             </div>
 
             <textarea
               value={text}
-              onChange={(e) => setText(e.target.value)}
+              onChange={(e) => {
+                setText(e.target.value);
+                if (validationError) setValidationError('');
+              }}
               rows={10}
+              disabled={analyzing}
               placeholder={PLACEHOLDERS.SCAM_DETECTOR}
-              className={TEXTAREA_BASE}
+              className="w-full p-4 rounded-2xl bg-court-walnut/40 border border-court-gold/30 text-court-cream placeholder:text-court-muted focus:outline-none focus:ring-2 focus:ring-court-gold/20 focus:border-court-gold transition disabled:opacity-50"
             />
 
-            <div className="mt-4 flex flex-col sm:flex-row gap-3 sm:items-center sm:justify-between">
-              <p className="text-xs text-slate-500 dark:text-slate-400">
-                Tip: include links/phone numbers if present (helps detection).
+            {validationError && (
+              <p className="text-red-400 text-xs mt-2 font-semibold flex items-center gap-1">
+                <ShieldAlert className="w-3.5 h-3.5" />
+                {validationError}
+              </p>
+            )}
+
+            <div className="mt-5 flex flex-col sm:flex-row gap-4 sm:items-center sm:justify-between">
+              <p className="text-xs text-court-muted leading-relaxed">
+                {L.tip}
               </p>
               <button
                 onClick={onAnalyze}
-                disabled={!text.trim() || analyzing}
-                className={ANALYZE_BUTTON}
+                disabled={analyzing}
+                className="rounded-full px-8 py-3 font-bold text-court-walnut bg-court-gold hover:bg-yellow-500 shadow-lg hover:scale-105 transition-all text-sm disabled:opacity-50 disabled:hover:scale-100 cursor-pointer"
               >
-                {analyzing ? 'Analyzing...' : 'Analyze Message'}
+                {analyzing ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    {L.btn_analyzing}
+                  </span>
+                ) : (
+                  L.btn_analyze
+                )}
               </button>
             </div>
           </div>
 
-          <div className={`lg:col-span-2 ${CARD_BASE}`}>
+          {/* Right panel: Results Area */}
+          <div className="lg:col-span-2 court-card p-8 rounded-3xl shadow-2xl transition-all duration-300">
             {!analysis && !analyzing ? (
-              <div className={EMPTY_STATE}>
-                <ShieldCheck className="w-12 h-12 text-slate-500 dark:text-slate-400 mx-auto mb-4" />
-                <h3 className="text-xl font-bold text-slate-850 dark:text-white">
-                  No analysis yet
+              <div className="text-center py-12">
+                <ShieldCheck className="w-14 h-14 text-court-gold/60 mx-auto mb-4" />
+                <h3 className="text-xl font-bold font-serif text-court-cream">
+                  {L.no_analysis_title}
                 </h3>
-                <p className="text-slate-600 dark:text-slate-400 mt-2 text-sm">
-                  Paste text and click{' '}
-                  <span className="text-slate-800 dark:text-slate-200 font-semibold">
-                    Analyze
-                  </span>
-                  .
+                <p className="text-court-muted mt-2 text-sm">
+                  {L.no_analysis_desc}
                 </p>
               </div>
             ) : analyzing ? (
-              <div className="flex flex-col items-center justify-center py-12">
-                <div className="flex gap-1.5 items-center mb-4">
+              <div className="flex flex-col items-center justify-center py-16">
+                <div className="flex gap-2 items-center mb-5">
                   <div
-                    className="w-3 h-3 rounded-full bg-nyaya-500 animate-bounce"
+                    className="w-3 h-3 rounded-full bg-court-gold animate-bounce"
                     style={{ animationDelay: '0s' }}
                   ></div>
                   <div
-                    className="w-3 h-3 rounded-full bg-nyaya-500 animate-bounce"
+                    className="w-3 h-3 rounded-full bg-court-gold animate-bounce"
                     style={{ animationDelay: '0.15s' }}
                   ></div>
                   <div
-                    className="w-3 h-3 rounded-full bg-nyaya-500 animate-bounce"
+                    className="w-3 h-3 rounded-full bg-court-gold animate-bounce"
                     style={{ animationDelay: '0.3s' }}
                   ></div>
                 </div>
-                <p className="text-sm text-slate-500 dark:text-slate-400">
-                  Analyzing message for scam patterns...
+                <p className="text-sm text-court-muted">
+                  {L.analyzing_pattern}
                 </p>
               </div>
             ) : (
               <div>
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm text-slate-500 dark:text-slate-400">
-                      Risk Score
+                    <p className="text-xs text-court-muted font-semibold uppercase tracking-wider">
+                      {L.risk_score}
                     </p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="text-3xl font-extrabold text-slate-850 dark:text-white">
+                    <div className="flex items-baseline gap-2 mt-1">
+                      <span className="text-4xl font-bold font-serif text-court-cream">
                         {analysis.score}
                       </span>
-                      <span className="text-sm text-slate-500 dark:text-slate-400">
+                      <span className="text-xs text-court-muted">
                         / 100
                       </span>
                     </div>
                     <p
-                      className={`${RISK_LABEL_BASE} ${
+                      className={`mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border ${
                         risk.tone === 'high'
-                          ? 'bg-rose-500/15 border border-rose-500/25 text-rose-800 dark:text-rose-200'
+                          ? 'bg-rose-500/10 border-rose-500/20 text-rose-400'
                           : risk.tone === 'mid'
-                            ? 'bg-amber-500/15 border border-amber-500/25 text-amber-800 dark:text-amber-200'
-                            : 'bg-emerald-500/15 border border-emerald-500/25 text-emerald-800 dark:text-emerald-200'
+                            ? 'bg-amber-500/10 border-amber-500/20 text-amber-400'
+                            : 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400'
                       }`}
                     >
                       {risk.tone === 'high' ? (
@@ -416,56 +467,52 @@ export default function ScamDetector() {
                       {risk.label}
                     </p>
                   </div>
-                  <div className="w-28">
-                    <div className="h-2.5 rounded-full bg-slate-100 dark:bg-white/10 overflow-hidden">
+                  <div className="w-32">
+                    <div className="h-2.5 rounded-full bg-court-walnut border border-court-gold/15 overflow-hidden">
                       <div
-                        className="h-full rounded-full bg-gradient-to-r from-nyaya-500 to-blue-600"
+                        className="h-full rounded-full bg-court-gold"
                         style={{ width: `${analysis.score}%` }}
                       />
                     </div>
-                    <p className="mt-2 text-[11px] text-slate-500 dark:text-slate-650 text-right">
-                      Heuristic score
+                    <p className="mt-2 text-[10px] text-court-muted text-right">
+                      {L.heuristic_score}
                     </p>
                   </div>
                 </div>
 
-                <div className="mt-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="text-slate-850 dark:text-white font-bold">
-                      Reasons flagged
+                <div className="mt-8 border-t border-court-gold/15 pt-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-court-cream font-bold font-serif text-md">
+                      {L.reasons_flagged}
                     </h4>
-                    <button onClick={onCopyResult} className={ACTION_BUTTON}>
-                      <Copy className="w-4 h-4" />
-                      {resultCopied ? 'Copied' : 'Copy'}
+                    <button onClick={onCopyResult} className="h-8 px-3 rounded-full bg-court-walnut border border-court-gold/25 hover:border-court-gold/50 text-court-muted hover:text-court-cream transition text-xs inline-flex items-center gap-1.5 cursor-pointer">
+                      <Copy className="w-3.5 h-3.5" />
+                      {resultCopied ? L.copied : L.copy}
                     </button>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {RULES.map((r) => {
                       const hit = analysis.hits.includes(r.id);
                       return (
                         <div
                           key={r.id}
-                          className={`${RULE_ITEM_BASE} ${
+                          className={`flex items-center justify-between gap-3 p-3.5 rounded-xl border transition-all duration-300 ${
                             hit
-                              ? 'border-nyaya-500/30 bg-nyaya-500/10 text-nyaya-900 dark:text-nyaya-200'
-                              : 'border-slate-200 dark:border-white/10 bg-slate-50 dark:bg-white/5'
+                              ? 'border-court-gold/45 bg-court-gold/10 text-court-cream'
+                              : 'border-court-gold/15 bg-court-walnut/20 text-court-muted'
                           }`}
                         >
                           <div className="flex items-center gap-2">
                             {hit ? (
-                              <BadgeAlert className="w-4 h-4 text-amber-600 dark:text-amber-300" />
+                              <BadgeAlert className="w-4 h-4 text-court-gold" />
                             ) : (
-                              <BadgeCheck className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                              <BadgeCheck className="w-4 h-4 text-court-gold/30" />
                             )}
-                            <span
-                              className={`text-sm ${hit ? 'text-slate-800 dark:text-slate-100' : 'text-slate-605 dark:text-slate-400'}`}
-                            >
-                              {r.label}
+                            <span className="text-xs font-medium">
+                              {L.rules[r.id]}
                             </span>
                           </div>
-                          <span
-                            className={`text-xs font-semibold ${hit ? 'text-slate-700 dark:text-slate-200' : 'text-slate-500'}`}
-                          >
+                          <span className="text-xs font-semibold">
                             +{r.weight}
                           </span>
                         </div>
@@ -473,12 +520,12 @@ export default function ScamDetector() {
                     })}
                   </div>
 
-                  <div className={WHATS_NEXT_CARD}>
-                    <p className="text-sm text-slate-800 dark:text-slate-300 font-semibold">
-                      What to do next
+                  <div className="mt-6 p-5 rounded-2xl border border-court-gold/20 bg-court-walnut/45">
+                    <p className="text-xs text-court-cream font-bold uppercase tracking-wider">
+                      {L.what_next}
                     </p>
-                    <ul className="mt-2 text-sm text-slate-650 dark:text-slate-400 space-y-1 list-disc list-inside">
-                      {SCAM_TIPS.map((tip, i) => (
+                    <ul className="mt-3 text-xs text-court-muted space-y-2 list-disc list-inside">
+                      {L.tips.map((tip, i) => (
                         <li key={i}>{tip}</li>
                       ))}
                     </ul>
@@ -486,16 +533,16 @@ export default function ScamDetector() {
                 </div>
               </div>
             )}
-            <div className="mt-6 text-xs text-slate-500 dark:text-slate-600">
-              Note: This is an assistive tool, not legal advice.
+            <div className="mt-6 text-[10px] text-court-muted/70 text-center">
+              {L.note}
             </div>
           </div>
         </div>
       </main>
 
-      <div className="w-full">
+      <section className="relative z-10 w-full mt-auto">
         <Footer />
-      </div>
+      </section>
     </div>
   );
 }

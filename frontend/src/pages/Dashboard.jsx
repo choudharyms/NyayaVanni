@@ -3,6 +3,7 @@ import { useParams, useLocation, useNavigate } from 'react-router-dom';
 import DashboardSkeleton from '../components/DashboardSkeleton';
 import ReactFlow, { MiniMap, Controls, Background } from 'reactflow';
 import 'reactflow/dist/style.css';
+import { toPng } from 'html-to-image';
 import {
   Scale,
   AlertTriangle,
@@ -19,6 +20,7 @@ import {
   Copy,
   Printer,
   Share2,
+  Download,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -29,6 +31,7 @@ import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
+import { calculateLayout } from '../utils/graphLayout';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -198,7 +201,7 @@ const CHAT_INPUT = `flex-1 bg-slate-100 dark:bg-slate-950
   placeholder-slate-500 dark:placeholder-slate-400 
   focus:bg-white dark:focus:bg-slate-950 
   focus:border-nyaya-500 focus:ring-2 focus:ring-nyaya-500/20 
-  rounded-full px-5 outline-none transition-all py-3 text-sm`;
+  rounded-xl px-5 outline-none transition-all py-3 text-sm resize-none overflow-y-auto`;
 
 const SEND_BUTTON = `bg-nyaya-600 text-white w-12 h-12 rounded-full 
   flex items-center justify-center hover:bg-nyaya-700 
@@ -255,6 +258,33 @@ export default function Dashboard() {
   
   // Ref for Knowledge Graph search input
   const kgSearchInputRef = useRef(null);
+
+  const downloadImage = () => {
+    const flowElement = document.querySelector('.react-flow');
+    if (!flowElement) return;
+
+    toPng(flowElement, {
+      backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff',
+      filter: (node) => {
+        if (
+          node?.classList?.contains('react-flow__minimap') ||
+          node?.classList?.contains('react-flow__controls')
+        ) {
+          return false;
+        }
+        return true;
+      },
+    })
+      .then((dataUrl) => {
+        const a = document.createElement('a');
+        a.setAttribute('download', 'legal-knowledge-graph.png');
+        a.setAttribute('href', dataUrl);
+        a.click();
+      })
+      .catch((err) => {
+        console.error('Could not download image:', err);
+      });
+  };
 
   // Ctrl+K / Cmd+K to focus knowledge graph search
   useKeyboardShortcut('k', () => {
@@ -431,7 +461,26 @@ export default function Dashboard() {
       return matchesSearch && matchesType;
     }) || [];
 
-  const graphNodes = filteredNodes.map((node, index) => ({
+  const visibleNodeIds = new Set(filteredNodes.map((node) => node.id));
+
+  const graphEdges =
+    knowledgeGraph?.edges
+      ?.filter((edge) => {
+        return (
+          visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
+        );
+      })
+      .map((edge) => ({
+        id: edge.id,
+        source: edge.source,
+        target: edge.target,
+        label: edge.label,
+        animated: true,
+      })) || [];
+
+  const layoutPositions = calculateLayout(filteredNodes, graphEdges);
+
+  const graphNodes = filteredNodes.map((node) => ({
     id: node.id,
 
     data: {
@@ -439,10 +488,7 @@ export default function Dashboard() {
       type: node.type,
     },
 
-    position: {
-      x: (index % 4) * 250,
-      y: Math.floor(index / 4) * 150,
-    },
+    position: layoutPositions[node.id] || { x: 0, y: 0 },
 
     style: {
       padding: 10,
@@ -463,23 +509,6 @@ export default function Dashboard() {
       fontSize: 12,
     },
   }));
-
-  const visibleNodeIds = new Set(graphNodes.map((node) => node.id));
-
-  const graphEdges =
-    knowledgeGraph?.edges
-      ?.filter((edge) => {
-        return (
-          visibleNodeIds.has(edge.source) && visibleNodeIds.has(edge.target)
-        );
-      })
-      .map((edge) => ({
-        id: edge.id,
-        source: edge.source,
-        target: edge.target,
-        label: edge.label,
-        animated: true,
-      })) || [];
 
   if (loading) {
     return <DashboardSkeleton />;
@@ -932,15 +961,26 @@ export default function Dashboard() {
             </div>
             {knowledgeGraph && (
               <div className={KG_SECTION}>
-                <div className="mb-6">
-                  <h2 className={KG_TITLE}>Legal Knowledge Graph</h2>
+                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                  <div>
+                    <h2 className={KG_TITLE}>Legal Knowledge Graph</h2>
 
-                  <p className={TEXT_MUTED + ' mt-2'}>
-                    Interactive visualization of clauses, obligations, parties,
-                    and relationships
-                  </p>
+                    <p className={TEXT_MUTED + ' mt-2'}>
+                      Interactive visualization of clauses, obligations, parties,
+                      and relationships
+                    </p>
+                  </div>
 
-                  <div className="relative mt-4">
+                  <button
+                    onClick={downloadImage}
+                    className="no-print px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition flex items-center gap-2 cursor-pointer shadow-xs self-start sm:self-center"
+                  >
+                    <Download className="w-4 h-4" />
+                    {t('dashboard.kg.download')}
+                  </button>
+                </div>
+
+                <div className="relative mt-4 mb-6">
                     <input
                       ref={kgSearchInputRef}
                       type="text"
@@ -951,8 +991,7 @@ export default function Dashboard() {
                       <SearchShortcutHint />
                     </div>
                   </div>
-                </div>
-                <div className={KG_FLOW_CONTAINER}>
+                  <div className={KG_FLOW_CONTAINER}>
                   <ReactFlow
                     nodes={graphNodes}
                     edges={graphEdges}
@@ -1102,17 +1141,29 @@ export default function Dashboard() {
             </div>
 
             <form onSubmit={handleChat} className={CHAT_FORM}>
-              <input
-                type="text"
+              <textarea
                 value={chatInput}
-                onChange={(e) => setChatInput(e.target.value)}
+                onChange={(e) => {
+                  setChatInput(e.target.value);
+                  e.target.style.height = 'auto';
+                  e.target.style.height = `${Math.min(e.target.scrollHeight, 160)}px`;
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    if (!chatInput.trim() || chatLoading) return;
+                    handleChat(e);
+                  }
+                }}
                 placeholder={t('chat.placeholder')}
                 className={CHAT_INPUT}
+                rows={1}
               />
               <button
                 type="submit"
                 disabled={chatLoading || !chatInput.trim()}
                 className={SEND_BUTTON}
+                aria-label={ARIA_LABELS.SEND_MESSAGE}
               >
                 <Send className="w-5 h-5 pl-0.5" />
               </button>
