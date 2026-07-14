@@ -7,6 +7,7 @@ import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from .audit_log_service import init_audit_log_table
 from .database import connect_db
 from .search_service import clear_expired_cache
 
@@ -56,6 +57,8 @@ def init_db(raise_on_error: bool = False):
         _ensure_sessions_table(cursor)
 
         conn.commit()
+
+        init_audit_log_table(DB_PATH)
     except Exception as e:
         if conn:
             conn.rollback()
@@ -158,14 +161,25 @@ def _ensure_sessions_table(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             session_id TEXT PRIMARY KEY,
+            user_id TEXT,
             created_at TEXT NOT NULL,
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
     """)
+    cursor.execute("PRAGMA table_info(sessions)")
+    cols = {row[1] for row in cursor.fetchall()}
+    if "user_id" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN user_id TEXT")
+    if "created_at" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN created_at TEXT")
+    if "last_used_at" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN last_used_at TEXT")
+    if "expires_at" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN expires_at TEXT")
 
 
-SESSION_TTL = timedelta(days=30)
+SESSION_TTL = timedelta(hours=24)
 
 
 def create_session_id() -> str:
@@ -218,6 +232,47 @@ def validate_session(session_id: str) -> bool:
     except Exception as e:
         logger.error(f"Session validation failed: {e}")
         return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_session_user_id(session_id: str, user_id: str) -> bool:
+    """Associate a user ID with an existing session."""
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET user_id = ? WHERE session_id = ?",
+            (user_id, session_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to update session user_id: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_session_user_id(session_id: str) -> Optional[str]:
+    """Return the user_id associated with a session, or None."""
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT user_id FROM sessions WHERE session_id = ?", (session_id,)
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"Failed to get session user_id: {e}")
+        return None
     finally:
         if conn:
             conn.close()
