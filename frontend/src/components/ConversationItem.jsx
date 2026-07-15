@@ -2,6 +2,12 @@ import React, { useState } from 'react';
 import { Trash2, ChevronRight, Edit2 } from 'lucide-react';
 import { ARIA_LABELS, TITLES, MESSAGES } from '../constants';
 
+function escapeHtml(str) {
+  const div = document.createElement('div');
+  div.appendChild(document.createTextNode(str));
+  return div.innerHTML;
+}
+
 export default function ConversationItem({
   conversation,
   isActive = false,
@@ -80,7 +86,7 @@ export default function ConversationItem({
                 e.stopPropagation();
                 const newTitle = window.prompt('Rename conversation:', conversation.title);
                 if (newTitle && newTitle.trim()) {
-                  onRename(conversation.id, newTitle.trim());
+                  onRename(conversation.id, escapeHtml(newTitle.trim()));
                 }
               }}
               className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
