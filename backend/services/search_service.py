@@ -7,6 +7,7 @@ response times from 5-10 seconds to under 500ms.
 """
 
 import hashlib
+import html
 import logging
 import re
 import sqlite3
@@ -237,7 +238,12 @@ def search_documents(
         conn.close()
 
         filtered_results = [
-            {**r, "filename": filter_search_result(r.get("filename", ""))}
+            {
+                **r,
+                "filename": html.escape(
+                    filter_search_result(r.get("filename", ""))
+                ),
+            }
             for r in results
         ]
 

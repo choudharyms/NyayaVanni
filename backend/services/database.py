@@ -1,6 +1,6 @@
 import sqlite3
 
-SQLITE_TIMEOUT_SECONDS = 30
+from ..config.database import DB_TIMEOUT_SECONDS as SQLITE_TIMEOUT_SECONDS
 
 
 def connect_db(db_path: str) -> sqlite3.Connection:
