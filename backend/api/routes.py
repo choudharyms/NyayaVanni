@@ -68,6 +68,7 @@ from ..services.auth_service import (
     send_verification_email,
     update_avatar_url,
     user_requires_password_reset,
+    validate_password_strength,
     verify_2fa_code,
     verify_email,
 )
@@ -348,6 +349,9 @@ class ChangePasswordRequest(BaseModel):
 @limiter.limit("5/minute")
 async def register(request: Request, body: RegisterRequest):
     session_id = require_session_id(request)
+    password_error = validate_password_strength(body.password)
+    if password_error:
+        raise HTTPException(status_code=400, detail=password_error)
     is_default = body.password == "default123"
     user = register_user(
         email=body.email,
@@ -415,6 +419,9 @@ async def change_password_endpoint(request: Request, body: ChangePasswordRequest
     user_id = get_session_user_id(session_id)
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
+    password_error = validate_password_strength(body.new_password)
+    if password_error:
+        raise HTTPException(status_code=400, detail=password_error)
     success, message = change_password(user_id, body.current_password, body.new_password)
     if not success:
         raise HTTPException(status_code=400, detail=message)
@@ -454,6 +461,9 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
 @api_router.post("/auth/reset-password")
 @limiter.limit(PASSWORD_RESET_RATE_LIMIT)
 async def reset_password(request: Request, body: ResetPasswordRequest):
+    password_error = validate_password_strength(body.new_password)
+    if password_error:
+        raise HTTPException(status_code=400, detail=password_error)
     success, message = reset_password_with_token(body.token, body.new_password)
     if not success:
         raise HTTPException(status_code=400, detail=message)
@@ -476,6 +486,9 @@ async def force_reset_password_endpoint(request: Request, body: ChangePasswordRe
     user_id = get_session_user_id(session_id)
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
+    password_error = validate_password_strength(body.new_password)
+    if password_error:
+        raise HTTPException(status_code=400, detail=password_error)
     success, message = force_reset_password(user_id, body.new_password)
     if not success:
         raise HTTPException(status_code=400, detail=message)
@@ -849,6 +862,16 @@ def _analyze_document_sync(
         session_id = require_session_id(request)
         record = require_document_owner(document_id, session_id)
 
+        log_action(
+            STORAGE_DB_PATH,
+            "document_view",
+            "document",
+            document_id,
+            session_id,
+            {"language": language, "force_ocr": force_ocr},
+            request.client.host if request.client else None,
+        )
+
         if not force_ocr:
             cached = get_cached_analysis(document_id, session_id, language)
             if cached:
@@ -1192,6 +1215,15 @@ def chat_stream_sse(
     if document_id:
         session_id = require_session_id(request)
         require_document_owner(document_id, session_id)
+        log_action(
+            STORAGE_DB_PATH,
+            "document_view",
+            "document",
+            document_id,
+            session_id,
+            {"via": "chat_stream"},
+            request.client.host if request.client else None,
+        )
         cached = get_cached_analysis(document_id, session_id, language)
         if cached:
             analysis = cached.get("analysis", {})
@@ -1277,6 +1309,15 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
     try:
         session_id = require_session_id(request)
         require_document_owner(document_id, session_id)
+        log_action(
+            STORAGE_DB_PATH,
+            "document_view",
+            "document",
+            document_id,
+            session_id,
+            {"via": "chat_with_document"},
+            request.client.host if request.client else None,
+        )
         cached = get_cached_analysis(document_id, session_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
 
@@ -1579,6 +1620,70 @@ async def delete_document(document_id: str, request: Request):
     )
 
     return {"documentId": document_id, "deleted": True}
+
+
+class ShareDocumentRequest(BaseModel):
+    recipient_email: str = Field(
+        ...,
+        max_length=320,
+        pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+    )
+    message: str = Field("", max_length=1000)
+    expiry_hours: int = Field(default=24, ge=1, le=168)
+
+
+@api_router.post("/documents/{document_id}/share")
+@limiter.limit("10/minute")
+async def share_document(
+    document_id: str,
+    request: Request,
+    body: ShareDocumentRequest,
+):
+    """Share a document with a recipient via email with input validation.
+
+    Args:
+        document_id: The unique identifier of the document to share.
+        request: The incoming HTTP request.
+        body: The share request payload with recipient email, optional message, and expiry.
+
+    Returns:
+        dict: A confirmation with share details.
+
+    Raises:
+        HTTPException 400: If input validation fails.
+        HTTPException 401: If session is invalid.
+        HTTPException 403: If session does not own the document.
+        HTTPException 404: If document is not found.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    recipient_email = body.recipient_email.strip()
+    if not recipient_email:
+        raise HTTPException(status_code=400, detail="Recipient email is required")
+    if "@" not in recipient_email or "." not in recipient_email:
+        raise HTTPException(status_code=400, detail="Invalid recipient email format")
+
+    share_token = secrets.token_urlsafe(32)
+    share_link = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/shared/{share_token}"
+
+    log_action(
+        STORAGE_DB_PATH,
+        "document_share",
+        "document",
+        document_id,
+        session_id,
+        {"recipient_email": recipient_email, "expiry_hours": body.expiry_hours},
+        request.client.host if request.client else None,
+    )
+
+    return {
+        "status": "ok",
+        "share_token": share_token,
+        "share_link": share_link,
+        "recipient_email": recipient_email,
+        "expiry_hours": body.expiry_hours,
+    }
 
 
 class BulkDeleteRequest(BaseModel):

@@ -1,6 +1,7 @@
 import hashlib
 import logging
 import os
+import re
 import secrets
 import smtplib
 import sqlite3
@@ -86,12 +87,39 @@ def _generate_verification_token() -> str:
     return secrets.token_urlsafe(48)
 
 
+PASSWORD_POLICY_ERRORS = {
+    "min_length": "Password must be at least 8 characters long",
+    "max_length": "Password must be at most 128 characters long",
+    "uppercase": "Password must contain at least one uppercase letter",
+    "digit": "Password must contain at least one digit",
+    "special": "Password must contain at least one special character (@$!%*#?&)",
+}
+
+
+def validate_password_strength(password: str) -> Optional[str]:
+    if len(password) < 8:
+        return PASSWORD_POLICY_ERRORS["min_length"]
+    if len(password) > 128:
+        return PASSWORD_POLICY_ERRORS["max_length"]
+    if not re.search(r"[A-Z]", password):
+        return PASSWORD_POLICY_ERRORS["uppercase"]
+    if not re.search(r"\d", password):
+        return PASSWORD_POLICY_ERRORS["digit"]
+    if not re.search(r"[@$!%*#?&]", password):
+        return PASSWORD_POLICY_ERRORS["special"]
+    return None
+
+
 def register_user(
     email: str,
     password: str,
     display_name: Optional[str] = None,
     is_default_password: bool = False,
 ) -> Optional[dict[str, Any]]:
+    validation_error = validate_password_strength(password)
+    if validation_error:
+        logger.warning(f"Registration failed: weak password for {email}")
+        return None
     conn = None
     try:
         conn = connect_db(STORAGE_DB_PATH)
