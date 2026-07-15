@@ -1,4 +1,5 @@
 import logging
+from typing import Optional
 
 logger = logging.getLogger(__name__)
 
@@ -47,7 +48,7 @@ def validate_file_magic_bytes(file_bytes: bytes, expected_ext: str) -> bool:
     return list(actual) == expected
 
 
-def detect_actual_mime(file_bytes: bytes) -> str | None:
+def detect_actual_mime(file_bytes: bytes) -> Optional[str]:
     for ext, sig in MAGIC_BYTES.items():
         offset = sig["offset"]
         expected = sig["bytes"]
