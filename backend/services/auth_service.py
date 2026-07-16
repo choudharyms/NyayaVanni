@@ -1,4 +1,3 @@
-import hashlib
 import logging
 import os
 import re
@@ -9,6 +8,8 @@ import threading
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from typing import Any, Optional
+
+import bcrypt
 
 from .database import connect_db
 
@@ -68,18 +69,12 @@ def init_users_table() -> None:
 
 
 def _hash_password(password: str) -> str:
-    salt = os.urandom(32)
-    key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100000)
-    return salt.hex() + ":" + key.hex()
+    return bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt()).decode("utf-8")
 
 
 def _verify_password(password: str, stored_hash: str) -> bool:
     try:
-        salt_hex, key_hex = stored_hash.split(":")
-        salt = bytes.fromhex(salt_hex)
-        stored_key = bytes.fromhex(key_hex)
-        new_key = hashlib.pbkdf2_hmac("sha256", password.encode("utf-8"), salt, 100000)
-        return new_key == stored_key
+        return bcrypt.checkpw(password.encode("utf-8"), stored_hash.encode("utf-8"))
     except (ValueError, AttributeError):
         return False
 
@@ -822,6 +817,50 @@ def seed_default_admin() -> None:
         logger.error(f"Failed to seed default admin: {e}")
         if conn:
             conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+def delete_user_account(user_id: str) -> tuple[bool, str]:
+    """Delete a user account and all associated data.
+
+    Returns:
+        tuple[bool, str]: (success, message)
+    """
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+
+        cursor.execute(
+            f"SELECT email FROM {USERS_TABLE} WHERE user_id = ?",
+            (user_id,),
+        )
+        if not cursor.fetchone():
+            return False, "User not found"
+
+        cursor.execute(
+            f"DELETE FROM {PASSWORD_RESET_TOKENS_TABLE} WHERE user_id = ?",
+            (user_id,),
+        )
+        cursor.execute(
+            f"DELETE FROM {TWO_FA_TABLE} WHERE user_id = ?",
+            (user_id,),
+        )
+        cursor.execute(
+            f"DELETE FROM {USERS_TABLE} WHERE user_id = ?",
+            (user_id,),
+        )
+        conn.commit()
+        _invalidate_user_cache(user_id)
+        logger.info(f"User account deleted: {user_id}")
+        return True, "Account deleted successfully"
+    except Exception as e:
+        logger.error(f"Failed to delete user account {user_id}: {e}")
+        if conn:
+            conn.rollback()
+        return False, "An internal error occurred"
     finally:
         if conn:
             conn.close()

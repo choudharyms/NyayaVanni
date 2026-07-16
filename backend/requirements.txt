@@ -8,7 +8,8 @@ pytesseract
 Pillow
 python-multipart
 python-jose
-passlib
+passlib[bcrypt]
+bcrypt
 pydantic
 pydantic-settings
 python-dotenv

@@ -308,12 +308,11 @@ export default function Dashboard() {
     const fetchAnalysis = async () => {
       try {
         const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-        const sessionId = await ensureSessionId(apiUrl);
+        await ensureSessionId(apiUrl);
         const response = await fetch(
           `${apiUrl}/api/analyze/${documentId}?language=${language}`,
           {
             method: 'POST',
-            headers: { 'X-Session-Id': sessionId },
             credentials: 'include',
           }
         );
@@ -383,12 +382,11 @@ export default function Dashboard() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      const sessionId = await ensureSessionId(apiUrl);
+      await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/chat/${documentId}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Session-Id': sessionId,
         },
         credentials: 'include',
         body: JSON.stringify({

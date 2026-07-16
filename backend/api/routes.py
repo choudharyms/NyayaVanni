@@ -59,6 +59,7 @@ from ..services.audit_log_service import get_audit_logs, log_action
 from ..services.auth_service import (
     authenticate_user,
     change_password,
+    delete_user_account,
     force_reset_password,
     get_user_by_id,
     is_account_locked,
@@ -265,7 +266,10 @@ def _get_client_ip(request: Request) -> str:
 
 
 def require_session_id(request: Request) -> str:
-    """Extract and validate the session ID from the request cookie.
+    """Extract and validate the session ID from the request cookie or header.
+
+    Session tokens from URL query parameters are explicitly rejected to
+    prevent leakage via server logs, browser history, or referrer headers.
 
     Args:
         request: The incoming HTTP request.
@@ -274,8 +278,14 @@ def require_session_id(request: Request) -> str:
         str: The validated session ID.
 
     Raises:
-        HTTPException 401: If the session_id cookie is missing or invalid.
+        HTTPException 400: If session_id is passed as a URL query parameter.
+        HTTPException 401: If the session_id cookie or header is missing or invalid.
     """
+    if request.query_params.get("session_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="session_id must not be passed as a URL query parameter. Use cookies or headers.",
+        )
     session_id = request.cookies.get("session_id")
     if not session_id:
         session_id = request.headers.get("X-Session-Id")
@@ -319,6 +329,11 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
 
 @api_router.get("/csrf-token")
 async def get_csrf_token(request: Request):
+    if request.query_params.get("session_id"):
+        raise HTTPException(
+            status_code=400,
+            detail="session_id must not be passed as a URL query parameter.",
+        )
     session_id = request.cookies.get("session_id")
     if not session_id:
         session_id = request.headers.get("X-Session-Id")
@@ -679,6 +694,45 @@ async def verify_2fa(request: Request, body: TwoFARequest):
     if not verify_2fa_code(user_id, body.code):
         raise HTTPException(status_code=400, detail="Invalid or expired 2FA code")
     return {"status": "ok", "message": "2FA verification successful"}
+
+
+class DeleteAccountRequest(BaseModel):
+    confirm: bool = Field(..., description="Must be true to confirm account deletion")
+
+
+@api_router.delete("/auth/account")
+@limiter.limit("3/minute")
+async def delete_account(request: Request, body: DeleteAccountRequest):
+    """Delete the authenticated user's account.
+
+    Requires confirmation via `confirm: true` in the request body.
+    """
+    if not body.confirm:
+        raise HTTPException(
+            status_code=400,
+            detail="Confirmation is required to delete your account. Set confirm=true.",
+        )
+
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    success, message = delete_user_account(user_id)
+    if not success:
+        raise HTTPException(status_code=400, detail=message)
+
+    log_action(
+        STORAGE_DB_PATH,
+        "account_delete",
+        "user",
+        user_id,
+        session_id,
+        None,
+        request.client.host if request.client else None,
+    )
+
+    return {"status": "ok", "message": message}
 
 
 @api_router.post("/contact")
@@ -1866,6 +1920,14 @@ def search_documents_endpoint(
         session_id = require_session_id(request)
 
         if not q or len(q.strip()) < 2:
+            raise HTTPException(
+                status_code=400, detail="Search query must be at least 2 characters"
+            )
+
+        q = q.strip()[:200]
+        q = re.sub(r'[<>\'";()&|!{}[\]^~*?:\\]', ' ', q)
+        q = re.sub(r'\s+', ' ', q).strip()
+        if len(q) < 2:
             raise HTTPException(
                 status_code=400, detail="Search query must be at least 2 characters"
             )
