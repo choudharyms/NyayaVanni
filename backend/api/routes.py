@@ -61,6 +61,7 @@ from ..services.auth_service import (
     change_password,
     force_reset_password,
     get_user_by_id,
+    is_account_locked,
     register_user,
     request_2fa_code,
     request_password_reset,
@@ -381,12 +382,16 @@ async def register(request: Request, body: RegisterRequest):
 @limiter.limit("20/minute")
 async def login(request: Request, body: LoginRequest):
     session_id = require_session_id(request)
-    user = authenticate_user(body.email, body.password)
-    if not user:
+
+    is_locked, remaining = is_account_locked(body.email)
+    if is_locked:
+        minutes = max(1, remaining // 60)
         raise HTTPException(
-            status_code=401,
-            detail="Invalid email or password.",
+            status_code=429,
+            detail=f"Account temporarily locked due to too many failed attempts. Try again in {minutes} minute(s).",
         )
+
+    user = authenticate_user(body.email, body.password, ip_address=_get_client_ip(request))
     update_session_user_id(session_id, user["user_id"])
     client_ip = _get_client_ip(request)
     if client_ip:

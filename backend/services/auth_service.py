@@ -195,7 +195,12 @@ def verify_email(token: str) -> bool:
             conn.close()
 
 
-def authenticate_user(email: str, password: str) -> Optional[dict[str, Any]]:
+def authenticate_user(email: str, password: str, ip_address: str = "") -> Optional[dict[str, Any]]:
+    is_locked, remaining = is_account_locked(email)
+    if is_locked:
+        logger.warning(f"Login denied: account locked for {email}")
+        return None
+
     conn = None
     try:
         conn = connect_db(STORAGE_DB_PATH)
@@ -208,15 +213,20 @@ def authenticate_user(email: str, password: str) -> Optional[dict[str, Any]]:
         )
         row = cursor.fetchone()
         if not row:
+            record_failed_login(email, ip_address="")
             return None
 
         user = dict(row)
         if not _verify_password(password, user["password_hash"]):
+            record_failed_login(email, ip_address="")
             return None
 
         if not user.get("email_verified"):
             logger.warning(f"Login denied: email not verified for user {user['user_id']}")
+            record_failed_login(email, ip_address="")
             return None
+
+        clear_login_attempts(email)
 
         now_iso = datetime.now(timezone.utc).isoformat()
         cursor.execute(
@@ -606,6 +616,119 @@ def verify_2fa_code(user_id: str, code: str) -> bool:
             conn.close()
 
 
+# ---------------------------------------------------------------------------
+# Account lockout after failed login attempts
+# ---------------------------------------------------------------------------
+
+LOGIN_ATTEMPTS_TABLE = "login_attempts"
+MAX_FAILED_ATTEMPTS = 5
+LOCKOUT_DURATION_MINUTES = 15
+
+
+def init_login_attempts_table() -> None:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {LOGIN_ATTEMPTS_TABLE} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT NOT NULL,
+                attempted_at TEXT NOT NULL,
+                ip_address TEXT
+            )
+        """)
+        cursor.execute(f"""
+            CREATE INDEX IF NOT EXISTS idx_login_attempts_email
+            ON {LOGIN_ATTEMPTS_TABLE}(email)
+        """)
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to initialize login attempts table: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+def record_failed_login(email: str, ip_address: str = "") -> None:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        now_iso = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            f"INSERT INTO {LOGIN_ATTEMPTS_TABLE} (email, attempted_at, ip_address) VALUES (?, ?, ?)",
+            (email, now_iso, ip_address),
+        )
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to record login attempt: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+def clear_login_attempts(email: str) -> None:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"DELETE FROM {LOGIN_ATTEMPTS_TABLE} WHERE email = ?",
+            (email,),
+        )
+        conn.commit()
+    except Exception as e:
+        logger.error(f"Failed to clear login attempts: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+def is_account_locked(email: str) -> tuple[bool, Optional[int]]:
+    """Check if account is locked due to too many failed attempts.
+    
+    Returns:
+        tuple[bool, Optional[int]]: (is_locked, remaining_seconds)
+    """
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        lockout_threshold = (
+            datetime.now(timezone.utc) - timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+        ).isoformat()
+        cursor.execute(
+            f"SELECT COUNT(*) FROM {LOGIN_ATTEMPTS_TABLE} WHERE email = ? AND attempted_at > ?",
+            (email, lockout_threshold),
+        )
+        count = cursor.fetchone()[0]
+        if count >= MAX_FAILED_ATTEMPTS:
+            cursor.execute(
+                f"SELECT MAX(attempted_at) FROM {LOGIN_ATTEMPTS_TABLE} WHERE email = ? AND attempted_at > ?",
+                (email, lockout_threshold),
+            )
+            last_attempt = cursor.fetchone()[0]
+            if last_attempt:
+                lockout_end = datetime.fromisoformat(last_attempt) + timedelta(minutes=LOCKOUT_DURATION_MINUTES)
+                remaining = int((lockout_end - datetime.now(timezone.utc)).total_seconds())
+                return True, max(remaining, 0)
+            return True, LOCKOUT_DURATION_MINUTES * 60
+        return False, None
+    except Exception as e:
+        logger.error(f"Failed to check account lockout: {e}")
+        return False, None
+    finally:
+        if conn:
+            conn.close()
+
+
 DEFAULT_ADMIN_EMAIL = "admin@nyayavanni.com"
 DEFAULT_ADMIN_PASSWORD = "admin123"
 
@@ -646,4 +769,5 @@ def seed_default_admin() -> None:
 
 init_two_factor_table()
 init_users_table()
+init_login_attempts_table()
 seed_default_admin()
