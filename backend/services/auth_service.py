@@ -5,6 +5,7 @@ import re
 import secrets
 import smtplib
 import sqlite3
+import threading
 from datetime import datetime, timedelta, timezone
 from email.mime.text import MIMEText
 from typing import Any, Optional
@@ -255,42 +256,50 @@ def authenticate_user(email: str, password: str, ip_address: str = "") -> Option
 def change_password(
     user_id: str, current_password: str, new_password: str
 ) -> tuple[bool, str]:
-    conn = None
+    lock = _get_password_change_lock(user_id)
+    acquired = lock.acquire(timeout=10)
+    if not acquired:
+        logger.warning("Password change timed out waiting for lock for user %s", user_id)
+        return False, "A password change is already in progress. Please try again."
     try:
-        conn = connect_db(STORAGE_DB_PATH)
-        conn.row_factory = sqlite3.Row
-        cursor = conn.cursor()
+        conn = None
+        try:
+            conn = connect_db(STORAGE_DB_PATH)
+            conn.row_factory = sqlite3.Row
+            cursor = conn.cursor()
 
-        cursor.execute(
-            f"SELECT * FROM {USERS_TABLE} WHERE user_id = ? AND is_active = 1",
-            (user_id,),
-        )
-        row = cursor.fetchone()
-        if not row:
-            return False, "User not found"
+            cursor.execute(
+                f"SELECT * FROM {USERS_TABLE} WHERE user_id = ? AND is_active = 1",
+                (user_id,),
+            )
+            row = cursor.fetchone()
+            if not row:
+                return False, "User not found"
 
-        user = dict(row)
-        if not _verify_password(current_password, user["password_hash"]):
-            return False, "Current password is incorrect"
+            user = dict(row)
+            if not _verify_password(current_password, user["password_hash"]):
+                return False, "Current password is incorrect"
 
-        new_hash = _hash_password(new_password)
-        now_iso = datetime.now(timezone.utc).isoformat()
-        cursor.execute(
-            f"UPDATE {USERS_TABLE} SET password_hash = ?, must_reset_password = 0, updated_at = ? WHERE user_id = ?",
-            (new_hash, now_iso, user_id),
-        )
-        conn.commit()
-        _invalidate_user_cache(user_id)
-        logger.info(f"Password changed for user {user_id}")
-        return True, "Password changed successfully"
-    except Exception as e:
-        logger.error(f"Password change failed for user {user_id}: {e}")
-        if conn:
-            conn.rollback()
-        return False, "An internal error occurred"
+            new_hash = _hash_password(new_password)
+            now_iso = datetime.now(timezone.utc).isoformat()
+            cursor.execute(
+                f"UPDATE {USERS_TABLE} SET password_hash = ?, must_reset_password = 0, updated_at = ? WHERE user_id = ?",
+                (new_hash, now_iso, user_id),
+            )
+            conn.commit()
+            _invalidate_user_cache(user_id)
+            logger.info(f"Password changed for user {user_id}")
+            return True, "Password changed successfully"
+        except Exception as e:
+            logger.error(f"Password change failed for user {user_id}: {e}")
+            if conn:
+                conn.rollback()
+            return False, "An internal error occurred"
+        finally:
+            if conn:
+                conn.close()
     finally:
-        if conn:
-            conn.close()
+        lock.release()
 
 
 def force_reset_password(user_id: str, new_password: str) -> tuple[bool, str]:
@@ -319,6 +328,17 @@ def force_reset_password(user_id: str, new_password: str) -> tuple[bool, str]:
             conn.close()
 
 
+_password_change_locks: dict[str, threading.Lock] = {}
+_password_change_locks_lock = threading.Lock()
+
+
+def _get_password_change_lock(user_id: str) -> threading.Lock:
+    with _password_change_locks_lock:
+        if user_id not in _password_change_locks:
+            _password_change_locks[user_id] = threading.Lock()
+        return _password_change_locks[user_id]
+
+
 _SENSITIVE_FIELDS = {"password_hash", "verification_token"}
 
 
@@ -333,17 +353,23 @@ def _invalidate_user_cache(user_id: str) -> None:
     _user_cache.pop(user_id, None)
 
 
-def get_user_by_id(user_id: str) -> Optional[dict[str, Any]]:
+_PUBLIC_PROFILE_FIELDS = {"created_at", "updated_at"}
+
+
+def get_user_by_id(user_id: str, public: bool = False) -> Optional[dict[str, Any]]:
     cached = _user_cache.get(user_id)
     if cached is not None:
-        return cached
+        result = cached
+        if public:
+            return {k: v for k, v in result.items() if k not in _PUBLIC_PROFILE_FIELDS}
+        return result
     conn = None
     try:
         conn = connect_db(STORAGE_DB_PATH)
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
         cursor.execute(
-            f"SELECT user_id, email, display_name, role, must_reset_password, is_active, avatar_url FROM {USERS_TABLE} WHERE user_id = ?",
+            f"SELECT user_id, email, display_name, role, must_reset_password, is_active, avatar_url, created_at FROM {USERS_TABLE} WHERE user_id = ?",
             (user_id,),
         )
         row = cursor.fetchone()
@@ -351,6 +377,8 @@ def get_user_by_id(user_id: str) -> Optional[dict[str, Any]]:
         if result is not None:
             result = _strip_sensitive_fields(result)
             _user_cache[user_id] = result
+        if public and result is not None:
+            return {k: v for k, v in result.items() if k not in _PUBLIC_PROFILE_FIELDS}
         return result
     except Exception as e:
         logger.error(f"Failed to get user {user_id}: {e}")

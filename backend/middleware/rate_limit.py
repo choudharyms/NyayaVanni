@@ -5,6 +5,8 @@ from slowapi.errors import RateLimitExceeded
 
 
 def _rate_limit_key(request: Request) -> str:
+    # Use the socket remote address only — do NOT trust X-Forwarded-For,
+    # which can be spoofed by clients.
     if request.client and request.client.host:
         return request.client.host
     return "127.0.0.1"

@@ -133,6 +133,21 @@ ALLOWED_MIME_TYPES = {
 }
 
 
+def _validate_path_within(base_dir: str, target_path: str, purpose: str = "") -> str:
+    resolved = os.path.realpath(target_path)
+    base_resolved = os.path.realpath(base_dir)
+    if not resolved.startswith(base_resolved + os.sep) and resolved != base_resolved:
+        logger.warning(
+            "Path traversal blocked [%s]: %s is outside %s",
+            purpose, target_path, base_dir,
+        )
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid file path detected.",
+        )
+    return resolved
+
+
 async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
     filename = file.filename
     if not filename:
@@ -157,12 +172,13 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
     # Save to quarantine before validation
     quarantine_id = str(uuid.uuid4())
     quarantine_path = os.path.join(QUARANTINE_DIR, f"{quarantine_id}.{ext}")
+    resolved_qp = _validate_path_within(QUARANTINE_DIR, quarantine_path, "quarantine_save")
     try:
-        with open(quarantine_path, "wb") as buffer:
+        with open(resolved_qp, "wb") as buffer:
             buffer.write(raw_bytes)
     except Exception as e:
-        if os.path.exists(quarantine_path):
-            os.remove(quarantine_path)
+        if os.path.exists(resolved_qp):
+            os.remove(resolved_qp)
         logger.error("File save to quarantine failed: %s", e, exc_info=True)
         raise HTTPException(
             status_code=500,
@@ -170,8 +186,8 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
         )
 
     if not validate_file_magic_bytes(raw_bytes, ext):
-        if os.path.exists(quarantine_path):
-            os.remove(quarantine_path)
+        if os.path.exists(resolved_qp):
+            os.remove(resolved_qp)
         actual_mime = detect_actual_mime(raw_bytes)
         logger.warning(
             "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
@@ -185,8 +201,8 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
         )
 
     # Validation passed — remove from quarantine
-    if os.path.exists(quarantine_path):
-        os.remove(quarantine_path)
+    if os.path.exists(resolved_qp):
+        os.remove(resolved_qp)
 
     return raw_bytes, safe_filename
 
@@ -807,13 +823,14 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
         doc_id = str(uuid.uuid4())
         quarantine_path = os.path.join(QUARANTINE_DIR, f"{doc_id}.{ext}")
+        resolved_qp = _validate_path_within(QUARANTINE_DIR, quarantine_path, "quarantine_save")
 
         try:
-            with open(quarantine_path, "wb") as buffer:
+            with open(resolved_qp, "wb") as buffer:
                 buffer.write(raw_bytes)
         except Exception as e:
-            if os.path.exists(quarantine_path):
-                os.remove(quarantine_path)
+            if os.path.exists(resolved_qp):
+                os.remove(resolved_qp)
             logger.error("File save to quarantine failed: %s", e, exc_info=True)
             raise HTTPException(
                 status_code=500,
@@ -821,11 +838,12 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
             )
 
         local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+        resolved_local = _validate_path_within(UPLOAD_DIR, local_path, "upload_save")
         try:
-            os.rename(quarantine_path, local_path)
+            os.rename(resolved_qp, resolved_local)
         except Exception as e:
-            if os.path.exists(quarantine_path):
-                os.remove(quarantine_path)
+            if os.path.exists(resolved_qp):
+                os.remove(resolved_qp)
             logger.error("File move from quarantine failed: %s", e, exc_info=True)
             raise HTTPException(
                 status_code=500,
