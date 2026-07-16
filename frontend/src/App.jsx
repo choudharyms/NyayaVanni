@@ -6,6 +6,7 @@ import GeneralChat from './pages/GeneralChat';
 import HireLawyer from './pages/HireLawyer';
 import FAQ from './pages/FAQ';
 import ScamDetector from './pages/ScamDetector';
+import Settings from './pages/Settings';
 import PrivacyPolicy from './pages/PrivacyPolicy';
 import TermsOfService from './pages/TermsOfService';
 import DocumentGenerator from './pages/DocumentGenerator';
@@ -40,6 +41,7 @@ function App() {
                   element={<DocumentGenerator />}
                 />
                 <Route path="/contact" element={<ContactUs />} />
+                <Route path="/settings" element={<Settings />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/version-diff" element={<VersionDiff />} />
