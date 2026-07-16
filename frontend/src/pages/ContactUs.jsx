@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   ArrowLeft,
@@ -30,6 +30,25 @@ export default function ContactUs() {
   const [errors, setErrors] = useState({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState(null);
+  const [csrfToken, setCsrfToken] = useState(null);
+
+  useEffect(() => {
+    async function fetchCsrfToken() {
+      try {
+        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+        const res = await fetch(`${apiUrl}/api/csrf-token`, {
+          credentials: 'include',
+        });
+        if (res.ok) {
+          const data = await res.json();
+          setCsrfToken(data.csrf_token);
+        }
+      } catch {
+        // CSRF token fetch is best-effort
+      }
+    }
+    fetchCsrfToken();
+  }, []);
 
   const validate = () => {
     const newErrors = {};
@@ -72,10 +91,15 @@ export default function ContactUs() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const headers = { 'Content-Type': 'application/json' };
+      if (csrfToken) {
+        headers['X-CSRF-Token'] = csrfToken;
+      }
       const res = await fetch(`${apiUrl}/api/contact`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers,
         body: JSON.stringify(formData),
+        credentials: 'include',
       });
 
       if (!res.ok) {
