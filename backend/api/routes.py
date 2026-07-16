@@ -35,11 +35,10 @@ from ..config.rate_limits import (
     PASSWORD_RESET_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
-    SEARCH_RATE_LIMIT,
 )
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
-from ..services.document_classifier import classify_document
+from ..services.document_classifier import DOCUMENT_TYPES, classify_document
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
 from ..services.gemini_service import (
     GEMINI_TIMEOUT,
@@ -55,10 +54,11 @@ from ..services.search_service import (
     remove_document_from_index,
     search_documents,
 )
-from ..services.audit_log_service import get_audit_logs, log_action
+from ..services.audit_log_service import get_audit_log_count, get_audit_logs, log_action
 from ..services.auth_service import (
     authenticate_user,
     change_password,
+    create_sso_token,
     delete_user_account,
     force_reset_password,
     get_user_by_id,
@@ -72,6 +72,7 @@ from ..services.auth_service import (
     update_avatar_url,
     user_requires_password_reset,
     validate_password_strength,
+    validate_sso_token,
     verify_2fa_code,
     verify_email,
 )
@@ -733,6 +734,71 @@ async def delete_account(request: Request, body: DeleteAccountRequest):
     )
 
     return {"status": "ok", "message": message}
+
+
+class SSOLoginRequest(BaseModel):
+    token: str = Field(..., min_length=1)
+    provider: str = Field("", max_length=50)
+
+
+@api_router.post("/auth/sso")
+@limiter.limit("10/minute")
+async def sso_login(request: Request, body: SSOLoginRequest):
+    """Authenticate via SSO token.
+
+    Validates the token signature (hash) and expiry before accepting.
+    """
+    session_id = require_session_id(request)
+
+    sso_user = validate_sso_token(body.token, provider=body.provider)
+    if not sso_user:
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired SSO token. Please re-authenticate with your provider.",
+        )
+
+    email = sso_user["email"]
+    user = get_user_by_id(sso_user.get("user_id")) if sso_user.get("user_id") else None
+
+    if not user:
+        user_data = register_user(
+            email=email,
+            password=secrets.token_urlsafe(32),
+            display_name=email.split("@")[0],
+        )
+        if not user_data:
+            raise HTTPException(
+                status_code=409,
+                detail="Could not create user from SSO. Email may already be registered.",
+            )
+        user_id = user_data["user_id"]
+    else:
+        user_id = user["user_id"]
+
+    update_session_user_id(session_id, user_id)
+
+    log_action(
+        STORAGE_DB_PATH,
+        "sso_login",
+        "user",
+        user_id,
+        session_id,
+        {"provider": body.provider},
+        request.client.host if request.client else None,
+    )
+
+    return {"status": "ok", "user_id": user_id, "email": email}
+
+
+# ---------------------------------------------------------------------------
+# Document categories endpoint
+# ---------------------------------------------------------------------------
+
+
+@api_router.get("/categories")
+async def list_categories():
+    """Return the list of allowed document categories."""
+    return {"categories": DOCUMENT_TYPES}
 
 
 @api_router.post("/contact")
@@ -1848,8 +1914,8 @@ async def delete_document_history_endpoint(
 @limiter.limit("30/minute")
 async def get_audit_logs_endpoint(
     request: Request,
-    limit: int = 100,
-    offset: int = 0,
+    page: int = 1,
+    page_size: int = 100,
     action: str = None,
     resource_type: str = None,
     resource_id: str = None,
@@ -1858,36 +1924,53 @@ async def get_audit_logs_endpoint(
 
     Args:
         request: The incoming HTTP request.
-        limit: Maximum number of entries to return (default 100).
-        offset: Number of entries to skip (default 0).
+        page: Page number (default 1).
+        page_size: Results per page (default 100, max 1000).
         action: Optional action type filter.
         resource_type: Optional resource type filter.
         resource_id: Optional resource ID filter.
 
     Returns:
-        dict: A list of audit log entries.
+        dict: Paginated audit log entries with metadata.
     """
     session_id = require_session_id(request)
     user_id = get_session_user_id(session_id)
     if not user_id:
         raise HTTPException(status_code=401, detail="User not authenticated")
 
-    if limit < 1:
-        limit = 100
-    if limit > 1000:
-        limit = 1000
-    if offset < 0:
-        offset = 0
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 1000:
+        page_size = 100
+
+    offset = (page - 1) * page_size
 
     logs = get_audit_logs(
         STORAGE_DB_PATH,
         action=action,
         resource_type=resource_type,
         resource_id=resource_id,
-        limit=limit,
+        limit=page_size,
         offset=offset,
     )
-    return {"logs": logs, "limit": limit, "offset": offset, "count": len(logs)}
+
+    total_count = get_audit_log_count(
+        STORAGE_DB_PATH,
+        action=action,
+        resource_type=resource_type,
+        resource_id=resource_id,
+    )
+
+    total_pages = max(1, (total_count + page_size - 1) // page_size)
+
+    return {
+        "logs": logs,
+        "page": page,
+        "page_size": page_size,
+        "total_count": total_count,
+        "total_pages": total_pages,
+        "count": len(logs),
+    }
 
 
 @api_router.get("/search")

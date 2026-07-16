@@ -148,3 +148,42 @@ def get_audit_logs(
     finally:
         if conn:
             conn.close()
+
+
+def get_audit_log_count(
+    db_path: str,
+    action: Optional[str] = None,
+    resource_type: Optional[str] = None,
+    resource_id: Optional[str] = None,
+) -> int:
+    """Return the total count of audit log entries matching the given filters."""
+    conn = None
+    try:
+        conn = sqlite3.connect(db_path)
+        cursor = conn.cursor()
+
+        conditions = []
+        params = []
+
+        if action:
+            conditions.append("action = ?")
+            params.append(action)
+        if resource_type:
+            conditions.append("resource_type = ?")
+            params.append(resource_type)
+        if resource_id:
+            conditions.append("resource_id = ?")
+            params.append(resource_id)
+
+        where_clause = " AND ".join(conditions) if conditions else "1=1"
+        cursor.execute(
+            f"SELECT COUNT(*) FROM {AUDIT_LOG_TABLE} WHERE {where_clause}",
+            params,
+        )
+        return cursor.fetchone()[0]
+    except Exception as e:
+        logger.error(f"Failed to count audit logs: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()

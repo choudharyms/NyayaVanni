@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import re
@@ -825,9 +826,15 @@ def seed_default_admin() -> None:
 def delete_user_account(user_id: str) -> tuple[bool, str]:
     """Delete a user account and all associated data.
 
+    Cleans up documents, analysis cache, sessions, search index,
+    audit logs, and auth-related records.
+
     Returns:
         tuple[bool, str]: (success, message)
     """
+    from .audit_log_service import AUDIT_LOG_TABLE
+    from .storage_service import UPLOAD_DIR
+
     conn = None
     try:
         conn = connect_db(STORAGE_DB_PATH)
@@ -837,9 +844,57 @@ def delete_user_account(user_id: str) -> tuple[bool, str]:
             f"SELECT email FROM {USERS_TABLE} WHERE user_id = ?",
             (user_id,),
         )
-        if not cursor.fetchone():
+        row = cursor.fetchone()
+        if not row:
             return False, "User not found"
 
+        email = row[0]
+
+        # Find sessions for this user to clean up documents
+        cursor.execute("SELECT session_id FROM sessions WHERE user_id = ?", (user_id,))
+        session_ids = [r[0] for r in cursor.fetchall()]
+
+        # Clean up documents, analysis cache, and local files for each session
+        for sid in session_ids:
+            cursor.execute(
+                "SELECT document_id, local_path FROM documents WHERE session_id = ?",
+                (sid,),
+            )
+            docs = cursor.fetchall()
+            for doc_id, local_path in docs:
+                if local_path and os.path.exists(local_path):
+                    try:
+                        os.remove(local_path)
+                    except OSError as exc:
+                        logger.warning(
+                            "Failed to delete file %s during account deletion: %s",
+                            local_path, exc,
+                        )
+                # Remove from FTS search index
+                try:
+                    cursor.execute(
+                        "DELETE FROM documents_fts WHERE document_id = ?",
+                        (doc_id,),
+                    )
+                except Exception:
+                    pass
+
+            cursor.execute(
+                "DELETE FROM document_analysis_cache WHERE session_id = ?",
+                (sid,),
+            )
+            cursor.execute("DELETE FROM documents WHERE session_id = ?", (sid,))
+
+        # Delete all sessions for this user
+        cursor.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+
+        # Clean up audit log records associated with this user
+        cursor.execute(
+            f"DELETE FROM {AUDIT_LOG_TABLE} WHERE resource_type = 'user' AND resource_id = ?",
+            (user_id,),
+        )
+
+        # Delete auth-related records
         cursor.execute(
             f"DELETE FROM {PASSWORD_RESET_TOKENS_TABLE} WHERE user_id = ?",
             (user_id,),
@@ -848,13 +903,11 @@ def delete_user_account(user_id: str) -> tuple[bool, str]:
             f"DELETE FROM {TWO_FA_TABLE} WHERE user_id = ?",
             (user_id,),
         )
-        cursor.execute(
-            f"DELETE FROM {USERS_TABLE} WHERE user_id = ?",
-            (user_id,),
-        )
+        cursor.execute(f"DELETE FROM {USERS_TABLE} WHERE user_id = ?", (user_id,))
+
         conn.commit()
         _invalidate_user_cache(user_id)
-        logger.info(f"User account deleted: {user_id}")
+        logger.info(f"User account deleted: {user_id} (email={email})")
         return True, "Account deleted successfully"
     except Exception as e:
         logger.error(f"Failed to delete user account {user_id}: {e}")
@@ -866,6 +919,149 @@ def delete_user_account(user_id: str) -> tuple[bool, str]:
             conn.close()
 
 
+# ---------------------------------------------------------------------------
+# SSO token validation
+# ---------------------------------------------------------------------------
+
+SSO_TOKENS_TABLE = "sso_tokens"
+
+
+def init_sso_tokens_table() -> None:
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(f"""
+            CREATE TABLE IF NOT EXISTS {SSO_TOKENS_TABLE} (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                token_hash TEXT NOT NULL UNIQUE,
+                user_id TEXT,
+                email TEXT NOT NULL,
+                provider TEXT NOT NULL,
+                issued_at TEXT NOT NULL,
+                expires_at TEXT NOT NULL,
+                used INTEGER NOT NULL DEFAULT 0,
+                created_at TEXT NOT NULL
+            )
+        """)
+        cursor.execute(f"""
+            CREATE INDEX IF NOT EXISTS idx_sso_tokens_token_hash
+            ON {SSO_TOKENS_TABLE}(token_hash)
+        """)
+        conn.commit()
+        logger.info("SSO tokens table initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize SSO tokens table: {e}")
+        if conn:
+            conn.rollback()
+    finally:
+        if conn:
+            conn.close()
+
+
+def validate_sso_token(token: str, provider: str = "") -> Optional[dict[str, Any]]:
+    """Validate an SSO token by checking signature (hash) and expiry.
+
+    Args:
+        token: The SSO token string.
+        provider: Optional provider name to filter by.
+
+    Returns:
+        dict with user info if valid, None otherwise.
+    """
+    if not token or not token.strip():
+        return None
+
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        conditions = ["token_hash = ?", "used = 0"]
+        params = [token_hash]
+        if provider:
+            conditions.append("provider = ?")
+            params.append(provider)
+
+        where = " AND ".join(conditions)
+        cursor.execute(
+            f"SELECT * FROM {SSO_TOKENS_TABLE} WHERE {where}",
+            params,
+        )
+        row = cursor.fetchone()
+        if not row:
+            logger.warning("SSO token not found or already used")
+            return None
+
+        record = dict(row)
+        expires_at = datetime.fromisoformat(record["expires_at"])
+        if expires_at < datetime.now(timezone.utc):
+            logger.warning("SSO token expired")
+            return None
+
+        # Mark token as used (one-time use)
+        cursor.execute(
+            f"UPDATE {SSO_TOKENS_TABLE} SET used = 1 WHERE id = ?",
+            (record["id"],),
+        )
+        conn.commit()
+
+        return {
+            "user_id": record.get("user_id"),
+            "email": record["email"],
+            "provider": record["provider"],
+        }
+    except Exception as e:
+        logger.error(f"SSO token validation failed: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def create_sso_token(email: str, provider: str, user_id: Optional[str] = None) -> Optional[str]:
+    """Create a new SSO token with expiry.
+
+    Args:
+        email: User email.
+        provider: SSO provider name (e.g. 'google', 'github').
+        user_id: Optional user ID.
+
+    Returns:
+        str: The raw token (hash stored in DB).
+    """
+    token = secrets.token_urlsafe(48)
+    token_hash = hashlib.sha256(token.encode()).hexdigest()
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(hours=1)
+
+    conn = None
+    try:
+        conn = connect_db(STORAGE_DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            f"""
+            INSERT INTO {SSO_TOKENS_TABLE}
+            (token_hash, user_id, email, provider, issued_at, expires_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (token_hash, user_id, email, provider, now.isoformat(), expires_at.isoformat(), now.isoformat()),
+        )
+        conn.commit()
+        return token
+    except Exception as e:
+        logger.error(f"Failed to create SSO token: {e}")
+        if conn:
+            conn.rollback()
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+init_sso_tokens_table()
 init_two_factor_table()
 init_users_table()
 init_login_attempts_table()
