@@ -15,3 +15,5 @@ CONTACT_RATE_LIMIT = os.getenv("CONTACT_RATE_LIMIT", "3/minute")
 DELETE_RATE_LIMIT = os.getenv("DELETE_RATE_LIMIT", "10/minute")
 
 SEARCH_RATE_LIMIT = os.getenv("SEARCH_RATE_LIMIT", "30/minute")
+
+PASSWORD_RESET_RATE_LIMIT = os.getenv("PASSWORD_RESET_RATE_LIMIT", "3/minute")
