@@ -2,11 +2,12 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import sqlite3
-import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
 
+from .audit_log_service import init_audit_log_table
 from .database import connect_db
 from .search_service import clear_expired_cache
 
@@ -14,7 +15,9 @@ logger = logging.getLogger(__name__)
 
 # Render ephemeral storage / local temp directory
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
+QUARANTINE_DIR = os.path.join(UPLOAD_DIR, "quarantine")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+os.makedirs(QUARANTINE_DIR, exist_ok=True)
 
 # SQLite Database setup
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "nyayavanni.db")
@@ -47,6 +50,8 @@ def init_db(raise_on_error: bool = False):
             cursor.execute("ALTER TABLE documents ADD COLUMN session_id TEXT")
         if "user_id" not in existing_columns:
             cursor.execute("ALTER TABLE documents ADD COLUMN user_id TEXT")
+        if "tags" not in existing_columns:
+            cursor.execute("ALTER TABLE documents ADD COLUMN tags TEXT DEFAULT ''")
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_session_id
             ON documents(session_id)
@@ -56,6 +61,8 @@ def init_db(raise_on_error: bool = False):
         _ensure_sessions_table(cursor)
 
         conn.commit()
+
+        init_audit_log_table(DB_PATH)
     except Exception as e:
         if conn:
             conn.rollback()
@@ -158,27 +165,44 @@ def _ensure_sessions_table(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
             session_id TEXT PRIMARY KEY,
+            user_id TEXT,
+            ip_address TEXT,
             created_at TEXT NOT NULL,
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
     """)
+    cursor.execute("PRAGMA table_info(sessions)")
+    cols = {row[1] for row in cursor.fetchall()}
+    if "user_id" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN user_id TEXT")
+    if "ip_address" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN ip_address TEXT")
+    if "user_agent" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN user_agent TEXT")
+    if "created_at" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN created_at TEXT")
+    if "last_used_at" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN last_used_at TEXT")
+    if "expires_at" not in cols:
+        cursor.execute("ALTER TABLE sessions ADD COLUMN expires_at TEXT")
 
 
-SESSION_TTL = timedelta(days=30)
+SESSION_TTL = timedelta(hours=24)
 
 
-def create_session_id() -> str:
-    session_id = str(uuid.uuid4())
+def create_session_id(ip_address: str = "", user_agent: str = "") -> str:
+    session_id = secrets.token_hex(32)
     now = datetime.now(timezone.utc)
     expires_at = now + SESSION_TTL
     conn = None
     try:
         conn = _connect_db()
+        conn.execute("BEGIN IMMEDIATE")
         cursor = conn.cursor()
         cursor.execute(
-            "INSERT OR IGNORE INTO sessions (session_id, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?)",
-            (session_id, now.isoformat(), now.isoformat(), expires_at.isoformat()),
+            "INSERT OR IGNORE INTO sessions (session_id, ip_address, user_agent, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (session_id, ip_address, user_agent[:512] if user_agent else "", now.isoformat(), now.isoformat(), expires_at.isoformat()),
         )
         conn.commit()
     except Exception as e:
@@ -191,7 +215,7 @@ def create_session_id() -> str:
     return session_id
 
 
-def validate_session(session_id: str) -> bool:
+def validate_session(session_id: str, ip_address: str = "", user_agent: str = "") -> bool:
     if not session_id or not session_id.strip():
         return False
     conn = None
@@ -199,7 +223,7 @@ def validate_session(session_id: str) -> bool:
         conn = _connect_db()
         cursor = conn.cursor()
         cursor.execute(
-            "SELECT expires_at FROM sessions WHERE session_id = ?", (session_id,)
+            "SELECT expires_at, ip_address, user_agent FROM sessions WHERE session_id = ?", (session_id,)
         )
         row = cursor.fetchone()
         if not row:
@@ -207,6 +231,20 @@ def validate_session(session_id: str) -> bool:
         expires_at = datetime.fromisoformat(row[0])
         if expires_at < datetime.now(timezone.utc):
             logger.warning(f"Expired session attempted: {session_id}")
+            return False
+        stored_ip = row[1] if len(row) > 1 else ""
+        if stored_ip and ip_address and stored_ip != ip_address:
+            logger.warning(
+                "Session IP mismatch: session=%s stored_ip=%s request_ip=%s",
+                session_id, stored_ip, ip_address,
+            )
+            return False
+        stored_ua = row[2] if len(row) > 2 else ""
+        if stored_ua and user_agent and stored_ua != user_agent[:512]:
+            logger.warning(
+                "Session User-Agent mismatch: session=%s",
+                session_id,
+            )
             return False
         now = datetime.now(timezone.utc).isoformat()
         cursor.execute(
@@ -218,6 +256,89 @@ def validate_session(session_id: str) -> bool:
     except Exception as e:
         logger.error(f"Session validation failed: {e}")
         return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_session_user_agent(session_id: str, user_agent: str) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET user_agent = ? WHERE session_id = ?",
+            (user_agent[:512] if user_agent else "", session_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to update session User-Agent: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_session_ip(session_id: str, ip_address: str) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET ip_address = ? WHERE session_id = ?",
+            (ip_address, session_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to update session IP: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_session_user_id(session_id: str, user_id: str) -> bool:
+    """Associate a user ID with an existing session."""
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET user_id = ? WHERE session_id = ?",
+            (user_id, session_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to update session user_id: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_session_user_id(session_id: str) -> Optional[str]:
+    """Return the user_id associated with a session, or None."""
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT user_id FROM sessions WHERE session_id = ?", (session_id,)
+        )
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"Failed to get session user_id: {e}")
+        return None
     finally:
         if conn:
             conn.close()
@@ -285,6 +406,31 @@ def save_document_record(session_id: str, doc_id: str, filename: str, local_path
             conn.close()
 
 
+INTERNAL_DOC_FIELDS = {"session_id", "user_id", "local_path", "status"}
+
+ALLOWED_DOCUMENT_TAGS = frozenset({
+    "contract", "nda", "terms_of_service", "privacy_policy",
+    "employment", "lease", "agreement", "notice", "legal_notice",
+    "court_order", "affidavit", "will", "deed", "invoice",
+    "gst", "tax", "banking", "insurance", "property",
+})
+
+
+def validate_document_tags(tags: list[str]) -> list[str]:
+    """Validate and sanitize document tags against the allowed list."""
+    sanitized = []
+    for tag in tags:
+        cleaned = re.sub(r'[^a-zA-Z0-9_]', '', tag).strip().lower()
+        if cleaned in ALLOWED_DOCUMENT_TAGS:
+            sanitized.append(cleaned)
+    return sanitized
+
+
+def strip_internal_metadata(record: dict) -> dict:
+    """Remove internal metadata fields from a document record for export."""
+    return {k: v for k, v in record.items() if k not in INTERNAL_DOC_FIELDS}
+
+
 def get_document_record(doc_id: str) -> Optional[dict]:
     """Retrieve document metadata from SQLite"""
     conn = None
@@ -305,9 +451,58 @@ def get_document_record(doc_id: str) -> Optional[dict]:
             conn.close()
 
 
-def delete_document_and_cache(doc_id: str) -> bool:
+def get_document_tags(doc_id: str) -> list[str]:
+    """Return the tags for a document as a list."""
     record = get_document_record(doc_id)
     if not record:
+        return []
+    tags_str = record.get("tags") or ""
+    return [t for t in tags_str.split(",") if t]
+
+
+def set_document_tags(doc_id: str, tags: list[str]) -> bool:
+    """Set validated tags on a document. Returns True on success."""
+    validated = validate_document_tags(tags)
+    tags_str = ",".join(validated)
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET tags = ? WHERE document_id = ?",
+            (tags_str, doc_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        logger.error(f"Failed to set tags for document {doc_id}: {e}")
+        if conn:
+            conn.rollback()
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def export_document_record(doc_id: str) -> Optional[dict]:
+    """Retrieve document metadata with internal fields stripped for export."""
+    record = get_document_record(doc_id)
+    if not record:
+        return None
+    return strip_internal_metadata(record)
+
+
+def delete_document_and_cache(doc_id: str, session_id: Optional[str] = None) -> bool:
+    record = get_document_record(doc_id)
+    if not record:
+        return False
+
+    if session_id is not None and record.get("session_id") != session_id:
+        logger.warning(
+            "Delete denied for document %s: session %s does not own document",
+            doc_id,
+            session_id,
+        )
         return False
 
     local_path = record.get("local_path")
