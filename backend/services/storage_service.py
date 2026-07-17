@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import asyncio
 import hashlib
 import json
@@ -70,7 +72,6 @@ def init_db(raise_on_error: bool = False):
     finally:
         if conn:
             conn.close()
-
 
 def _create_analysis_cache_table(cursor):
     cursor.execute("""
@@ -378,8 +379,42 @@ def mark_password_reset_token_used(token: str) -> bool:
             conn.close()
 
 
+def init_api_keys_table() -> None:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS api_keys (
+                key_id TEXT PRIMARY KEY,
+                user_id TEXT NOT NULL,
+                key_hash TEXT NOT NULL UNIQUE,
+                name TEXT NOT NULL DEFAULT 'default',
+                scopes TEXT NOT NULL DEFAULT 'read',
+                is_active INTEGER NOT NULL DEFAULT 1,
+                last_used_at TEXT,
+                created_at TEXT NOT NULL,
+                expires_at TEXT,
+                FOREIGN KEY (user_id) REFERENCES users(user_id)
+            )
+        """)
+        cursor.execute("""
+            CREATE INDEX IF NOT EXISTS idx_api_keys_user_id
+            ON api_keys(user_id)
+        """)
+        conn.commit()
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to initialize api_keys table: {e}")
+    finally:
+        if conn:
+            conn.close()
+
+
 # Initialize tables
 init_db()
+init_api_keys_table()
 
 
 def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
@@ -719,6 +754,273 @@ def get_notification_preferences(session_id: str) -> dict:
 
 
 ALLOWED_NOTIFICATION_PREFERENCES = {"email", "sms", "push", "in_app"}
+ALLOWED_DOCUMENT_TAGS = frozenset({
+    "legal", "contract", "nda", "agreement", "policy",
+    "terms", "employment", "property", "financial", "personal",
+})
+ALLOWED_SHARE_PERMISSIONS = {"view", "comment", "edit", "admin"}
+
+
+def get_user_documents(session_id: str, page: int = 1, page_size: int = 10) -> dict:
+    """Return a paginated list of documents for the given session."""
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute(
+            "SELECT COUNT(*) FROM documents WHERE session_id = ?",
+            (session_id,),
+        )
+        total_count = cursor.fetchone()[0]
+
+        offset = (page - 1) * page_size
+        cursor.execute(
+            "SELECT document_id, filename, status, uploaded_at, tags, description FROM documents WHERE session_id = ? ORDER BY uploaded_at DESC LIMIT ? OFFSET ?",
+            (session_id, page_size, offset),
+        )
+        rows = cursor.fetchall()
+        results = []
+        for row in rows:
+            d = dict(row)
+            if d.get("tags"):
+                try:
+                    d["tags"] = json.loads(d["tags"])
+                except (json.JSONDecodeError, TypeError):
+                    d["tags"] = []
+            else:
+                d["tags"] = []
+            results.append(d)
+
+        return {
+            "results": results,
+            "total_count": total_count,
+            "page": page,
+            "page_size": page_size,
+        }
+    except Exception as e:
+        logger.error(f"Failed to list documents for session {session_id}: {e}")
+        return {"results": [], "total_count": 0, "page": page, "page_size": page_size}
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_document_tags(doc_id: str) -> list[str]:
+    """Return tags for a document."""
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT tags FROM documents WHERE document_id = ?", (doc_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            try:
+                return json.loads(row[0])
+            except (json.JSONDecodeError, TypeError):
+                return []
+        return []
+    except Exception as e:
+        logger.error(f"Failed to get tags for document {doc_id}: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def set_document_tags(doc_id: str, tags: list[str]) -> bool:
+    """Set tags for a document, dropping any not in ALLOWED_DOCUMENT_TAGS."""
+    cleaned = []
+    for tag in tags:
+        cleaned_tag = tag.strip().lower()
+        if cleaned_tag in ALLOWED_DOCUMENT_TAGS:
+            cleaned.append(cleaned_tag)
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET tags = ? WHERE document_id = ?",
+            (json.dumps(cleaned), doc_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to set tags for document {doc_id}: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def export_document_record(doc_id: str) -> dict | None:
+    """Export document record excluding internal fields."""
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT document_id, filename, uploaded_at FROM documents WHERE document_id = ?",
+            (doc_id,),
+        )
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    except Exception as e:
+        logger.error(f"Failed to export document {doc_id}: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_session_user_id(session_id: str) -> str | None:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("SELECT user_id FROM sessions WHERE session_id = ?", (session_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+    except Exception as e:
+        logger.error(f"Failed to get user_id for session {session_id}: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_session_user_id(session_id: str, user_id: str) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET user_id = ? WHERE session_id = ?",
+            (user_id, session_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to update session user_id: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def update_session_ip(session_id: str, ip_address: str) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE sessions SET ip_address = ? WHERE session_id = ?",
+            (ip_address, session_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to update session ip: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def deactivate_user_sessions(user_id: str) -> int:
+    """Delete all sessions for a given user. Returns count of deleted sessions."""
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE user_id = ?", (user_id,))
+        deleted = cursor.rowcount
+        conn.commit()
+        return deleted
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to delete sessions for user {user_id}: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+
+def generate_api_key(user_id: str, name: str = "default", scopes: str = "read") -> tuple[str, str] | None:
+    """Generate a new API key for a user. Returns (key_id, raw_key)."""
+    import hashlib
+    import secrets
+    raw_key = f"nyv_{secrets.token_urlsafe(32)}"
+    key_hash = hashlib.sha256(raw_key.encode()).hexdigest()
+    key_id = secrets.token_hex(16)
+    now = datetime.now(timezone.utc).isoformat()
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO api_keys (key_id, user_id, key_hash, name, scopes, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (key_id, user_id, key_hash, name, scopes, now),
+        )
+        conn.commit()
+        return key_id, raw_key
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to generate API key: {e}")
+        return None
+    finally:
+        if conn:
+            conn.close()
+
+
+def list_api_keys(user_id: str) -> list[dict]:
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT key_id, name, scopes, is_active, last_used_at, created_at, expires_at FROM api_keys WHERE user_id = ? ORDER BY created_at DESC",
+            (user_id,),
+        )
+        return [dict(r) for r in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"Failed to list API keys: {e}")
+        return []
+    finally:
+        if conn:
+            conn.close()
+
+
+def revoke_api_key(key_id: str, user_id: str) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE api_keys SET is_active = 0 WHERE key_id = ? AND user_id = ?",
+            (key_id, user_id),
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Failed to revoke API key {key_id}: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 
 def update_notification_preferences(session_id: str, preferences: dict) -> bool:

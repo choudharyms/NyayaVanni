@@ -1,8 +1,12 @@
+from __future__ import annotations
+
 import asyncio
+import hashlib
 import io
 import json
 import logging
 import os
+import secrets
 import uuid
 
 import google.generativeai as genai
@@ -16,7 +20,7 @@ from fastapi import (
     UploadFile,
 )
 from fastapi.responses import StreamingResponse
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -56,18 +60,27 @@ from ..services.storage_service import (
     UPLOAD_DIR,
     ALLOWED_NOTIFICATION_PREFERENCES,
     create_session_id,
+    deactivate_user_sessions,
     delete_document_and_cache,
+    generate_api_key,
     get_avatar_path,
     get_cached_analysis,
     get_document_record,
+    get_document_tags,
     get_notification_preferences,
+    get_session_user_id,
+    get_user_documents,
     invalidate_session,
+    list_api_keys,
     mark_password_reset_token_used,
+    revoke_api_key,
     save_avatar,
     save_cached_analysis,
     save_document_record,
+    set_document_tags,
     store_password_reset_token,
     update_notification_preferences,
+    update_session_user_id,
     upload_to_local,
     validate_session,
     verify_password_reset_token,
@@ -119,6 +132,38 @@ class DocumentGenerationRequest(BaseModel):
     party_two_name: str = Field(..., max_length=500)
     consideration_amount: str = Field(..., max_length=500)
     jurisdiction: str = Field(..., max_length=200)
+
+
+class DocumentTagsRequest(BaseModel):
+    tags: list[str] = Field(..., max_length=20)
+
+
+class ShareDocumentRequest(BaseModel):
+    recipient_email: str = Field(
+        ...,
+        max_length=320,
+        pattern=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$",
+    )
+    message: str = Field("", max_length=1000)
+    expiry_hours: int = Field(default=24, ge=1, le=168)
+    permissions: list[str] = Field(default=["view"], max_length=10)
+
+    @field_validator("permissions")
+    @classmethod
+    def validate_permissions(cls, v: list[str]) -> list[str]:
+        from ..services.storage_service import ALLOWED_SHARE_PERMISSIONS
+        invalid = set(v) - ALLOWED_SHARE_PERMISSIONS
+        if invalid:
+            raise ValueError(
+                f"Invalid sharing permissions: {', '.join(sorted(invalid))}. "
+                f"Allowed: {', '.join(sorted(ALLOWED_SHARE_PERMISSIONS))}"
+            )
+        return list(dict.fromkeys(v))
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str = Field(default="default", max_length=100)
+    scopes: str = Field(default="read", max_length=100)
 
 
 def require_session_id(request: Request) -> str:
@@ -1135,4 +1180,207 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+@api_router.get("/documents")
+@limiter.limit("30/minute", key_func=_session_key)
+async def list_documents(
+    request: Request,
+    page: int = 1,
+    page_size: int = 10,
+):
+    """List documents for the current session with pagination.
+
+    Query Parameters:
+    - page: Page number (default: 1)
+    - page_size: Results per page (default: 10, max: 100)
+
+    Returns:
+        - results: List of documents
+        - total_count: Total documents
+        - page: Current page
+        - page_size: Results per page
+    """
+    try:
+        session_id = require_session_id(request)
+        _log_access(request, "list-documents", session_id)
+
+        if page < 1:
+            page = 1
+        if page_size < 1 or page_size > 100:
+            page_size = 10
+
+        result = get_user_documents(session_id, page=page, page_size=page_size)
+        return result
+
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"List documents failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list documents")
+
+
+@api_router.get("/documents/{document_id}/tags")
+@limiter.limit("30/minute", key_func=_session_key)
+async def get_document_tags_endpoint(document_id: str, request: Request):
+    """Get tags for a document."""
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+    tags = get_document_tags(document_id)
+    return {"document_id": document_id, "tags": tags}
+
+
+@api_router.patch("/documents/{document_id}/tags")
+@limiter.limit("10/minute", key_func=_session_key)
+async def update_document_tags(
+    document_id: str, request: Request, body: DocumentTagsRequest
+):
+    """Update tags for a document with validation against allowed list.
+
+    Invalid tags are silently dropped. Returns the final tag set.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    success = set_document_tags(document_id, body.tags)
+    if not success:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    tags = get_document_tags(document_id)
+    return {"document_id": document_id, "tags": tags}
+
+
+@api_router.post("/documents/{document_id}/share")
+@limiter.limit("10/minute", key_func=_session_key)
+async def share_document(
+    document_id: str,
+    request: Request,
+    body: ShareDocumentRequest,
+):
+    """Share a document with a recipient via email with permission validation.
+
+    Validates sharing permissions against allowed values (view, comment, edit, admin).
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    recipient_email = body.recipient_email.strip()
+    if not recipient_email:
+        raise HTTPException(status_code=400, detail="Recipient email is required")
+    if "@" not in recipient_email or "." not in recipient_email:
+        raise HTTPException(status_code=400, detail="Invalid recipient email format")
+
+    share_token = secrets.token_urlsafe(32)
+    share_link = f"{os.getenv('FRONTEND_URL', 'http://localhost:5173')}/shared/{share_token}"
+
+    _log_access(
+        request,
+        "document-share",
+        session_id,
+        f"doc={document_id} recipient={recipient_email} perms={body.permissions}",
+    )
+
+    return {
+        "status": "ok",
+        "share_token": share_token,
+        "share_link": share_link,
+        "recipient_email": recipient_email,
+        "expiry_hours": body.expiry_hours,
+        "permissions": body.permissions,
+    }
+
+
+@api_router.get("/auth/api-keys")
+@limiter.limit("10/minute", key_func=_session_key)
+async def list_api_keys_endpoint(request: Request):
+    """List API keys for the current user."""
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+    keys = list_api_keys(user_id)
+    return {"api_keys": keys}
+
+
+@api_router.post("/auth/api-keys")
+@limiter.limit("5/minute", key_func=_session_key)
+async def create_api_key(request: Request, body: ApiKeyCreateRequest):
+    """Generate a new API key for the current user.
+
+    Rate limited to 5 requests per minute per session.
+    """
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    result = generate_api_key(user_id, name=body.name.strip(), scopes=body.scopes.strip())
+    if not result:
+        raise HTTPException(status_code=500, detail="Failed to generate API key")
+
+    key_id, raw_key = result
+    _log_access(request, "api-key-create", session_id, f"key={key_id}")
+
+    return {
+        "status": "ok",
+        "key_id": key_id,
+        "api_key": raw_key,
+        "message": "Save this key securely. It will not be shown again.",
+    }
+
+
+@api_router.delete("/auth/api-keys/{key_id}")
+@limiter.limit("10/minute", key_func=_session_key)
+async def delete_api_key(key_id: str, request: Request):
+    """Revoke an API key."""
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    if not revoke_api_key(key_id, user_id):
+        raise HTTPException(status_code=404, detail="API key not found")
+
+    _log_access(request, "api-key-revoke", session_id, f"key={key_id}")
+    return {"status": "ok", "message": "API key revoked"}
+
+
+@api_router.post("/auth/deactivate")
+@limiter.limit("3/hour", key_func=_session_key)
+async def deactivate_account(request: Request):
+    """Deactivate the current user account and invalidate all sessions.
+
+    Sets the user's is_active flag to 0 and deletes all active sessions,
+    forcing logout from all devices.
+    """
+    session_id = require_session_id(request)
+    user_id = get_session_user_id(session_id)
+    if not user_id:
+        raise HTTPException(status_code=401, detail="User not authenticated")
+
+    try:
+        from ..services.auth_service import delete_user_account
+        success, message = delete_user_account(user_id)
+        if not success:
+            raise HTTPException(status_code=500, detail=message)
+    except ImportError:
+        from ..services.storage_service import _connect_db
+        conn = None
+        try:
+            conn = _connect_db()
+            cursor = conn.cursor()
+            cursor.execute("UPDATE users SET is_active = 0 WHERE user_id = ?", (user_id,))
+            deleted_sessions = deactivate_user_sessions(user_id)
+            conn.commit()
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Failed to deactivate user {user_id}: {e}")
+            raise HTTPException(status_code=500, detail="Failed to deactivate account")
+        finally:
+            if conn:
+                conn.close()
+
+    _log_access(request, "account-deactivate", session_id, f"user={user_id}")
+    return {"status": "ok", "message": "Account deactivated and all sessions invalidated"}
 
