@@ -6,6 +6,7 @@ import io
 import json
 import logging
 import os
+import re
 import secrets
 import uuid
 
@@ -95,6 +96,37 @@ from ..services.storage_service import (
 logger = logging.getLogger(__name__)
 
 api_router = APIRouter()
+
+
+_FILE_PATH_PATTERN = re.compile(r"(?:/[a-zA-Z0-9_\-./]+)+")
+
+
+def _strip_file_paths(text: str) -> str:
+    """Remove absolute file-system paths from text to prevent internal path leakage."""
+    return _FILE_PATH_PATTERN.sub("[path]", text)
+
+
+_REQUIRED_ANALYSIS_FIELDS = {
+    "document_type": "Unknown",
+    "parties": [],
+    "dates": [],
+    "sections": [],
+    "clauses": [],
+    "summary": "",
+    "risk_level": "Medium",
+    "urgency": "Normal",
+    "consequences": [],
+    "recommended_timeline": "",
+    "actions": [],
+}
+
+
+def _validate_analysis_output(analysis: dict) -> dict:
+    """Ensure the AI analysis dict contains all expected fields with safe defaults."""
+    for key, default in _REQUIRED_ANALYSIS_FIELDS.items():
+        if key not in analysis or analysis[key] is None:
+            analysis[key] = default
+    return analysis
 graph_builder = LegalKnowledgeGraphBuilder()
 
 # ---------------------------------------------------------------------------
@@ -138,6 +170,21 @@ class DocumentGenerationRequest(BaseModel):
     party_two_name: str = Field(..., max_length=500)
     consideration_amount: str = Field(..., max_length=500)
     jurisdiction: str = Field(..., max_length=200)
+
+    @field_validator("effective_date")
+    @classmethod
+    def validate_date(cls, v: str) -> str:
+        if not re.match(r"^\d{4}-\d{2}-\d{2}$", v):
+            raise ValueError("effective_date must be in YYYY-MM-DD format")
+        return v
+
+    @field_validator("party_one_name", "party_two_name", "jurisdiction")
+    @classmethod
+    def sanitize_text(cls, v: str) -> str:
+        stripped = re.sub(r"<[^>]*>", "", v)
+        if not stripped.strip():
+            raise ValueError("Field must contain visible text after sanitization")
+        return stripped.strip()
 
 
 class DocumentTagsRequest(BaseModel):
@@ -484,9 +531,8 @@ async def forgot_password(request: Request, body: ForgotPasswordRequest):
     token = store_password_reset_token(body.email)
     if token:
         logger.info(
-            "Password reset token generated for %s (dev mode — token: %s)",
+            "Password reset token generated for %s (dev mode)",
             body.email,
-            token,
         )
     return {
         "status": "ok",
@@ -681,7 +727,7 @@ def _analyze_document_sync(
                 knowledge_graph = graph_builder.generate_graph(cached["extracted_text"])
                 return {
                     "documentId": document_id,
-                    "analysis": cached["analysis"],
+                    "analysis": _validate_analysis_output(cached["analysis"]),
                     "knowledge_graph": knowledge_graph,
                     "extracted_text": cached["extracted_text"][:500] + "...",
                     "cached": True,
@@ -716,6 +762,7 @@ def _analyze_document_sync(
         text = extract_document(
             contents, filename, force_ocr=force_ocr, language=language
         )
+        text = _strip_file_paths(text)
 
         # Index document content for full-text search
         index_document(document_id, filename, text)
@@ -733,7 +780,7 @@ def _analyze_document_sync(
 
         return {
             "documentId": document_id,
-            "analysis": analysis_result,
+            "analysis": _validate_analysis_output(analysis_result),
             "confidence": confidence,
             "classification": classification,
             "knowledge_graph": knowledge_graph,
@@ -985,8 +1032,8 @@ def diff_analysis(
         old_text = extract_document(old_contents, old_document.filename or "old.pdf")
         new_text = extract_document(new_contents, new_document.filename or "new.pdf")
 
-        old_text = old_text[:8000]
-        new_text = new_text[:8000]
+        old_text = _strip_file_paths(old_text[:8000])
+        new_text = _strip_file_paths(new_text[:8000])
 
         prompt = f"""
 You are an expert Indian Legal AI. Compare the following two document versions and provide a structured difference analysis.

@@ -813,6 +813,10 @@ def get_user_documents(
     session_id: str, page: int = 1, page_size: int = 10, include_deleted: bool = False
 ) -> dict:
     """Return a paginated list of documents for the given session."""
+    if page < 1:
+        page = 1
+    if page_size < 1 or page_size > 100:
+        page_size = 10
     conn = None
     try:
         conn = _connect_db()

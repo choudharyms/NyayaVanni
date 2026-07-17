@@ -43,19 +43,38 @@ export default function LandingPage() {
     }
   };
 
+  const ALLOWED_UPLOAD_EXTENSIONS = ["pdf", "png", "jpg", "jpeg", "docx"];
+  const MAX_UPLOAD_SIZE = 10 * 1024 * 1024;
+
+  const isValidFile = (f) => {
+    if (!f) return false;
+    if (f.size > MAX_UPLOAD_SIZE) {
+      alert("File size exceeds the maximum allowed limit of 10MB.");
+      return false;
+    }
+    const ext = f.name?.split(".").pop()?.toLowerCase();
+    if (!ALLOWED_UPLOAD_EXTENSIONS.includes(ext)) {
+      alert("Unsupported file format. Only PDF, PNG, JPG, JPEG, and DOCX are allowed.");
+      return false;
+    }
+    return true;
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+      const f = e.dataTransfer.files[0];
+      if (isValidFile(f)) setFile(f);
     }
   };
 
   const handleChange = (e) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      const f = e.target.files[0];
+      if (isValidFile(f)) setFile(f);
     }
   };
 
@@ -75,11 +94,15 @@ export default function LandingPage() {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       await ensureSessionId(apiUrl);
 
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
       const response = await fetch(`${apiUrl}/api/upload`, {
         method: 'POST',
         credentials: 'include',
+        signal: controller.signal,
         body: formData,
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('Upload failed');
       const data = await response.json();

@@ -1,30 +1,30 @@
 import re
 from typing import Any, Dict, List, Optional
 
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, Field, field_validator
 
 
 class ChatMessage(BaseModel):
-    role: str
-    message: str
+    role: str = Field(..., max_length=50)
+    message: str = Field(..., max_length=10000)
 
 
 class ChatRequest(BaseModel):
-    user_message: str
-    chat_history: List[ChatMessage]
+    user_message: str = Field(..., max_length=5000)
+    chat_history: List[ChatMessage] = Field(default_factory=list, max_length=100)
     language: str = "en"
     document_analysis: Optional[Dict[str, Any]] = None
 
 
 class ChatResponse(BaseModel):
-    response: str
+    response: str = Field(..., max_length=50000)
 
 
 class ContactRequest(BaseModel):
-    name: str
-    email: str
-    subject: str
-    message: str
+    name: str = Field(..., max_length=200)
+    email: str = Field(..., max_length=320)
+    subject: str = Field(..., max_length=500)
+    message: str = Field(..., max_length=5000)
 
 
 class DocumentGenerationRequest(BaseModel):

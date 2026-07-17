@@ -305,8 +305,8 @@ def change_password(
             )
             conn.commit()
             _invalidate_user_cache(user_id)
-            logger.info(f"Password changed for user {user_id}")
-            return True, "Password changed successfully"
+        logger.info("Password changed for user %s", user_id)
+        return True, "Password changed successfully"
         except Exception as e:
             logger.error(f"Password change failed for user {user_id}: {e}")
             if conn:

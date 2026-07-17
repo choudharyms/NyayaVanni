@@ -140,16 +140,20 @@ export default function GeneralChat() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 120000);
       const response = await fetch(`${apiUrl}/api/chat/general`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
+        signal: controller.signal,
         body: JSON.stringify({
           user_message: userMsg.message,
           chat_history: currentHistory,
           language: language,
         }),
       });
+      clearTimeout(timeoutId);
 
       if (!response.ok) throw new Error('Chat failed');
 

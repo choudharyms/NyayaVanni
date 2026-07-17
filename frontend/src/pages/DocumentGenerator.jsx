@@ -92,6 +92,17 @@ export default function DocumentGenerator() {
         'Receiving Party must be different from Disclosing Party.';
     }
 
+    if (formData.effective_date && !/^\d{4}-\d{2}-\d{2}$/.test(formData.effective_date.trim())) {
+      nextErrors.effective_date = 'Date must be in YYYY-MM-DD format.';
+    }
+
+    const sanitize = (v) => v.replace(/<[^>]*>/g, '').trim();
+    for (const key of ['party_one_name', 'party_two_name', 'jurisdiction']) {
+      if (formData[key] && sanitize(formData[key]) === '') {
+        nextErrors[key] = `${FIELD_CONFIG.find(f => f.name === key)?.label || key} contains only invalid markup.`;
+      }
+    }
+
     setErrors(nextErrors);
     return Object.keys(nextErrors).length === 0;
   };
