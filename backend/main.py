@@ -2,6 +2,7 @@ import asyncio
 import logging
 import os
 import re
+import uuid
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, HTTPException, Request
@@ -60,7 +61,8 @@ class LimitUploadSizeMiddleware(BaseHTTPMiddleware):
                     return JSONResponse(
                         status_code=413,
                         content={
-                            "detail": "Payload Too Large: The request body exceeds the maximum allowed limit."
+                            "detail": "Payload Too Large: The request body exceeds the maximum allowed limit.",
+                            "request_id": str(uuid.uuid4()),
                         },
                     )
             except ValueError:
@@ -93,7 +95,7 @@ async def validate_origin(request, call_next):
     if request.method in ("POST", "PUT", "DELETE", "PATCH"):
         if origin and "nyayavanni" not in origin and "localhost" not in origin:
             from fastapi.responses import JSONResponse
-            return JSONResponse(status_code=403, content={"detail": "Forbidden"})
+            return JSONResponse(status_code=403, content={"detail": "Forbidden", "request_id": str(uuid.uuid4())})
     return await call_next(request)
 
 app.add_middleware(LimitUploadSizeMiddleware, max_upload_size=11 * 1024 * 1024)
@@ -112,7 +114,10 @@ app.add_middleware(SlowAPIMiddleware)
 @app.exception_handler(StarletteHTTPException)
 async def http_exception_handler(request: Request, exc: StarletteHTTPException):
     sanitized = re.sub(r"/[^\s]{10,}", "[path removed]", str(exc.detail))
-    return JSONResponse(status_code=exc.status_code, content={"detail": sanitized})
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail": sanitized, "request_id": str(uuid.uuid4())},
+    )
 
 
 @app.exception_handler(Exception)
@@ -129,7 +134,10 @@ async def sanitized_exception_handler(request: Request, exc: Exception):
 
         logger.error("Unhandled exception: %s", sanitized)
 
-    return JSONResponse(status_code=status_code, content={"detail": detail})
+    return JSONResponse(
+        status_code=status_code,
+        content={"detail": detail, "request_id": str(uuid.uuid4())},
+    )
 
 
 @app.on_event("startup")

@@ -38,7 +38,8 @@ def init_db(raise_on_error: bool = False):
                 filename TEXT,
                 local_path TEXT,
                 status TEXT,
-                uploaded_at TEXT
+                uploaded_at TEXT,
+                deleted INTEGER NOT NULL DEFAULT 0
             )
         """)
         cursor.execute("PRAGMA table_info(documents)")
@@ -47,6 +48,8 @@ def init_db(raise_on_error: bool = False):
             cursor.execute("ALTER TABLE documents ADD COLUMN session_id TEXT")
         if "user_id" not in existing_columns:
             cursor.execute("ALTER TABLE documents ADD COLUMN user_id TEXT")
+        if "deleted" not in existing_columns:
+            cursor.execute("ALTER TABLE documents ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0")
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_session_id
             ON documents(session_id)
@@ -443,6 +446,64 @@ def delete_document_and_cache(doc_id: str) -> bool:
             conn.rollback()
         logger.error(f"SQLite delete failed: {e}")
         return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def soft_delete_document(doc_id: str) -> bool:
+    """Mark a document as soft-deleted without removing the file or DB row.
+
+    Args:
+        doc_id: The document ID to mark as deleted.
+
+    Returns:
+        bool: True if the document was found and marked, False otherwise.
+    """
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET deleted = 1 WHERE document_id = ?", (doc_id,)
+        )
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Soft delete failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
+def get_user_documents_for_export(session_id: str) -> list[dict]:
+    """Retrieve all non-deleted documents for a session for data export.
+
+    Excludes soft-deleted documents (deleted = 1) from the export.
+
+    Args:
+        session_id: The session ID to export data for.
+
+    Returns:
+        list[dict]: A list of document records with deleted ones excluded.
+    """
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT document_id, filename, status, uploaded_at "
+            "FROM documents WHERE session_id = ? AND (deleted IS NULL OR deleted = 0)",
+            (session_id,),
+        )
+        return [dict(row) for row in cursor.fetchall()]
+    except Exception as e:
+        logger.error(f"User data export query failed: {e}")
+        return []
     finally:
         if conn:
             conn.close()

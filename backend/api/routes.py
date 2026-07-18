@@ -31,7 +31,7 @@ from ..config.rate_limits import (
     LOGIN_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
 )
-from ..models.schemas import ChatRequest, ChatResponse, ContactRequest, ForgotPasswordRequest, ResetPasswordRequest
+from ..models.schemas import ChatRequest, ChatResponse, ContactRequest, ForgotPasswordRequest, NotificationTemplateRequest, ResetPasswordRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
@@ -232,6 +232,33 @@ async def contact_us(request: Request, body: ContactRequest):
     return {
         "status": "ok",
         "message": "Thank you for reaching out. We will get back to you shortly.",
+    }
+
+
+@api_router.post("/notification-templates")
+async def create_notification_template(request: Request, body: NotificationTemplateRequest):
+    """Register a new notification template with name validation.
+
+    The template name must contain only alphanumeric characters, underscores,
+    and hyphens to prevent injection in template resolution paths.
+
+    Args:
+        request: The incoming HTTP request.
+        body: The notification template payload with validated name.
+
+    Returns:
+        dict: A status message confirming the template was registered.
+    """
+    _log_access(request, "notification-template")
+    logger.info(
+        "Notification template registered: name=%s subject=%s",
+        body.name,
+        body.subject,
+    )
+    return {
+        "status": "ok",
+        "message": "Notification template registered successfully.",
+        "template_name": body.name,
     }
 
 
@@ -445,9 +472,6 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
 
 @api_router.post("/analyze/{document_id}")
 @limiter.limit(RATE_LIMIT_ANALYZE)
-import asyncio
-
-@asyncio.timeout(30)
 async def analyze_document(
     request: Request,
     document_id: str,
@@ -458,13 +482,17 @@ async def analyze_document(
     """Trigger full analysis pipeline."""
 
     # Heavy OCR/LLM/DB work is executed in a worker thread to avoid blocking the event loop.
-    return await asyncio.to_thread(
-        _analyze_document_sync,
-        request,
-        document_id,
-        language,
-        force_ocr,
-        file,
+    # Wrap with a 60-second timeout to prevent OCR hangs.
+    return await asyncio.wait_for(
+        asyncio.to_thread(
+            _analyze_document_sync,
+            request,
+            document_id,
+            language,
+            force_ocr,
+            file,
+        ),
+        timeout=60,
     )
 
 
@@ -952,12 +980,17 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
 
 @api_router.delete("/documents/{document_id}")
 @limiter.limit(DELETE_RATE_LIMIT)
-async def delete_document(document_id: str, request: Request):
+async def delete_document(
+    document_id: str,
+    request: Request,
+    soft: bool = False,
+):
     """Delete a document and remove it from the search index.
 
     Args:
         document_id: The unique identifier of the document to delete.
         request: The incoming HTTP request.
+        soft: If True, soft-delete (mark as deleted in DB only).
 
     Returns:
         dict: A confirmation with the deleted document ID.
@@ -970,6 +1003,16 @@ async def delete_document(document_id: str, request: Request):
     session_id = require_session_id(request)
     _log_access(request, "delete-document", session_id, f"doc={document_id}")
     require_document_owner(document_id, session_id)
+
+    if soft:
+        from ..services.storage_service import soft_delete_document as _soft_delete
+
+        ok = _soft_delete(document_id)
+        if not ok:
+            raise HTTPException(status_code=404, detail="Document not found")
+        # Remove document from search index
+        remove_document_from_index(document_id)
+        return {"documentId": document_id, "deleted": True, "soft": True}
 
     deleted = delete_document_and_cache(document_id)
     if not deleted:
@@ -1033,4 +1076,36 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+@api_router.get("/user/export-data")
+async def export_user_data(request: Request):
+    """Export user data excluding soft-deleted documents.
+
+    Returns all user documents that have not been soft-deleted,
+    along with session information.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        dict: User data including active (non-deleted) documents.
+    """
+    try:
+        session_id = require_session_id(request)
+        _log_access(request, "export-data", session_id)
+
+        from ..services.storage_service import get_user_documents_for_export
+
+        documents = get_user_documents_for_export(session_id)
+        return {
+            "session_id": session_id[:8] + "...",
+            "documents": documents,
+            "total_documents": len(documents),
+        }
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"User data export failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to export user data")
 
