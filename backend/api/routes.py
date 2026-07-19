@@ -1053,7 +1053,7 @@ def search_documents_endpoint(
         session_id = require_session_id(request)
         _log_access(request, "search", session_id, f"q={q[:50]}")
 
-        if not q or not q.strip() or len(q.strip()) < 2:
+        if not q or not q.strip() or len(q.strip()) < 2 or len(q.strip()) > 200:
             raise HTTPException(
                 status_code=400, detail="Search query must be at least 2 characters"
             )
