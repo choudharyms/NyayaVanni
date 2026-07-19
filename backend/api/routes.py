@@ -236,6 +236,9 @@ async def contact_us(request: Request, body: ContactRequest):
 
 
 @api_router.post("/notification-templates")
+from fastapi import Body
+
+@rate_limit(minute=10)
 async def create_notification_template(request: Request, body: NotificationTemplateRequest):
     """Register a new notification template with name validation.
 
