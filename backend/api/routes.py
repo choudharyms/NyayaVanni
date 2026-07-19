@@ -1030,7 +1030,10 @@ async def delete_document(
 
 
 @api_router.get("/search")
-def search_documents_endpoint(
+def search_documents_endpoint(request: Request, q: str = , filter: str = , page: int = 1, page_size: int = 10):
+    allowed_filters = ['title', 'content', 'tags', 'date']
+    if filter and filter not in allowed_filters:
+        raise HTTPException(status_code=400, detail=f"Invalid filter. Allowed: {allowed_filters}")
     request: Request, q: str, page: int = 1, page_size: int = 10
 ):
     """
