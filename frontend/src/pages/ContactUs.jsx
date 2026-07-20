@@ -93,40 +93,40 @@ export default function ContactUs() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col transition-colors duration-300">
-      <div className="max-w-6xl mx-auto flex flex-col flex-1 w-full px-6 py-6">
-        <header className="flex items-center justify-between py-4 mb-8 border-b border-slate-200 dark:border-slate-800">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
+      <div className="mx-auto flex w-full max-w-6xl flex-1 flex-col px-6 py-6">
+        <header className="mb-8 flex items-center justify-between border-b border-slate-200 py-4 dark:border-slate-800">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-xl border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition text-slate-700 dark:text-slate-200 cursor-pointer"
+            className="flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
           >
-            <ArrowLeft className="w-4 h-4" />{' '}
+            <ArrowLeft className="h-4 w-4" />{' '}
             {language === 'en' ? 'Back' : 'वापस'}
           </button>
           <ThemeToggle />
         </header>
 
-        <main className="flex-1 w-full flex flex-col md:flex-row gap-12">
-          <div className="flex-1 flex flex-col">
-            <h1 className="text-4xl md:text-5xl font-extrabold text-slate-850 dark:text-white mb-4">
+        <main className="flex w-full flex-1 flex-col gap-12 md:flex-row">
+          <div className="flex flex-1 flex-col">
+            <h1 className="text-slate-850 mb-4 text-4xl font-extrabold md:text-5xl dark:text-white">
               {L.CONTACT_TITLE}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mb-8 text-lg">
+            <p className="mb-8 text-lg text-slate-600 dark:text-slate-400">
               {L.CONTACT_DESC}
             </p>
 
             <form
               onSubmit={handleSubmit}
-              className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-6"
+              className="flex flex-col gap-6 rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-sm backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80"
             >
               {submitStatus === 'success' && (
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                <div className="flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-emerald-700 dark:border-emerald-500/20 dark:bg-emerald-500/10 dark:text-emerald-400">
+                  <CheckCircle className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
                     <p className="font-semibold">
                       {language === 'en' ? 'Message Sent!' : 'संदेश भेजा गया!'}
                     </p>
-                    <p className="text-sm mt-1">
+                    <p className="mt-1 text-sm">
                       {language === 'en'
                         ? 'Thank you for reaching out. We will get back to you shortly.'
                         : 'संपर्क करने के लिए धन्यवाद। हम शीघ्र ही आपसे संपर्क करेंगे।'}
@@ -136,15 +136,15 @@ export default function ContactUs() {
               )}
 
               {submitStatus === 'error' && (
-                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
+                <div className="flex items-start gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-500/20 dark:bg-red-500/10 dark:text-red-400">
+                  <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
                   <div>
                     <p className="font-semibold">
                       {language === 'en'
                         ? 'Failed to send message.'
                         : 'संदेश भेजने में विफल।'}
                     </p>
-                    <p className="text-sm mt-1">
+                    <p className="mt-1 text-sm">
                       {language === 'en'
                         ? 'Please try again later.'
                         : 'कृपया बाद में पुनः प्रयास करें।'}
@@ -153,7 +153,7 @@ export default function ContactUs() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
                 <div className="flex flex-col gap-2">
                   <label
                     htmlFor="name"
@@ -168,7 +168,7 @@ export default function ContactUs() {
                     value={formData.name}
                     onChange={handleChange}
                     maxLength={200}
-                    className={`px-4 py-3 rounded-xl border ${errors.name ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
+                    className={`rounded-xl border px-4 py-3 ${errors.name ? 'border-red-500 focus:ring-red-500' : 'focus:border-nyaya-500 dark:focus:border-nyaya-500 border-slate-200 dark:border-slate-700'} focus:ring-nyaya-500/20 bg-slate-50 transition-all outline-none focus:ring-2 dark:bg-slate-950`}
                     placeholder={
                       language === 'en'
                         ? CONTACT_PLACEHOLDERS.NAME_EN
@@ -176,7 +176,7 @@ export default function ContactUs() {
                     }
                   />
                   {errors.name && (
-                    <span className="text-red-500 text-xs">{errors.name}</span>
+                    <span className="text-xs text-red-500">{errors.name}</span>
                   )}
                 </div>
 
@@ -194,13 +194,13 @@ export default function ContactUs() {
                     value={formData.email}
                     onChange={handleChange}
                     maxLength={320}
-                    className={`px-4 py-3 rounded-xl border ${errors.email ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
+                    className={`rounded-xl border px-4 py-3 ${errors.email ? 'border-red-500 focus:ring-red-500' : 'focus:border-nyaya-500 dark:focus:border-nyaya-500 border-slate-200 dark:border-slate-700'} focus:ring-nyaya-500/20 bg-slate-50 transition-all outline-none focus:ring-2 dark:bg-slate-950`}
                     placeholder={
                       CONTACT_PLACEHOLDERS.CONTACT_EMAIL || 'john@example.com'
                     }
                   />
                   {errors.email && (
-                    <span className="text-red-500 text-xs">{errors.email}</span>
+                    <span className="text-xs text-red-500">{errors.email}</span>
                   )}
                 </div>
               </div>
@@ -212,22 +212,22 @@ export default function ContactUs() {
                 >
                   {L.SUBJECT}
                 </label>
-                  <input
-                    type="text"
-                    id="subject"
-                    name="subject"
-                    value={formData.subject}
-                    onChange={handleChange}
-                    maxLength={500}
-                    className={`px-4 py-3 rounded-xl border ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all`}
-                    placeholder={
-                      language === 'en'
-                        ? CONTACT_PLACEHOLDERS.HELP_EN
-                        : CONTACT_PLACEHOLDERS.HELP_HI
-                    }
-                  />
+                <input
+                  type="text"
+                  id="subject"
+                  name="subject"
+                  value={formData.subject}
+                  onChange={handleChange}
+                  maxLength={500}
+                  className={`rounded-xl border px-4 py-3 ${errors.subject ? 'border-red-500 focus:ring-red-500' : 'focus:border-nyaya-500 dark:focus:border-nyaya-500 border-slate-200 dark:border-slate-700'} focus:ring-nyaya-500/20 bg-slate-50 transition-all outline-none focus:ring-2 dark:bg-slate-950`}
+                  placeholder={
+                    language === 'en'
+                      ? CONTACT_PLACEHOLDERS.HELP_EN
+                      : CONTACT_PLACEHOLDERS.HELP_HI
+                  }
+                />
                 {errors.subject && (
-                  <span className="text-red-500 text-xs">{errors.subject}</span>
+                  <span className="text-xs text-red-500">{errors.subject}</span>
                 )}
               </div>
 
@@ -238,38 +238,38 @@ export default function ContactUs() {
                 >
                   {L.MESSAGE}
                 </label>
-                  <textarea
-                    id="message"
-                    name="message"
-                    rows="5"
-                    value={formData.message}
-                    onChange={handleChange}
-                    maxLength={10000}
-                    className={`px-4 py-3 rounded-xl border ${errors.message ? 'border-red-500 focus:ring-red-500' : 'border-slate-200 dark:border-slate-700 focus:border-nyaya-500 dark:focus:border-nyaya-500'} bg-slate-50 dark:bg-slate-950 focus:ring-2 focus:ring-nyaya-500/20 outline-none transition-all resize-none`}
-                    placeholder={
-                      language === 'en'
-                        ? CONTACT_PLACEHOLDERS.ISSUE_EN
-                        : CONTACT_PLACEHOLDERS.ISSUE_HI
-                    }
-                  />
+                <textarea
+                  id="message"
+                  name="message"
+                  rows="5"
+                  value={formData.message}
+                  onChange={handleChange}
+                  maxLength={10000}
+                  className={`rounded-xl border px-4 py-3 ${errors.message ? 'border-red-500 focus:ring-red-500' : 'focus:border-nyaya-500 dark:focus:border-nyaya-500 border-slate-200 dark:border-slate-700'} focus:ring-nyaya-500/20 resize-none bg-slate-50 transition-all outline-none focus:ring-2 dark:bg-slate-950`}
+                  placeholder={
+                    language === 'en'
+                      ? CONTACT_PLACEHOLDERS.ISSUE_EN
+                      : CONTACT_PLACEHOLDERS.ISSUE_HI
+                  }
+                />
                 {errors.message && (
-                  <span className="text-red-500 text-xs">{errors.message}</span>
+                  <span className="text-xs text-red-500">{errors.message}</span>
                 )}
               </div>
 
               <button
                 type="submit"
                 disabled={isSubmitting}
-                className="mt-2 flex items-center justify-center gap-2 w-full md:w-auto self-start bg-linear-to-r from-nyaya-600 to-nyaya-500 hover:from-nyaya-500 hover:to-nyaya-400 text-white px-8 py-3 rounded-xl font-semibold transition-all shadow-lg shadow-nyaya-500/20 dark:shadow-nyaya-500/30 hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 cursor-pointer"
+                className="from-nyaya-600 to-nyaya-500 hover:from-nyaya-500 hover:to-nyaya-400 shadow-nyaya-500/20 dark:shadow-nyaya-500/30 mt-2 flex w-full cursor-pointer items-center justify-center gap-2 self-start rounded-xl bg-linear-to-r px-8 py-3 font-semibold text-white shadow-lg transition-all hover:scale-105 disabled:opacity-70 disabled:hover:scale-100 md:w-auto"
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-white/30 border-t-white"></div>
                     {L.SENDING}
                   </>
                 ) : (
                   <>
-                    <Send className="w-5 h-5" />
+                    <Send className="h-5 w-5" />
                     {L.SEND_MESSAGE}
                   </>
                 )}
@@ -277,15 +277,15 @@ export default function ContactUs() {
             </form>
           </div>
 
-          <div className="w-full md:w-80 flex flex-col gap-6 mt-8 md:mt-24">
-            <div className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm">
-              <h3 className="text-xl font-bold text-slate-850 dark:text-white mb-6">
+          <div className="mt-8 flex w-full flex-col gap-6 md:mt-24 md:w-80">
+            <div className="rounded-3xl border border-slate-200 bg-white/80 p-8 shadow-sm backdrop-blur-xl dark:border-slate-800 dark:bg-slate-900/80">
+              <h3 className="text-slate-850 mb-6 text-xl font-bold dark:text-white">
                 {L.CONTACT_INFO}
               </h3>
               <div className="flex flex-col gap-6">
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-nyaya-500/10 flex items-center justify-center shrink-0 text-nyaya-600 dark:text-nyaya-400">
-                    <Mail className="w-5 h-5" />
+                  <div className="bg-nyaya-500/10 text-nyaya-600 dark:text-nyaya-400 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                    <Mail className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-white">
@@ -293,7 +293,7 @@ export default function ContactUs() {
                     </p>
                     <a
                       href="mailto:support@nyayavanni.com"
-                      className="text-sm text-slate-600 dark:text-slate-400 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-colors"
+                      className="hover:text-nyaya-600 dark:hover:text-nyaya-400 text-sm text-slate-600 transition-colors dark:text-slate-400"
                     >
                       support@nyayavanni.com
                     </a>
@@ -301,8 +301,8 @@ export default function ContactUs() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-nyaya-500/10 flex items-center justify-center shrink-0 text-nyaya-600 dark:text-nyaya-400">
-                    <Clock className="w-5 h-5" />
+                  <div className="bg-nyaya-500/10 text-nyaya-600 dark:text-nyaya-400 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                    <Clock className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-white">
@@ -315,8 +315,8 @@ export default function ContactUs() {
                 </div>
 
                 <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 rounded-full bg-nyaya-500/10 flex items-center justify-center shrink-0 text-nyaya-600 dark:text-nyaya-400">
-                    <MapPin className="w-5 h-5" />
+                  <div className="bg-nyaya-500/10 text-nyaya-600 dark:text-nyaya-400 flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
+                    <MapPin className="h-5 w-5" />
                   </div>
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-white">

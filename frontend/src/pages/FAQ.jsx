@@ -18,15 +18,15 @@ export default function FAQ() {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col transition-colors duration-300">
-      <div className="max-w-4xl mx-auto flex flex-col flex-1 w-full px-6 py-6">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
+      <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-6 py-6">
         {/* Navigation / Header */}
-        <header className="flex items-center justify-between py-4 mb-8 border-b border-slate-200 dark:border-slate-800">
+        <header className="mb-8 flex items-center justify-between border-b border-slate-200 py-4 dark:border-slate-800">
           <button
             onClick={() => navigate(-1)}
-            className="flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full border border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-900 transition text-slate-700 dark:text-slate-200 cursor-pointer"
+            className="flex cursor-pointer items-center gap-2 rounded-full border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-100 dark:border-slate-800 dark:text-slate-200 dark:hover:bg-slate-900"
           >
-            <ArrowLeft className="w-4 h-4" />{' '}
+            <ArrowLeft className="h-4 w-4" />{' '}
             {language === 'en' ? 'Back' : 'वापस'}
           </button>
           <ThemeToggle />
@@ -34,10 +34,10 @@ export default function FAQ() {
 
         {/* Content */}
         <main className="flex-1">
-          <h1 className="text-4xl font-extrabold text-slate-850 dark:text-white">
+          <h1 className="text-slate-850 text-4xl font-extrabold dark:text-white">
             {t('faq.title')}
           </h1>
-          <p className="text-slate-600 dark:text-slate-400 mt-3">
+          <p className="mt-3 text-slate-600 dark:text-slate-400">
             {t('faq.desc')}
           </p>
 
@@ -45,16 +45,16 @@ export default function FAQ() {
             {faqs.map((item, idx) => (
               <details
                 key={idx}
-                className="rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/40 p-5 hover:border-slate-350 dark:hover:border-slate-700 transition-all duration-300 group open:shadow-lg open:border-slate-300 dark:open:border-slate-600"
+                className="hover:border-slate-350 group rounded-xl border border-slate-200 bg-white p-5 transition-all duration-300 open:border-slate-300 open:shadow-lg dark:border-slate-800 dark:bg-slate-900/40 dark:open:border-slate-600 dark:hover:border-slate-700"
               >
-                <summary className="cursor-pointer list-none flex items-center justify-between gap-4 font-semibold text-slate-850 dark:text-white">
+                <summary className="text-slate-850 flex cursor-pointer list-none items-center justify-between gap-4 font-semibold dark:text-white">
                   <span>{item.q}</span>
-                  <span className="text-slate-400 dark:text-slate-500 transition-transform duration-300 group-open:rotate-45 text-lg leading-none">
+                  <span className="text-lg leading-none text-slate-400 transition-transform duration-300 group-open:rotate-45 dark:text-slate-500">
                     +
                   </span>
                 </summary>
                 <div className="overflow-hidden">
-                  <p className="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed text-sm animate-fadeIn">
+                  <p className="animate-fadeIn mt-3 text-sm leading-relaxed text-slate-600 dark:text-slate-400">
                     {item.a}
                   </p>
                 </div>

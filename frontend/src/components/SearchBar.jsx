@@ -23,13 +23,13 @@ export default function SearchBar({
   return (
     <div className="relative">
       <div
-        className={`relative flex items-center gap-2 px-3 py-2 rounded-xl border transition-colors ${
+        className={`relative flex items-center gap-2 rounded-xl border px-3 py-2 transition-colors ${
           isFocused
             ? 'border-nyaya-500 bg-white dark:bg-slate-800'
-            : 'border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900'
+            : 'border-slate-300 bg-slate-50 dark:border-slate-600 dark:bg-slate-900'
         }`}
       >
-        <Search className="w-4 h-4 text-slate-400 shrink-0" />
+        <Search className="h-4 w-4 shrink-0 text-slate-400" />
         <input
           type="text"
           value={query}
@@ -37,17 +37,17 @@ export default function SearchBar({
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
           placeholder={placeholder}
-          className="flex-1 bg-transparent outline-none text-sm text-slate-900 dark:text-slate-100 placeholder-slate-500 dark:placeholder-slate-400"
+          className="flex-1 bg-transparent text-sm text-slate-900 placeholder-slate-500 outline-none dark:text-slate-100 dark:placeholder-slate-400"
           aria-label={ARIA_LABELS.SEARCH_CONVERSATIONS}
         />
         {query && (
           <button
             onClick={handleClear}
-            className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-xl transition-colors text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+            className="rounded-xl p-1 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-700 dark:hover:text-slate-300"
             aria-label={ARIA_LABELS.CLEAR_SEARCH}
             title={TITLES.CLEAR_SEARCH}
           >
-            <X className="w-4 h-4" />
+            <X className="h-4 w-4" />
           </button>
         )}
       </div>

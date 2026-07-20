@@ -84,42 +84,42 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
     <>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="md:hidden fixed top-16 left-4 z-40 p-2 rounded-lg bg-nyaya-500 text-white hover:bg-nyaya-600 transition-colors"
+        className="bg-nyaya-500 hover:bg-nyaya-600 fixed top-16 left-4 z-40 rounded-lg p-2 text-white transition-colors md:hidden"
         aria-label={ARIA_LABELS.TOGGLE_SIDEBAR}
         title={TITLES.TOGGLE_SIDEBAR}
       >
         {isOpen ? (
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="h-5 w-5" />
         ) : (
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="h-5 w-5" />
         )}
       </button>
 
       {isOpen && (
         <div
-          className="md:hidden fixed inset-0 bg-black/50 z-30 top-16"
+          className="fixed inset-0 top-16 z-30 bg-black/50 md:hidden"
           onClick={() => setIsOpen(false)}
           aria-label={ARIA_LABELS.CLOSE_SIDEBAR}
         />
       )}
 
       <aside
-        className={`fixed md:relative left-0 top-16 md:top-0 h-[calc(100vh-4rem)] md:h-screen w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-700 shadow-lg md:shadow-none flex flex-col transform transition-transform duration-300 md:transform-none ${
+        className={`fixed top-16 left-0 flex h-[calc(100vh-4rem)] w-64 transform flex-col border-r border-slate-200 bg-white shadow-lg transition-transform duration-300 md:relative md:top-0 md:h-screen md:transform-none md:shadow-none dark:border-slate-700 dark:bg-slate-900 ${
           isOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div className="p-4 border-b border-slate-200 dark:border-slate-700">
-          <div className="flex items-center justify-between mb-4">
+        <div className="border-b border-slate-200 p-4 dark:border-slate-700">
+          <div className="mb-4 flex items-center justify-between">
             <h2 className="font-bold text-slate-900 dark:text-slate-100">
               Chat History
             </h2>
             <button
               onClick={handleNewChat}
-              className="p-1.5 rounded-lg bg-nyaya-500 text-white hover:bg-nyaya-600 transition-colors"
+              className="bg-nyaya-500 hover:bg-nyaya-600 rounded-lg p-1.5 text-white transition-colors"
               aria-label={ARIA_LABELS.NEW_CHAT}
               title={TITLES.NEW_CHAT}
             >
-              <Plus className="w-5 h-5" />
+              <Plus className="h-5 w-5" />
             </button>
           </div>
 
@@ -139,8 +139,8 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
           )}
 
           {error && (
-            <div className="p-4 m-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg flex gap-2">
-              <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 shrink-0 mt-0.5" />
+            <div className="m-2 flex gap-2 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-800 dark:bg-red-900/20">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0 text-red-600 dark:text-red-400" />
               <p className="text-sm text-red-700 dark:text-red-300">{error}</p>
             </div>
           )}
@@ -170,7 +170,7 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
         </div>
 
         {conversations.length > 0 && !isSearching && (
-          <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+          <div className="border-t border-slate-200 p-4 dark:border-slate-700">
             {showClearConfirm ? (
               <div className="space-y-2">
                 <p className="text-sm text-slate-700 dark:text-slate-300">
@@ -179,13 +179,13 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
                 <div className="flex gap-2">
                   <button
                     onClick={handleClearAll}
-                    className="flex-1 px-3 py-1.5 bg-red-500 text-white rounded-md text-sm hover:bg-red-600 transition-colors"
+                    className="flex-1 rounded-md bg-red-500 px-3 py-1.5 text-sm text-white transition-colors hover:bg-red-600"
                   >
                     Delete
                   </button>
                   <button
                     onClick={() => setShowClearConfirm(false)}
-                    className="flex-1 px-3 py-1.5 bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-slate-100 rounded-md text-sm hover:bg-slate-300 dark:hover:bg-slate-600 transition-colors"
+                    className="flex-1 rounded-md bg-slate-200 px-3 py-1.5 text-sm text-slate-900 transition-colors hover:bg-slate-300 dark:bg-slate-700 dark:text-slate-100 dark:hover:bg-slate-600"
                   >
                     Cancel
                   </button>
@@ -194,10 +194,10 @@ export default function HistorySidebar({ onSelectConversation, onNewChat }) {
             ) : (
               <button
                 onClick={() => setShowClearConfirm(true)}
-                className="w-full px-3 py-2 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors flex items-center justify-center gap-2 text-sm"
+                className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700 transition-colors hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                 title={TITLES.CLEAR_HISTORY}
               >
-                <Trash2 className="w-4 h-4" />
+                <Trash2 className="h-4 w-4" />
                 Clear All
               </button>
             )}

@@ -27,7 +27,7 @@ function App() {
           <Router>
             <ScrollToTop />
             {/* Theme-Responsive Root Layout Wrapper */}
-            <div className="min-h-screen font-sans bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-nyaya-500 selection:text-white relative transition-colors duration-300">
+            <div className="selection:bg-nyaya-500 relative min-h-screen bg-slate-50 font-sans text-slate-900 transition-colors duration-300 selection:text-white dark:bg-slate-950 dark:text-slate-100">
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/dashboard/:documentId" element={<Dashboard />} />
@@ -49,7 +49,7 @@ function App() {
               <BackToTop />
 
               {/* Pinned Language Switcher */}
-              <div className="fixed bottom-6 right-6 z-50 shadow-xl">
+              <div className="fixed right-6 bottom-6 z-50 shadow-xl">
                 <LanguageSwitcher />
               </div>
             </div>

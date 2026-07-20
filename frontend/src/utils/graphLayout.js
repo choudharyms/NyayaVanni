@@ -3,7 +3,7 @@
  * Level 0: clauses, parties, legal_terms, etc.
  * Level 1: obligations, financial_terms
  * Level 2: dates
- * 
+ *
  * Orders nodes horizontally using a barycenter heuristic to align children under their parents.
  */
 export function calculateLayout(nodes, edges, options = {}) {
@@ -12,7 +12,7 @@ export function calculateLayout(nodes, edges, options = {}) {
 
   // 1. Assign level based on node type
   const nodeLevels = {};
-  nodes.forEach(node => {
+  nodes.forEach((node) => {
     if (node.type === 'obligations' || node.type === 'financial_terms') {
       nodeLevels[node.id] = 1;
     } else if (node.type === 'dates') {
@@ -24,7 +24,7 @@ export function calculateLayout(nodes, edges, options = {}) {
 
   // Group nodes by level
   const levels = { 0: [], 1: [], 2: [] };
-  nodes.forEach(node => {
+  nodes.forEach((node) => {
     const lvl = nodeLevels[node.id];
     levels[lvl].push(node);
   });
@@ -41,7 +41,7 @@ export function calculateLayout(nodes, edges, options = {}) {
   // Helper to find parents of a node at a specific level
   const getParents = (nodeId, parentLevel) => {
     const parents = [];
-    edges.forEach(edge => {
+    edges.forEach((edge) => {
       if (edge.target === nodeId) {
         if (nodeLevels[edge.source] === parentLevel) {
           parents.push(edge.source);
@@ -52,11 +52,14 @@ export function calculateLayout(nodes, edges, options = {}) {
   };
 
   // 3. Position Level 1 nodes using barycenter
-  const lvl1Nodes = levels[1].map(node => {
+  const lvl1Nodes = levels[1].map((node) => {
     const parents = getParents(node.id, 0);
     let targetX = 0;
     if (parents.length > 0) {
-      const sumX = parents.reduce((sum, pId) => sum + (positions[pId]?.x || 0), 0);
+      const sumX = parents.reduce(
+        (sum, pId) => sum + (positions[pId]?.x || 0),
+        0
+      );
       targetX = sumX / parents.length;
     }
     return { node, targetX };
@@ -71,11 +74,14 @@ export function calculateLayout(nodes, edges, options = {}) {
   });
 
   // 4. Position Level 2 nodes using barycenter
-  const lvl2Nodes = levels[2].map(node => {
+  const lvl2Nodes = levels[2].map((node) => {
     const parents = getParents(node.id, 1);
     let targetX = 0;
     if (parents.length > 0) {
-      const sumX = parents.reduce((sum, pId) => sum + (positions[pId]?.x || 0), 0);
+      const sumX = parents.reduce(
+        (sum, pId) => sum + (positions[pId]?.x || 0),
+        0
+      );
       targetX = sumX / parents.length;
     }
     return { node, targetX };

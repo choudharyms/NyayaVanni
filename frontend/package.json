@@ -8,22 +8,26 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest"
+    "test": "vitest",
+    "format": "prettier --write 'src/**/*.{js,jsx,ts,tsx}'"
+
+    
   },
+
   "dependencies": {
-    "@tailwindcss/postcss": "^4.2.2",
-    "@tailwindcss/typography": "^0.5.19",
-    "autoprefixer": "^10.4.27",
-    "axios": "^1.13.6",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@tailwindcss/typography": "^0.5.20",
+    "autoprefixer": "^10.5.4",
+    "axios": "^1.18.1",
     "html-to-image": "^1.11.13",
-    "i18next": "^26.3.1",
+    "i18next": "^26.3.6",
     "lucide-react": "^0.577.0",
-    "postcss": "^8.5.8",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
-    "react-i18next": "^17.0.8",
+    "postcss": "^8.5.20",
+    "react": "^19.2.7",
+    "react-dom": "^19.2.7",
+    "react-i18next": "^17.0.10",
     "react-markdown": "^10.1.0",
-    "react-router-dom": "^7.13.1",
+    "react-router-dom": "^7.18.1",
     "react-window": "^2.2.7",
     "reactflow": "^11.11.4",
     "rehype-sanitize": "^6.0.0",
@@ -33,15 +37,17 @@
     "@eslint/js": "^9.39.4",
     "@testing-library/jest-dom": "^6.9.1",
     "@testing-library/react": "^16.3.2",
-    "@types/react": "^19.2.14",
+    "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "@vitejs/plugin-react": "^6.0.1",
-    "eslint": "^9.39.4",
-    "eslint-plugin-react-hooks": "^7.0.1",
-    "eslint-plugin-react-refresh": "^0.5.2",
-    "globals": "^17.4.0",
+    "@vitejs/plugin-react": "^6.0.3",
+    "eslint": "^9.39.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
     "jsdom": "^29.1.1",
-    "vite": "^8.0.1",
-    "vitest": "^4.1.9"
+    "prettier": "^3.9.5",
+    "prettier-plugin-tailwindcss": "^0.8.1",
+    "vite": "^8.1.5",
+    "vitest": "^4.1.10"
   }
 }
