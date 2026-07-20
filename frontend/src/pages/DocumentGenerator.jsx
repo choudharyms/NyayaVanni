@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, FileText, Loader2, Scale, Sparkles } from 'lucide-react';
 import ThemeToggle from '../components/ThemeToggle';
-import Footer from "../components/Footer";
+import Footer from '../components/Footer';
 import { ensureSessionId } from '../utils/session';
 
 const FIELD_CONFIG = [
@@ -139,26 +139,26 @@ export default function DocumentGenerator() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 pb-16 transition-colors duration-300">
-      <div className="absolute top-[-8%] left-[-12%] w-[50%] h-[50%] bg-nyaya-500/10 dark:bg-nyaya-500/20 rounded-full blur-[140px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-      <div className="absolute bottom-[-10%] right-[-10%] w-[52%] h-[52%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[150px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 pb-16 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
+      <div className="bg-nyaya-500/10 dark:bg-nyaya-500/20 pointer-events-none absolute top-[-8%] left-[-12%] h-[50%] w-[50%] rounded-full mix-blend-multiply blur-[140px] dark:mix-blend-screen" />
+      <div className="pointer-events-none absolute right-[-10%] bottom-[-10%] h-[52%] w-[52%] rounded-full bg-blue-600/10 mix-blend-multiply blur-[150px] dark:bg-blue-600/20 dark:mix-blend-screen" />
 
-      <nav className="sticky top-0 z-30 border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300">
-        <div className="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+      <nav className="sticky top-0 z-30 border-b border-slate-200 bg-white/60 backdrop-blur-xl transition-all duration-300 dark:border-white/10 dark:bg-slate-900/60">
+        <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 transition cursor-pointer"
+              className="cursor-pointer rounded-full border border-slate-200 bg-slate-100 p-2 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:hover:bg-white/10"
               aria-label="Go back"
             >
-              <ArrowLeft className="w-5 h-5 text-slate-700 dark:text-slate-200" />
+              <ArrowLeft className="h-5 w-5 text-slate-700 dark:text-slate-200" />
             </button>
             <button
               onClick={() => navigate('/')}
-              className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white"
             >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
-                <Scale className="text-nyaya-600 dark:text-nyaya-400 w-5 h-5" />
+              <span className="bg-nyaya-500/15 border-nyaya-500/25 inline-flex h-9 w-9 items-center justify-center rounded-full border">
+                <Scale className="text-nyaya-600 dark:text-nyaya-400 h-5 w-5" />
               </span>
               <span>
                 Nyaya
@@ -170,8 +170,8 @@ export default function DocumentGenerator() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-sm">
-              <Sparkles className="w-4 h-4 text-nyaya-600 dark:text-nyaya-300" />
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-1.5 text-sm text-slate-700 sm:flex dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
+              <Sparkles className="text-nyaya-600 dark:text-nyaya-300 h-4 w-4" />
               NDA Generator
             </div>
             <ThemeToggle />
@@ -179,16 +179,16 @@ export default function DocumentGenerator() {
         </div>
       </nav>
 
-      <main className="max-w-5xl mx-auto px-6 pt-10">
-        <div className="text-center max-w-3xl mx-auto">
-          <div className="inline-flex items-center gap-2 mb-5 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 font-medium text-sm">
-            <FileText className="w-4 h-4" />
+      <main className="mx-auto max-w-5xl px-6 pt-10">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="bg-nyaya-500/10 border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 mb-5 inline-flex items-center gap-2 rounded-full border px-4 py-1.5 text-sm font-medium">
+            <FileText className="h-4 w-4" />
             Generate legally structured documents
           </div>
-          <h1 className="text-4xl md:text-5xl font-extrabold tracking-tight text-slate-850 dark:text-white">
+          <h1 className="text-slate-850 text-4xl font-extrabold tracking-tight md:text-5xl dark:text-white">
             NDA Document Generator
           </h1>
-          <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-300">
+          <p className="mt-4 text-base text-slate-600 md:text-lg dark:text-slate-300">
             Fill in the details below to generate a professional NDA PDF
             instantly.
           </p>
@@ -196,9 +196,9 @@ export default function DocumentGenerator() {
 
         <form
           onSubmit={handleGenerate}
-          className="mt-10 rounded-[2rem] border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 md:p-8 shadow-md"
+          className="mt-10 rounded-[2rem] border border-slate-200 bg-white/60 p-6 shadow-md backdrop-blur-xl md:p-8 dark:border-white/10 dark:bg-slate-900/60"
         >
-          <div className="grid md:grid-cols-2 gap-5">
+          <div className="grid gap-5 md:grid-cols-2">
             {FIELD_CONFIG.map((field) => (
               <div
                 key={field.name}
@@ -206,7 +206,7 @@ export default function DocumentGenerator() {
               >
                 <label
                   htmlFor={field.name}
-                  className="block text-sm font-semibold text-slate-700 dark:text-slate-200 mb-2"
+                  className="mb-2 block text-sm font-semibold text-slate-700 dark:text-slate-200"
                 >
                   {field.label}
                 </label>
@@ -216,13 +216,11 @@ export default function DocumentGenerator() {
                   value={formData[field.name]}
                   onChange={(e) => handleChange(field.name, e.target.value)}
                   placeholder={field.placeholder}
-                  className={`w-full px-4 py-3 rounded-xl bg-slate-50 dark:bg-slate-950/40 border ${errors[field.name] ? 'border-rose-500' : 'border-slate-200 dark:border-white/10'} text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400
-                    focus:outline-none focus:ring-2 transition
-                    ${
-                      errors[field.name]
-                        ? 'focus:ring-rose-400/50'
-                        : 'focus:ring-nyaya-500/70 focus:border-nyaya-500/50'
-                    }`}
+                  className={`w-full rounded-xl border bg-slate-50 px-4 py-3 dark:bg-slate-950/40 ${errors[field.name] ? 'border-rose-500' : 'border-slate-200 dark:border-white/10'} text-slate-900 transition placeholder:text-slate-500 focus:ring-2 focus:outline-none dark:text-white dark:placeholder:text-slate-400 ${
+                    errors[field.name]
+                      ? 'focus:ring-rose-400/50'
+                      : 'focus:ring-nyaya-500/70 focus:border-nyaya-500/50'
+                  }`}
                 />
                 {errors[field.name] && (
                   <p className="mt-1.5 text-xs text-rose-300">
@@ -239,7 +237,7 @@ export default function DocumentGenerator() {
             </div>
           )}
 
-          <div className="mt-8 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="mt-8 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <p className="text-xs text-slate-500 dark:text-slate-400">
               Disclaimer: Generated by NyayaVanni for informational purposes
               only.
@@ -247,14 +245,11 @@ export default function DocumentGenerator() {
             <button
               type="submit"
               disabled={isGenerating || !isFormComplete}
-              className="inline-flex items-center justify-center gap-2 rounded-2xl px-6 py-3.5 font-semibold text-white
-                         bg-gradient-to-r from-nyaya-500 to-blue-600 shadow-[0_0_25px_rgba(37,99,235,0.22)]
-                         transition-all duration-300 hover:scale-[1.02] active:scale-[0.99]
-                         disabled:opacity-60 disabled:hover:scale-100"
+              className="from-nyaya-500 inline-flex items-center justify-center gap-2 rounded-2xl bg-gradient-to-r to-blue-600 px-6 py-3.5 font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.22)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] disabled:opacity-60 disabled:hover:scale-100"
             >
               {isGenerating ? (
                 <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin" />
                   Generating PDF...
                 </>
               ) : (
@@ -264,7 +259,7 @@ export default function DocumentGenerator() {
           </div>
         </form>
       </main>
-      <Footer/>
+      <Footer />
     </div>
   );
 }

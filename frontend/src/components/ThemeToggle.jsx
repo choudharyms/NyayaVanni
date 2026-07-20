@@ -8,15 +8,15 @@ export default function ThemeToggle() {
   return (
     <button
       onClick={toggleTheme}
-      className="relative p-2.5 rounded-full border border-slate-200 hover:bg-slate-100 text-slate-700 dark:border-slate-800 dark:hover:bg-slate-900 dark:text-slate-300 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-nyaya-500/50 cursor-pointer overflow-hidden group shadow-sm bg-white dark:bg-slate-950"
+      className="focus:ring-nyaya-500/50 group relative cursor-pointer overflow-hidden rounded-full border border-slate-200 bg-white p-2.5 text-slate-700 shadow-sm transition-all duration-300 hover:bg-slate-100 focus:ring-2 focus:outline-none dark:border-slate-800 dark:bg-slate-950 dark:text-slate-300 dark:hover:bg-slate-900"
       title={theme === 'light' ? TITLES.SWITCH_TO_LIGHT : TITLES.SWITCH_TO_DARK}
       aria-label={ARIA_LABELS.TOGGLE_THEME}
     >
-      <div className="relative w-5 h-5 flex items-center justify-center">
+      <div className="relative flex h-5 w-5 items-center justify-center">
         {theme === 'light' ? (
-          <Sun className="w-5 h-5 transition-transform duration-500 rotate-0 scale-100 text-amber-400 group-hover:rotate-45" />
+          <Sun className="h-5 w-5 scale-100 rotate-0 text-amber-400 transition-transform duration-500 group-hover:rotate-45" />
         ) : (
-          <Moon className="w-5 h-5 transition-transform duration-500 rotate-0 scale-100 group-hover:rotate-12" />
+          <Moon className="h-5 w-5 scale-100 rotate-0 transition-transform duration-500 group-hover:rotate-12" />
         )}
       </div>
     </button>

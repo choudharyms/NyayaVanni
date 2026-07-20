@@ -7,7 +7,7 @@ describe('calculateLayout', () => {
       { id: 'clause1', label: 'Clause 1', type: 'clauses' },
       { id: 'obligation1', label: 'Obligation 1', type: 'obligations' },
       { id: 'date1', label: 'Date 1', type: 'dates' },
-      { id: 'party1', label: 'Party 1', type: 'parties' }
+      { id: 'party1', label: 'Party 1', type: 'parties' },
     ];
     const edges = [];
 
@@ -28,7 +28,7 @@ describe('calculateLayout', () => {
     const nodes = [
       { id: 'n1', label: 'C1', type: 'clauses' },
       { id: 'n2', label: 'C2', type: 'clauses' },
-      { id: 'n3', label: 'C3', type: 'clauses' }
+      { id: 'n3', label: 'C3', type: 'clauses' },
     ];
     const edges = [];
 
@@ -49,14 +49,17 @@ describe('calculateLayout', () => {
       { id: 'c1', label: 'Clause 1', type: 'clauses' }, // idx=0 -> x=-100
       { id: 'c2', label: 'Clause 2', type: 'clauses' }, // idx=1 -> x=100
       { id: 'o1', label: 'Obligation 1', type: 'obligations' },
-      { id: 'o2', label: 'Obligation 2', type: 'obligations' }
+      { id: 'o2', label: 'Obligation 2', type: 'obligations' },
     ];
     const edges = [
       { source: 'c1', target: 'o1' }, // parent is c1 (x=-100)
-      { source: 'c2', target: 'o2' }  // parent is c2 (x=100)
+      { source: 'c2', target: 'o2' }, // parent is c2 (x=100)
     ];
 
-    const positions = calculateLayout(nodes, edges, { xSpacing: 200, ySpacing: 150 });
+    const positions = calculateLayout(nodes, edges, {
+      xSpacing: 200,
+      ySpacing: 150,
+    });
 
     // Level 1 sorted and spaced out centered around 0
     // For 2 nodes: idxs: 0, 1. (lvl1Count-1)/2 = 0.5.
@@ -75,16 +78,19 @@ describe('calculateLayout', () => {
       { id: 'o1', label: 'O1', type: 'obligations' }, // targetX=-100 -> placed at x=-100
       { id: 'o2', label: 'O2', type: 'obligations' }, // targetX=100 -> placed at x=100
       { id: 'd1', label: 'D1', type: 'dates' },
-      { id: 'd2', label: 'D2', type: 'dates' }
+      { id: 'd2', label: 'D2', type: 'dates' },
     ];
     const edges = [
       { source: 'c1', target: 'o1' },
       { source: 'c2', target: 'o2' },
       { source: 'o1', target: 'd1' }, // parent is o1 (x=-100)
-      { source: 'o2', target: 'd2' }  // parent is o2 (x=100)
+      { source: 'o2', target: 'd2' }, // parent is o2 (x=100)
     ];
 
-    const positions = calculateLayout(nodes, edges, { xSpacing: 200, ySpacing: 150 });
+    const positions = calculateLayout(nodes, edges, {
+      xSpacing: 200,
+      ySpacing: 150,
+    });
 
     // Level 2 sorted and spaced out
     // d1: (0 - 0.5) * 200 = -100
@@ -99,7 +105,7 @@ describe('calculateLayout', () => {
     const nodes = [
       { id: 'c1', label: 'C1', type: 'clauses' },
       { id: 'o1', label: 'O1', type: 'obligations' },
-      { id: 'd1', label: 'D1', type: 'dates' }
+      { id: 'd1', label: 'D1', type: 'dates' },
     ];
     const edges = []; // no edges
 

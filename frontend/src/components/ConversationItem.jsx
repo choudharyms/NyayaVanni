@@ -52,18 +52,18 @@ export default function ConversationItem({
       onClick={() => onSelect(conversation.id)}
       onMouseEnter={() => setIsHovering(true)}
       onMouseLeave={() => setIsHovering(false)}
-      className={`w-full text-left px-3 py-2 rounded-md transition-all duration-200 flex items-center justify-between group ${
+      className={`group flex w-full items-center justify-between rounded-md px-3 py-2 text-left transition-all duration-200 ${
         isActive
-          ? 'bg-nyaya-100 dark:bg-nyaya-900/30 text-nyaya-900 dark:text-nyaya-100 ring-1 ring-nyaya-500'
-          : 'hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
+          ? 'bg-nyaya-100 dark:bg-nyaya-900/30 text-nyaya-900 dark:text-nyaya-100 ring-nyaya-500 ring-1'
+          : 'text-slate-700 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700'
       }`}
       aria-label={ARIA_LABELS.SELECT_CONVERSATION}
       title={conversation.title}
     >
-      <div className="flex-1 min-w-0">
-        <p className="font-medium text-sm truncate">{conversation.title}</p>
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-sm font-medium">{conversation.title}</p>
         <p
-          className={`text-xs mt-0.5 ${
+          className={`mt-0.5 text-xs ${
             isActive
               ? 'text-nyaya-700 dark:text-nyaya-200'
               : 'text-slate-500 dark:text-slate-400'
@@ -72,33 +72,36 @@ export default function ConversationItem({
           {formatDate(conversation.updatedAt || conversation.timestamp)}
         </p>
       </div>
-      <div className="flex items-center gap-1 ml-2">
+      <div className="ml-2 flex items-center gap-1">
         {isHovering ? (
-          <div className="flex items-center gap-0.5 shrink-0">
+          <div className="flex shrink-0 items-center gap-0.5">
             <button
               onClick={(e) => {
                 e.stopPropagation();
-                const newTitle = window.prompt('Rename conversation:', conversation.title);
+                const newTitle = window.prompt(
+                  'Rename conversation:',
+                  conversation.title
+                );
                 if (newTitle && newTitle.trim()) {
                   onRename(conversation.id, newTitle.trim());
                 }
               }}
-              className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-750 dark:hover:text-slate-200 transition-colors cursor-pointer"
+              className="hover:text-slate-750 cursor-pointer rounded p-1 text-slate-500 transition-colors hover:bg-slate-200 dark:hover:bg-slate-800 dark:hover:text-slate-200"
               title="Rename Conversation"
             >
-              <Edit2 className="w-3.5 h-3.5" />
+              <Edit2 className="h-3.5 w-3.5" />
             </button>
             <button
               onClick={handleDelete}
-              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/30 text-red-500 hover:text-red-700 dark:hover:text-red-400 transition-colors cursor-pointer"
+              className="cursor-pointer rounded p-1 text-red-500 transition-colors hover:bg-red-100 hover:text-red-700 dark:hover:bg-red-900/30 dark:hover:text-red-400"
               aria-label={ARIA_LABELS.DELETE_CONVERSATION}
               title={TITLES.DELETE_CONVERSATION}
             >
-              <Trash2 className="w-3.5 h-3.5" />
+              <Trash2 className="h-3.5 w-3.5" />
             </button>
           </div>
         ) : isActive ? (
-          <ChevronRight className="w-4 h-4 text-nyaya-500 shrink-0" />
+          <ChevronRight className="text-nyaya-500 h-4 w-4 shrink-0" />
         ) : null}
       </div>
     </button>

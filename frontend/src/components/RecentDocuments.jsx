@@ -40,9 +40,9 @@ function RiskBadge({ level }) {
   const Icon = config.icon;
   return (
     <span
-      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-xs font-semibold ${config.color}`}
+      className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-xs font-semibold ${config.color}`}
     >
-      <Icon className="w-3 h-3" />
+      <Icon className="h-3 w-3" />
       {config.label}
     </span>
   );
@@ -64,10 +64,10 @@ export default function RecentDocuments({ history, onClear }) {
 
   if (!history || history.length === 0) {
     return (
-      <div className="w-full rounded-2xl border border-slate-700/60 bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+      <div className="w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/80 backdrop-blur-sm">
         <div className="flex flex-col items-center justify-center px-8 py-12 text-center">
           <svg
-            className="w-24 h-24 mb-4 text-slate-600"
+            className="mb-4 h-24 w-24 text-slate-600"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -79,10 +79,10 @@ export default function RecentDocuments({ history, onClear }) {
               d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
             />
           </svg>
-          <h3 className="text-base font-semibold text-slate-400 mb-2">
+          <h3 className="mb-2 text-base font-semibold text-slate-400">
             No documents yet
           </h3>
-          <p className="text-sm text-slate-500 max-w-xs">
+          <p className="max-w-xs text-sm text-slate-500">
             Upload a legal document to get started with AI-powered analysis and
             risk assessment.
           </p>
@@ -92,25 +92,22 @@ export default function RecentDocuments({ history, onClear }) {
   }
 
   return (
-    <div className="w-full rounded-2xl border border-slate-700/60 bg-slate-900/80 backdrop-blur-sm overflow-hidden">
+    <div className="w-full overflow-hidden rounded-2xl border border-slate-700/60 bg-slate-900/80 backdrop-blur-sm">
       <button
         onClick={() => setOpen((v) => !v)}
-        className="w-full flex items-center justify-between px-5 py-4 hover:bg-slate-800/50 transition-colors"
+        className="flex w-full items-center justify-between px-5 py-4 transition-colors hover:bg-slate-800/50"
       >
-        <div className="flex items-center gap-2 text-slate-200 font-semibold text-sm">
-          <Clock aria-hidden="true"
-          className="w-4 h-4 text-nyaya-400" />
+        <div className="flex items-center gap-2 text-sm font-semibold text-slate-200">
+          <Clock aria-hidden="true" className="text-nyaya-400 h-4 w-4" />
           Recent Documents
-          <span className="ml-1 bg-slate-700 text-slate-300 text-xs px-2 py-0.5 rounded-full">
+          <span className="ml-1 rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-300">
             {history.length}
           </span>
         </div>
         {open ? (
-          <ChevronUp aria-hidden="true"
-          className="w-4 h-4 text-slate-400" />
+          <ChevronUp aria-hidden="true" className="h-4 w-4 text-slate-400" />
         ) : (
-          <ChevronDown aria-hidden="true"
-          className="w-4 h-4 text-slate-400" />
+          <ChevronDown aria-hidden="true" className="h-4 w-4 text-slate-400" />
         )}
       </button>
 
@@ -120,15 +117,17 @@ export default function RecentDocuments({ history, onClear }) {
             <button
               key={entry.documentId}
               onClick={() => navigate(`/dashboard/${entry.documentId}`)}
-              className="w-full flex items-start gap-3 px-5 py-3 text-left hover:bg-slate-800/60 transition-colors group"
+              className="group flex w-full items-start gap-3 px-5 py-3 text-left transition-colors hover:bg-slate-800/60"
             >
-              <FileText aria-hidden="true"
-              className="w-4 h-4 mt-0.5 text-slate-500 group-hover:text-nyaya-400 transition-colors flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-sm text-slate-200 font-medium truncate group-hover:text-white transition-colors">
+              <FileText
+                aria-hidden="true"
+                className="group-hover:text-nyaya-400 mt-0.5 h-4 w-4 flex-shrink-0 text-slate-500 transition-colors"
+              />
+              <div className="min-w-0 flex-1">
+                <p className="truncate text-sm font-medium text-slate-200 transition-colors group-hover:text-white">
                   {entry.fileName}
                 </p>
-                <div className="flex items-center gap-2 mt-1 flex-wrap">
+                <div className="mt-1 flex flex-wrap items-center gap-2">
                   <RiskBadge level={entry.riskLevel} />
                   {entry.fileType && (
                     <span className="text-xs text-slate-500 uppercase">
@@ -149,10 +148,9 @@ export default function RecentDocuments({ history, onClear }) {
                 e.stopPropagation();
                 onClear();
               }}
-              className="flex items-center gap-1.5 text-xs text-slate-500 hover:text-red-400 transition-colors"
+              className="flex items-center gap-1.5 text-xs text-slate-500 transition-colors hover:text-red-400"
             >
-              <Trash2 aria-hidden="true"
-              className="w-3 h-3" />
+              <Trash2 aria-hidden="true" className="h-3 w-3" />
               Clear History
             </button>
           </div>

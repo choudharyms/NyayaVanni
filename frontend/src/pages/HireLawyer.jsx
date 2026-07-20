@@ -45,7 +45,7 @@ function HighlightedText({ text, query }) {
   return (
     <>
       {text.slice(0, index)}
-      <mark className="rounded bg-nyaya-500/20 px-0.5 font-semibold text-nyaya-700 dark:text-nyaya-300">
+      <mark className="bg-nyaya-500/20 text-nyaya-700 dark:text-nyaya-300 rounded px-0.5 font-semibold">
         {text.slice(index, index + lowerQuery.length)}
       </mark>
       {text.slice(index + lowerQuery.length)}
@@ -69,19 +69,19 @@ function EmptyState({ searchTerm, filterType, onReset, onSelectArea }) {
   const hasFilter = filterType !== 'All';
 
   return (
-    <div className="flex flex-col items-center justify-center py-20 px-6 text-center rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl shadow-md">
+    <div className="flex flex-col items-center justify-center rounded-4xl border border-slate-200 bg-white/60 px-6 py-20 text-center shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
       {/* Illustration */}
       <div className="relative mb-8">
-        <div className="absolute inset-0 rounded-full bg-nyaya-500/10 dark:bg-nyaya-500/20 blur-2xl scale-150 pointer-events-none" />
-        <div className="relative flex items-center justify-center w-28 h-28 rounded-full bg-gradient-to-br from-nyaya-500/15 to-blue-600/15 dark:from-nyaya-500/25 dark:to-blue-600/25 border border-nyaya-500/20 dark:border-nyaya-500/30 shadow-lg">
-          <div className="flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-nyaya-500/20 to-blue-600/20 dark:from-nyaya-500/30 dark:to-blue-600/30">
-            <SearchX className="w-8 h-8 text-nyaya-600 dark:text-nyaya-300" />
+        <div className="bg-nyaya-500/10 dark:bg-nyaya-500/20 pointer-events-none absolute inset-0 scale-150 rounded-full blur-2xl" />
+        <div className="from-nyaya-500/15 dark:from-nyaya-500/25 border-nyaya-500/20 dark:border-nyaya-500/30 relative flex h-28 w-28 items-center justify-center rounded-full border bg-gradient-to-br to-blue-600/15 shadow-lg dark:to-blue-600/25">
+          <div className="from-nyaya-500/20 dark:from-nyaya-500/30 flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br to-blue-600/20 dark:to-blue-600/30">
+            <SearchX className="text-nyaya-600 dark:text-nyaya-300 h-8 w-8" />
           </div>
         </div>
       </div>
 
       {/* Heading */}
-      <h3 className="text-2xl font-extrabold tracking-tight text-slate-800 dark:text-white mb-2">
+      <h3 className="mb-2 text-2xl font-extrabold tracking-tight text-slate-800 dark:text-white">
         {hasSearch
           ? `No results for "${searchTerm}"`
           : hasFilter
@@ -90,7 +90,7 @@ function EmptyState({ searchTerm, filterType, onReset, onSelectArea }) {
       </h3>
 
       {/* Subtext */}
-      <p className="text-sm text-slate-500 dark:text-slate-400 max-w-sm leading-relaxed mb-8">
+      <p className="mb-8 max-w-sm text-sm leading-relaxed text-slate-500 dark:text-slate-400">
         {hasSearch && hasFilter
           ? `We couldn't find any ${filterType} lawyers matching "${searchTerm}". Try broadening your search or resetting the filters.`
           : hasSearch
@@ -101,8 +101,8 @@ function EmptyState({ searchTerm, filterType, onReset, onSelectArea }) {
       </p>
 
       {/* Quick area suggestions */}
-      <div className="w-full max-w-lg mb-8">
-        <p className="text-xs font-bold uppercase tracking-widest text-slate-400 dark:text-slate-500 mb-3">
+      <div className="mb-8 w-full max-w-lg">
+        <p className="mb-3 text-xs font-bold tracking-widest text-slate-400 uppercase dark:text-slate-500">
           Browse popular practice areas
         </p>
         <div className="flex flex-wrap justify-center gap-2">
@@ -110,13 +110,7 @@ function EmptyState({ searchTerm, filterType, onReset, onSelectArea }) {
             <button
               key={area}
               onClick={() => onSelectArea(area)}
-              className="px-3 py-1.5 text-xs font-semibold rounded-full border transition-all
-                         bg-slate-50 dark:bg-white/5
-                         border-slate-200 dark:border-white/10
-                         text-slate-600 dark:text-slate-300
-                         hover:bg-nyaya-500/10 hover:border-nyaya-500/30 hover:text-nyaya-600
-                         dark:hover:bg-nyaya-500/15 dark:hover:border-nyaya-500/30 dark:hover:text-nyaya-300
-                         cursor-pointer"
+              className="hover:bg-nyaya-500/10 hover:border-nyaya-500/30 hover:text-nyaya-600 dark:hover:bg-nyaya-500/15 dark:hover:border-nyaya-500/30 dark:hover:text-nyaya-300 cursor-pointer rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-600 transition-all dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
             >
               {area}
             </button>
@@ -127,14 +121,9 @@ function EmptyState({ searchTerm, filterType, onReset, onSelectArea }) {
       {/* Reset button */}
       <button
         onClick={onReset}
-        className="inline-flex items-center justify-center gap-2 px-6 py-3 font-semibold text-sm rounded-full transition-all
-                   bg-gradient-to-r from-nyaya-500 to-blue-600
-                   text-white shadow-md
-                   hover:from-nyaya-400 hover:to-blue-500
-                   hover:scale-[1.03] active:scale-[0.99]
-                   cursor-pointer"
+        className="from-nyaya-500 hover:from-nyaya-400 inline-flex cursor-pointer items-center justify-center gap-2 rounded-full bg-gradient-to-r to-blue-600 px-6 py-3 text-sm font-semibold text-white shadow-md transition-all hover:scale-[1.03] hover:to-blue-500 active:scale-[0.99]"
       >
-        <X className="w-4 h-4" />
+        <X className="h-4 w-4" />
         Reset All Filters
       </button>
     </div>
@@ -202,7 +191,8 @@ export default function HireLawyer() {
       return (
         booking.lawyer.name.toLowerCase().includes(q) ||
         booking.lawyer.specialty.toLowerCase().includes(q) ||
-        (booking.caseDescription && booking.caseDescription.toLowerCase().includes(q))
+        (booking.caseDescription &&
+          booking.caseDescription.toLowerCase().includes(q))
       );
     });
   }, [activeBookings, bookingSearchTerm]);
@@ -534,29 +524,29 @@ export default function HireLawyer() {
   };
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 transition-colors duration-300">
+    <div className="relative min-h-screen overflow-hidden bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       {/* Background gradients (match LandingPage) */}
-      <div className="absolute top-[-10%] left-[-10%] w-[55%] h-[55%] bg-nyaya-500/10 dark:bg-nyaya-500/25 rounded-full blur-[140px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
-      <div className="absolute bottom-[-12%] right-[-12%] w-[60%] h-[60%] bg-blue-600/10 dark:bg-blue-600/20 rounded-full blur-[160px] mix-blend-multiply dark:mix-blend-screen pointer-events-none" />
+      <div className="bg-nyaya-500/10 dark:bg-nyaya-500/25 pointer-events-none absolute top-[-10%] left-[-10%] h-[55%] w-[55%] rounded-full mix-blend-multiply blur-[140px] dark:mix-blend-screen" />
+      <div className="pointer-events-none absolute right-[-12%] bottom-[-12%] h-[60%] w-[60%] rounded-full bg-blue-600/10 mix-blend-multiply blur-[160px] dark:bg-blue-600/20 dark:mix-blend-screen" />
 
       {/* Navbar */}
-      <nav className="sticky top-0 z-30 border-b border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl transition-all duration-300">
-        <div className="flex items-center justify-between h-16 px-6 mx-auto max-w-7xl">
+      <nav className="sticky top-0 z-30 border-b border-slate-200 bg-white/60 backdrop-blur-xl transition-all duration-300 dark:border-white/10 dark:bg-slate-900/60">
+        <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-6">
           <div className="flex items-center gap-3">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 transition border rounded-full bg-white dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer"
+              className="cursor-pointer rounded-full border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
               aria-label={ARIA_LABELS.GO_BACK}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
 
             <div
-              className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white cursor-pointer"
+              className="flex cursor-pointer items-center gap-2 text-xl font-bold tracking-tight text-slate-800 dark:text-white"
               onClick={() => navigate('/')}
             >
-              <span className="inline-flex items-center justify-center border rounded-full w-9 h-9 bg-nyaya-500/15 border-nyaya-500/25">
-                <Scale className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
+              <span className="bg-nyaya-500/15 border-nyaya-500/25 inline-flex h-9 w-9 items-center justify-center rounded-full border">
+                <Scale className="text-nyaya-600 dark:text-nyaya-400 h-5 w-5" />
               </span>
               <span>
                 Nyaya
@@ -568,40 +558,40 @@ export default function HireLawyer() {
           </div>
 
           <div className="flex items-center gap-3">
-            <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-sm">
+            <div className="hidden items-center gap-2 rounded-full border border-slate-200 bg-slate-100 px-4 py-1.5 text-sm text-slate-700 sm:flex dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
               {t('nav.directory')}
             </div>
             <ThemeToggle />
           </div>
         </div>
-        <div className="px-6 py-2 mx-auto max-w-7xl border-t border-slate-100 dark:border-white/5">
+        <div className="mx-auto max-w-7xl border-t border-slate-100 px-6 py-2 dark:border-white/5">
           <Breadcrumb />
         </div>
       </nav>
 
-      <main className="relative z-10 px-6 pt-10 mx-auto max-w-7xl">
+      <main className="relative z-10 mx-auto max-w-7xl px-6 pt-10">
         {/* Header */}
-        <div className="max-w-3xl mx-auto text-center">
-          <div className="inline-block mb-5 px-4 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 font-medium text-sm">
+        <div className="mx-auto max-w-3xl text-center">
+          <div className="bg-nyaya-500/10 border-nyaya-500/20 text-nyaya-600 dark:text-nyaya-300 mb-5 inline-block rounded-full border px-4 py-1.5 text-sm font-medium">
             Legal Experts Directory
           </div>
 
-          <h1 className="text-4xl font-extrabold tracking-tight text-slate-850 dark:text-white md:text-5xl">
+          <h1 className="text-slate-850 text-4xl font-extrabold tracking-tight md:text-5xl dark:text-white">
             {t('lawyers.title')}
           </h1>
 
-          <p className="mt-4 text-base md:text-lg text-slate-600 dark:text-slate-300">
+          <p className="mt-4 text-base text-slate-600 md:text-lg dark:text-slate-300">
             {t('lawyers.disclaimer')}
           </p>
         </div>
 
         {/* Active Consultations */}
         {activeBookings.length > 0 && (
-          <div className="mt-10 mb-10 rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-6 shadow-md">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 mb-5 border-b border-slate-200 dark:border-white/10 gap-4">
+          <div className="mt-10 mb-10 rounded-4xl border border-slate-200 bg-white/60 p-6 shadow-md backdrop-blur-xl dark:border-white/10 dark:bg-slate-900/60">
+            <div className="mb-5 flex flex-col justify-between gap-4 border-b border-slate-200 pb-4 sm:flex-row sm:items-center dark:border-white/10">
               <div className="flex items-center gap-2">
-                <Bookmark className="w-5 h-5 text-nyaya-600 dark:text-nyaya-300" />
-                <h2 className="text-lg font-bold text-slate-850 dark:text-white">
+                <Bookmark className="text-nyaya-600 dark:text-nyaya-300 h-5 w-5" />
+                <h2 className="text-slate-850 text-lg font-bold dark:text-white">
                   Your Active Consultations
                 </h2>
               </div>
@@ -611,9 +601,9 @@ export default function HireLawyer() {
                   placeholder="Filter consultations..."
                   value={bookingSearchTerm}
                   onChange={(e) => setBookingSearchTerm(e.target.value)}
-                  className="px-3 py-1.5 text-sm rounded-xl bg-slate-100 dark:bg-slate-950/40 border border-slate-200 dark:border-white/10 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50 transition"
+                  className="focus:ring-nyaya-500/70 focus:border-nyaya-500/50 rounded-xl border border-slate-200 bg-slate-100 px-3 py-1.5 text-sm text-slate-900 transition focus:ring-2 focus:outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-white"
                 />
-                <span className="px-3 py-1 text-xs font-semibold border rounded-full bg-slate-100 border-slate-200 dark:bg-white/5 dark:border-white/10 text-slate-700 dark:text-slate-200 shrink-0">
+                <span className="shrink-0 rounded-full border border-slate-200 bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200">
                   {filteredBookings.length} of {activeBookings.length} Scheduled
                 </span>
               </div>
@@ -623,29 +613,29 @@ export default function HireLawyer() {
               {filteredBookings.map((booking) => (
                 <div
                   key={booking.id}
-                  className="flex items-center gap-4 p-4 transition border group rounded-2xl border-slate-200 dark:border-white/10 bg-white/50 dark:bg-slate-950/30 hover:bg-slate-100 dark:hover:bg-slate-950/45"
+                  className="group flex items-center gap-4 rounded-2xl border border-slate-200 bg-white/50 p-4 transition hover:bg-slate-100 dark:border-white/10 dark:bg-slate-950/30 dark:hover:bg-slate-950/45"
                 >
                   <img
                     src={booking.lawyer.image}
                     alt={booking.lawyer.name}
-                    className="object-cover w-12 h-12 border rounded-full border-slate-200 dark:border-white/10"
+                    className="h-12 w-12 rounded-full border border-slate-200 object-cover dark:border-white/10"
                   />
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-slate-800 dark:text-white truncate">
+                  <div className="min-w-0 flex-1">
+                    <h4 className="truncate font-bold text-slate-800 dark:text-white">
                       {booking.lawyer.name}
                     </h4>
-                    <p className="text-xs font-semibold truncate text-nyaya-600 dark:text-nyaya-300">
+                    <p className="text-nyaya-600 dark:text-nyaya-300 truncate text-xs font-semibold">
                       {booking.lawyer.specialty}
                     </p>
 
-                    <div className="flex items-center gap-3 mt-1.5 text-xs text-slate-600 dark:text-slate-300 font-semibold">
+                    <div className="mt-1.5 flex items-center gap-3 text-xs font-semibold text-slate-600 dark:text-slate-300">
                       <span className="flex items-center gap-1">
-                        <CalendarDays className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                        <CalendarDays className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                         {booking.date.split(',')[1] || booking.date}
                       </span>
                       <span className="flex items-center gap-1">
-                        <Clock className="w-3.5 h-3.5 text-slate-400 dark:text-slate-500" />
+                        <Clock className="h-3.5 w-3.5 text-slate-400 dark:text-slate-500" />
                         {booking.time}
                       </span>
                     </div>
@@ -653,7 +643,7 @@ export default function HireLawyer() {
 
                   <button
                     onClick={() => handleCancelBooking(booking.id)}
-                    className="px-3 py-2 text-xs font-semibold transition border rounded-full bg-slate-50 border-slate-250 dark:bg-white/5 dark:border-white/10 hover:bg-rose-500/15 hover:border-rose-500/30 dark:hover:bg-rose-500/15 dark:hover:border-rose-500/30 text-rose-600 dark:text-rose-300 cursor-pointer"
+                    className="border-slate-250 cursor-pointer rounded-full border bg-slate-50 px-3 py-2 text-xs font-semibold text-rose-600 transition hover:border-rose-500/30 hover:bg-rose-500/15 dark:border-white/10 dark:bg-white/5 dark:text-rose-300 dark:hover:border-rose-500/30 dark:hover:bg-rose-500/15"
                   >
                     Cancel
                   </button>
@@ -665,12 +655,12 @@ export default function HireLawyer() {
 
         {/* Search + Filters */}
         <div className="mt-10 mb-10">
-          <div className="rounded-4xl border border-slate-200 dark:border-white/10 bg-white/60 dark:bg-slate-900/60 backdrop-blur-xl p-5 md:p-6 shadow-md">
+          <div className="rounded-4xl border border-slate-200 bg-white/60 p-5 shadow-md backdrop-blur-xl md:p-6 dark:border-white/10 dark:bg-slate-900/60">
             <div className="flex flex-col gap-4 md:flex-row">
               {/* Search */}
               <div className="relative flex-1" ref={searchContainerRef}>
-                <div className="absolute inset-y-0 flex items-center pointer-events-none left-4">
-                  <Search className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                  <Search className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                 </div>
 
                 {searchTerm.length > 0 && (
@@ -680,7 +670,7 @@ export default function HireLawyer() {
                       setIsSearchFocused(false);
                       setHighlightedIndex(-1);
                     }}
-                    className="absolute inset-y-0 px-3 my-auto text-sm transition border rounded-full right-3 h-9 bg-slate-100 dark:bg-white/5 border-slate-200 dark:border-white/10 hover:bg-slate-200 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 cursor-pointer"
+                    className="absolute inset-y-0 right-3 my-auto h-9 cursor-pointer rounded-full border border-slate-200 bg-slate-100 px-3 text-sm text-slate-700 transition hover:bg-slate-200 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
                   >
                     Clear
                   </button>
@@ -707,11 +697,11 @@ export default function HireLawyer() {
                   onFocus={() => setIsSearchFocused(true)}
                   onBlur={() => setIsSearchFocused(false)}
                   onKeyDown={handleSearchKeyDown}
-                  className="w-full py-4 pl-12 pr-20 text-slate-900 dark:text-white transition border rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+                  className="focus:ring-nyaya-500/70 focus:border-nyaya-500/50 w-full rounded-2xl border border-slate-200 bg-slate-50 py-4 pr-20 pl-12 text-slate-900 transition placeholder:text-slate-500 focus:ring-2 focus:outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-white dark:placeholder:text-slate-400"
                 />
 
                 {/* Keyboard shortcut hint */}
-                <div className="absolute inset-y-0 right-14 flex items-center pointer-events-none">
+                <div className="pointer-events-none absolute inset-y-0 right-14 flex items-center">
                   <SearchShortcutHint />
                 </div>
 
@@ -719,7 +709,7 @@ export default function HireLawyer() {
                   <div
                     id="lawyer-search-suggestions"
                     role="listbox"
-                    className="absolute z-20 w-full mt-1 overflow-hidden border shadow-lg rounded-2xl border-slate-200 dark:border-white/10 bg-white dark:bg-slate-900"
+                    className="absolute z-20 mt-1 w-full overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-lg dark:border-white/10 dark:bg-slate-900"
                   >
                     {suggestions.length === 0 ? (
                       <p className="px-4 py-3 text-sm text-slate-500 dark:text-slate-400">
@@ -745,23 +735,23 @@ export default function HireLawyer() {
                             <img
                               src={lawyer.image}
                               alt=""
-                              className="object-cover w-9 h-9 border rounded-full border-slate-200 dark:border-white/10 shrink-0"
+                              className="h-9 w-9 shrink-0 rounded-full border border-slate-200 object-cover dark:border-white/10"
                             />
                             <div className="min-w-0">
-                              <p className="text-sm font-semibold truncate text-slate-800 dark:text-white">
+                              <p className="truncate text-sm font-semibold text-slate-800 dark:text-white">
                                 <HighlightedText
                                   text={lawyer.name}
                                   query={searchTerm}
                                 />
                               </p>
-                              <p className="text-xs truncate text-nyaya-600 dark:text-nyaya-300">
+                              <p className="text-nyaya-600 dark:text-nyaya-300 truncate text-xs">
                                 <HighlightedText
                                   text={lawyer.specialty}
                                   query={searchTerm}
                                 />
                               </p>
-                              <p className="flex items-center gap-1 mt-0.5 text-xs truncate text-slate-500 dark:text-slate-400">
-                                <MapPin className="w-3 h-3 shrink-0 text-slate-400 dark:text-slate-500" />
+                              <p className="mt-0.5 flex items-center gap-1 truncate text-xs text-slate-500 dark:text-slate-400">
+                                <MapPin className="h-3 w-3 shrink-0 text-slate-400 dark:text-slate-500" />
                                 <HighlightedText
                                   text={lawyer.location}
                                   query={searchTerm}
@@ -778,33 +768,33 @@ export default function HireLawyer() {
 
               {/* Filter */}
               <div className="relative md:w-72">
-                <div className="absolute inset-y-0 flex items-center pointer-events-none left-4">
-                  <Filter className="w-5 h-5 text-slate-400 dark:text-slate-500" />
+                <div className="pointer-events-none absolute inset-y-0 left-4 flex items-center">
+                  <Filter className="h-5 w-5 text-slate-400 dark:text-slate-500" />
                 </div>
 
                 <select
                   value={filterType}
                   onChange={(e) => setFilterType(e.target.value)}
-                  className="w-full py-4 pl-12 pr-10 text-slate-900 dark:text-white transition border appearance-none cursor-pointer rounded-2xl bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 focus:outline-none focus:ring-2 focus:ring-nyaya-500/70 focus:border-nyaya-500/50"
+                  className="focus:ring-nyaya-500/70 focus:border-nyaya-500/50 w-full cursor-pointer appearance-none rounded-2xl border border-slate-200 bg-slate-50 py-4 pr-10 pl-12 text-slate-900 transition focus:ring-2 focus:outline-none dark:border-white/10 dark:bg-slate-950/40 dark:text-white"
                 >
                   {categories.map((cat) => (
                     <option
                       key={cat}
                       value={cat}
-                      className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+                      className="bg-white text-slate-900 dark:bg-slate-900 dark:text-white"
                     >
                       {cat}
                     </option>
                   ))}
                 </select>
 
-                <div className="absolute inset-y-0 flex items-center pointer-events-none right-4 text-slate-400 dark:text-slate-500">
+                <div className="pointer-events-none absolute inset-y-0 right-4 flex items-center text-slate-400 dark:text-slate-500">
                   ▼
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-500 dark:text-slate-400">
+            <div className="mt-4 flex items-center justify-between gap-3 text-sm text-slate-500 dark:text-slate-400">
               <p>
                 {searchTerm.trim().length > 0 ? (
                   <>
@@ -826,15 +816,15 @@ export default function HireLawyer() {
               </p>
               <p className="hidden sm:block">
                 Tip: Search by{' '}
-                <span className="text-slate-800 dark:text-slate-200 font-semibold">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
                   name
                 </span>
                 ,{' '}
-                <span className="text-slate-800 dark:text-slate-200 font-semibold">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
                   specialty
                 </span>
                 , or{' '}
-                <span className="text-slate-800 dark:text-slate-200 font-semibold">
+                <span className="font-semibold text-slate-800 dark:text-slate-200">
                   location
                 </span>
                 .
@@ -845,7 +835,7 @@ export default function HireLawyer() {
 
         {/* Grid */}
         {loading ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
             {Array.from({ length: 6 }).map((_, index) => (
               <LawyerSkeleton key={index} />
             ))}
@@ -858,36 +848,33 @@ export default function HireLawyer() {
             onSelectArea={handleSelectArea}
           />
         ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-7">
+          <div className="grid grid-cols-1 gap-7 md:grid-cols-2 lg:grid-cols-3">
             {filteredLawyers.map((lawyer) => (
               <div
                 key={lawyer.id}
                 ref={(el) => {
                   lawyerCardRefs.current[lawyer.id] = el;
                 }}
-                className="group relative rounded-4xl border border-slate-200 dark:border-white/10 bg-white/70 dark:bg-slate-900/65 backdrop-blur-xl p-6
-                           shadow-md
-                           transition-all duration-500
-                           hover:-translate-y-2 hover:border-nyaya-500/40 hover:shadow-[0_0_45px_rgba(37,99,235,0.15)] dark:hover:shadow-[0_0_45px_rgba(37,99,235,0.22)]"
+                className="group hover:border-nyaya-500/40 relative rounded-4xl border border-slate-200 bg-white/70 p-6 shadow-md backdrop-blur-xl transition-all duration-500 hover:-translate-y-2 hover:shadow-[0_0_45px_rgba(37,99,235,0.15)] dark:border-white/10 dark:bg-slate-900/65 dark:hover:shadow-[0_0_45px_rgba(37,99,235,0.22)]"
               >
                 {/* glow blobs */}
-                <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -top-10 -right-10 h-28 w-28 bg-nyaya-500/10 dark:bg-nyaya-500/20 blur-3xl group-hover:opacity-100" />
-                <div className="absolute transition-opacity duration-500 rounded-full opacity-0 pointer-events-none -bottom-10 -left-10 h-28 w-28 bg-blue-500/10 dark:bg-blue-500/20 blur-3xl group-hover:opacity-100" />
+                <div className="bg-nyaya-500/10 dark:bg-nyaya-500/20 pointer-events-none absolute -top-10 -right-10 h-28 w-28 rounded-full opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100" />
+                <div className="pointer-events-none absolute -bottom-10 -left-10 h-28 w-28 rounded-full bg-blue-500/10 opacity-0 blur-3xl transition-opacity duration-500 group-hover:opacity-100 dark:bg-blue-500/20" />
 
                 <div className="flex items-start gap-4">
-                  <div className="relative w-16 h-16 overflow-hidden transition rounded-full shrink-0 ring-2 ring-slate-200 dark:ring-white/10 group-hover:ring-nyaya-500/40">
+                  <div className="group-hover:ring-nyaya-500/40 relative h-16 w-16 shrink-0 overflow-hidden rounded-full ring-2 ring-slate-200 transition dark:ring-white/10">
                     <img
                       src={lawyer.image}
                       alt={lawyer.name}
-                      className="object-cover w-full h-full"
+                      className="h-full w-full object-cover"
                     />
                   </div>
 
                   <div className="min-w-0">
-                    <h3 className="text-lg font-bold text-slate-850 dark:text-white break-words transition-colors group-hover:text-nyaya-600 dark:group-hover:text-nyaya-300">
+                    <h3 className="text-slate-850 group-hover:text-nyaya-600 dark:group-hover:text-nyaya-300 text-lg font-bold break-words transition-colors dark:text-white">
                       {lawyer.name}
                     </h3>
-                    <p className="text-sm font-semibold text-nyaya-600 dark:text-nyaya-300/90">
+                    <p className="text-nyaya-600 dark:text-nyaya-300/90 text-sm font-semibold">
                       {lawyer.specialty}
                     </p>
                   </div>
@@ -895,31 +882,26 @@ export default function HireLawyer() {
 
                 <div className="mt-5 space-y-2 text-sm text-slate-600 dark:text-slate-300">
                   <div className="flex items-center gap-2">
-                    <MapPin className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <MapPin className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                     <span className="truncate">{lawyer.location}</span>
                   </div>
 
                   <div className="flex items-center gap-2">
-                    <Briefcase className="w-4 h-4 text-slate-400 dark:text-slate-500" />
+                    <Briefcase className="h-4 w-4 text-slate-400 dark:text-slate-500" />
                     <span>{lawyer.experience} Experience</span>
                   </div>
 
-                  <div className="pt-3 mt-3 font-semibold border-t border-slate-200 dark:border-white/10 text-slate-800 dark:text-slate-100">
+                  <div className="mt-3 border-t border-slate-200 pt-3 font-semibold text-slate-800 dark:border-white/10 dark:text-slate-100">
                     {lawyer.fee}
                   </div>
                 </div>
 
                 <button
                   onClick={() => handleOpenBooking(lawyer)}
-                  className="mt-6 w-full rounded-2xl py-3.5 px-4 font-semibold text-white
-                             bg-gradient-to-r from-nyaya-500 to-blue-600
-                             shadow-[0_0_25px_rgba(37,99,235,0.15)] dark:shadow-[0_0_25px_rgba(37,99,235,0.22)]
-                             transition-all duration-300
-                             hover:scale-[1.02] active:scale-[0.99]
-                             flex items-center justify-center gap-2 cursor-pointer"
+                  className="from-nyaya-500 mt-6 flex w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-gradient-to-r to-blue-600 px-4 py-3.5 font-semibold text-white shadow-[0_0_25px_rgba(37,99,235,0.15)] transition-all duration-300 hover:scale-[1.02] active:scale-[0.99] dark:shadow-[0_0_25px_rgba(37,99,235,0.22)]"
                 >
                   <span className="inline-flex items-center justify-center gap-2">
-                    <Calendar className="w-4 h-4" /> {t('lawyers.book')}
+                    <Calendar className="h-4 w-4" /> {t('lawyers.book')}
                   </span>
                 </button>
 
@@ -941,14 +923,14 @@ export default function HireLawyer() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
           <div
             onClick={() => setIsModalOpen(false)}
-            className="absolute inset-0 transition-opacity duration-300 bg-slate-950/60 backdrop-blur-sm"
+            className="absolute inset-0 bg-slate-950/60 backdrop-blur-sm transition-opacity duration-300"
           />
 
-          <div className="relative w-full max-w-xl bg-white/95 dark:bg-slate-900/95 border border-slate-200 dark:border-white/10 rounded-3xl shadow-2xl backdrop-blur-xl overflow-hidden transition-all transform scale-100 flex flex-col max-h-[90vh]">
-            <div className="flex items-center justify-between p-6 border-b border-slate-200 dark:border-white/10 shrink-0">
+          <div className="relative flex max-h-[90vh] w-full max-w-xl scale-100 transform flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white/95 shadow-2xl backdrop-blur-xl transition-all dark:border-white/10 dark:bg-slate-900/95">
+            <div className="flex shrink-0 items-center justify-between border-b border-slate-200 p-6 dark:border-white/10">
               <div className="flex items-center gap-3">
-                <span className="flex items-center justify-center w-10 h-10 text-blue-600 dark:text-blue-400 rounded-full bg-blue-50 dark:bg-blue-500/10 shrink-0">
-                  <Scale className="w-5 h-5" />
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-400">
+                  <Scale className="h-5 w-5" />
                 </span>
                 <div>
                   <h3 className="text-lg font-bold text-slate-800 dark:text-white">
@@ -962,20 +944,20 @@ export default function HireLawyer() {
 
               <button
                 onClick={() => setIsModalOpen(false)}
-                className="p-1.5 hover:bg-slate-100 rounded-full transition-colors text-slate-400 hover:text-slate-600"
+                className="rounded-full p-1.5 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600"
               >
-                <X className="w-5 h-5" />
+                <X className="h-5 w-5" />
               </button>
             </div>
 
-            <div className="flex-1 p-6 overflow-y-auto">
+            <div className="flex-1 overflow-y-auto p-6">
               {!bookingComplete ? (
                 <form onSubmit={handleConfirmBooking} className="space-y-6">
-                  <div className="flex items-center gap-4 p-4 border bg-slate-50 dark:bg-slate-950/40 border-slate-200 dark:border-white/10 rounded-2xl">
+                  <div className="flex items-center gap-4 rounded-2xl border border-slate-200 bg-slate-50 p-4 dark:border-white/10 dark:bg-slate-950/40">
                     <img
                       src={selectedLawyer.image}
                       alt={selectedLawyer.name}
-                      className="object-cover w-12 h-12 border rounded-full"
+                      className="h-12 w-12 rounded-full border object-cover"
                     />
                     <div>
                       <h4 className="font-bold text-slate-800 dark:text-white">
@@ -984,7 +966,7 @@ export default function HireLawyer() {
                       <p className="text-xs font-semibold text-blue-600">
                         {selectedLawyer.specialty}
                       </p>
-                      <p className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                      <p className="mt-0.5 text-xs font-semibold text-slate-500 dark:text-slate-400">
                         {selectedLawyer.fee}
                       </p>
                     </div>
@@ -992,7 +974,7 @@ export default function HireLawyer() {
 
                   {/* Date selector */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
+                    <label className="block text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                       Select Date Slot
                     </label>
                     <div className="flex gap-2.5 overflow-x-auto pb-2">
@@ -1003,19 +985,19 @@ export default function HireLawyer() {
                             key={d.fullDate}
                             type="button"
                             onClick={() => setSelectedDate(d.fullDate)}
-                            className={`flex flex-col items-center justify-center p-3 rounded-xl border shrink-0 w-16 transition-all ${
+                            className={`flex w-16 shrink-0 flex-col items-center justify-center rounded-xl border p-3 transition-all ${
                               isSelected
-                                ? 'bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10'
-                                : 'bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300'
+                                ? 'border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10 dark:border-blue-600 dark:bg-blue-600'
+                                : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-blue-500/40'
                             }`}
                           >
-                            <span className="text-[10px] uppercase font-bold tracking-wider">
+                            <span className="text-[10px] font-bold tracking-wider uppercase">
                               {d.dayName}
                             </span>
-                            <span className="text-lg font-extrabold my-0.5 leading-none">
+                            <span className="my-0.5 text-lg leading-none font-extrabold">
                               {d.dayNum}
                             </span>
-                            <span className="text-[9px] uppercase font-semibold">
+                            <span className="text-[9px] font-semibold uppercase">
                               {d.month}
                             </span>
                           </button>
@@ -1026,7 +1008,7 @@ export default function HireLawyer() {
 
                   {/* Time */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
+                    <label className="block text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                       Select Available Time
                     </label>
                     <div className="grid grid-cols-3 gap-2">
@@ -1042,12 +1024,12 @@ export default function HireLawyer() {
                             onClick={() =>
                               !(isPast || booked) && setSelectedTime(time)
                             }
-                            className={`py-2.5 rounded-xl border text-center text-xs font-bold transition-all ${
+                            className={`rounded-xl border py-2.5 text-center text-xs font-bold transition-all ${
                               isPast || booked
-                                ? 'opacity-50 cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400'
+                                ? 'cursor-not-allowed border-slate-300 bg-slate-100 text-slate-400 opacity-50'
                                 : isSelected
-                                  ? 'bg-slate-900 dark:bg-blue-600 border-slate-900 dark:border-blue-600 text-white shadow-md shadow-slate-900/10'
-                                  : 'bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/40 text-slate-600 dark:text-slate-300'
+                                  ? 'border-slate-900 bg-slate-900 text-white shadow-md shadow-slate-900/10 dark:border-blue-600 dark:bg-blue-600'
+                                  : 'border-slate-200 bg-white text-slate-600 hover:border-slate-300 dark:border-white/10 dark:bg-slate-950/40 dark:text-slate-300 dark:hover:border-blue-500/40'
                             }`}
                           >
                             {booked ? `${time} (Booked)` : time}
@@ -1059,38 +1041,38 @@ export default function HireLawyer() {
 
                   {/* Attach context */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
+                    <label className="block text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                       Legal Context
                     </label>
                     <div
                       onClick={() => setAttachDocument(!attachDocument)}
-                      className={`p-3.5 rounded-xl border cursor-pointer flex items-start gap-3 transition-all ${
+                      className={`flex cursor-pointer items-start gap-3 rounded-xl border p-3.5 transition-all ${
                         attachDocument
-                          ? 'bg-blue-50/50 dark:bg-blue-500/10 border-blue-200 dark:border-blue-500/30 shadow-sm'
-                          : 'bg-white dark:bg-slate-950/40 border-slate-200 dark:border-white/10 hover:border-slate-300 dark:hover:border-blue-500/30'
+                          ? 'border-blue-200 bg-blue-50/50 shadow-sm dark:border-blue-500/30 dark:bg-blue-500/10'
+                          : 'border-slate-200 bg-white hover:border-slate-300 dark:border-white/10 dark:bg-slate-950/40 dark:hover:border-blue-500/30'
                       }`}
                     >
                       <div
-                        className={`mt-0.5 w-5 h-5 rounded-full flex items-center justify-center border shrink-0 transition-colors ${
+                        className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded-full border transition-colors ${
                           attachDocument
-                            ? 'bg-blue-600 border-blue-600 text-white'
+                            ? 'border-blue-600 bg-blue-600 text-white'
                             : 'border-slate-300 bg-white'
                         }`}
                       >
                         {attachDocument && (
-                          <Check className="w-3.5 h-3.5 stroke-3" />
+                          <Check className="h-3.5 w-3.5 stroke-3" />
                         )}
                       </div>
                       <div className="flex-1">
                         <div className="flex items-center gap-1.5">
                           <FileText
-                            className={`w-4 h-4 ${attachDocument ? 'text-blue-600' : 'text-slate-400'}`}
+                            className={`h-4 w-4 ${attachDocument ? 'text-blue-600' : 'text-slate-400'}`}
                           />
                           <h5 className="text-xs font-bold text-slate-800 dark:text-white">
                             Attach Document Analysis
                           </h5>
                         </div>
-                        <p className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-1">
+                        <p className="mt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
                           Share your active analyzed legal document
                           automatically with {selectedLawyer.name} for instant
                           briefing.
@@ -1101,7 +1083,7 @@ export default function HireLawyer() {
 
                   {/* Case summary */}
                   <div className="space-y-2">
-                    <label className="block text-xs font-bold tracking-wider uppercase text-slate-700 dark:text-slate-300">
+                    <label className="block text-xs font-bold tracking-wider text-slate-700 uppercase dark:text-slate-300">
                       Case Summary or Questions
                     </label>
                     <textarea
@@ -1109,21 +1091,21 @@ export default function HireLawyer() {
                       value={caseDescription}
                       onChange={(e) => setCaseDescription(e.target.value)}
                       rows={3}
-                      className="w-full p-3 text-xs font-medium border bg-slate-50 dark:bg-slate-950 dark:border-slate-700 rounded-xl text-slate-900 dark:text-white placeholder:text-slate-500 dark:placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white dark:focus:bg-slate-900"
+                      className="w-full rounded-xl border bg-slate-50 p-3 text-xs font-medium text-slate-900 placeholder:text-slate-500 focus:bg-white focus:ring-2 focus:ring-blue-600 focus:outline-none dark:border-slate-700 dark:bg-slate-950 dark:text-white dark:placeholder:text-slate-400 dark:focus:bg-slate-900"
                     />
                   </div>
 
                   <button
                     type="submit"
-                    className="w-full py-3.5 px-4 rounded-xl font-bold text-white bg-gradient-to-r from-nyaya-500 to-blue-600 hover:from-nyaya-400 hover:to-blue-500 transition-all duration-300 shadow-lg hover:scale-[1.01] flex items-center justify-center gap-2 cursor-pointer"
+                    className="from-nyaya-500 hover:from-nyaya-400 flex w-full cursor-pointer items-center justify-center gap-2 rounded-xl bg-gradient-to-r to-blue-600 px-4 py-3.5 font-bold text-white shadow-lg transition-all duration-300 hover:scale-[1.01] hover:to-blue-500"
                   >
                     Confirm Consultation Booking
                   </button>
                 </form>
               ) : (
                 <div className="flex flex-col items-center space-y-6">
-                  <div className="flex items-center justify-center w-12 h-12 rounded-full bg-emerald-100 text-emerald-600 animate-pulse">
-                    <BadgeCheck className="w-8 h-8" />
+                  <div className="flex h-12 w-12 animate-pulse items-center justify-center rounded-full bg-emerald-100 text-emerald-600">
+                    <BadgeCheck className="h-8 w-8" />
                   </div>
 
                   <div className="text-center">
@@ -1135,31 +1117,31 @@ export default function HireLawyer() {
                     </p>
                   </div>
 
-                  <div className="relative w-full max-w-sm overflow-hidden text-white border shadow-xl bg-linear-to-br from-slate-900 to-slate-950 rounded-2xl border-slate-800">
-                    <div className="absolute w-4 h-4 -translate-y-1/2 border-r rounded-full bg-white/95 -left-2 top-1/2 border-slate-800" />
-                    <div className="absolute w-4 h-4 -translate-y-1/2 border-l rounded-full bg-white/95 -right-2 top-1/2 border-slate-800" />
+                  <div className="relative w-full max-w-sm overflow-hidden rounded-2xl border border-slate-800 bg-linear-to-br from-slate-900 to-slate-950 text-white shadow-xl">
+                    <div className="absolute top-1/2 -left-2 h-4 w-4 -translate-y-1/2 rounded-full border-r border-slate-800 bg-white/95" />
+                    <div className="absolute top-1/2 -right-2 h-4 w-4 -translate-y-1/2 rounded-full border-l border-slate-800 bg-white/95" />
 
-                    <div className="relative p-5 pb-6 border-b border-dashed border-slate-800">
-                      <div className="flex items-center justify-between mb-4">
-                        <span className="text-[10px] tracking-widest font-black uppercase text-blue-400">
+                    <div className="relative border-b border-dashed border-slate-800 p-5 pb-6">
+                      <div className="mb-4 flex items-center justify-between">
+                        <span className="text-[10px] font-black tracking-widest text-blue-400 uppercase">
                           NYAYAVANNI TICKET
                         </span>
-                        <span className="text-[10px] font-mono text-slate-400 uppercase">
+                        <span className="font-mono text-[10px] text-slate-400 uppercase">
                           {currentTicket?.meetingCode}
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-4 mb-5">
+                      <div className="mb-5 flex items-center gap-4">
                         <img
                           src={currentTicket?.lawyer?.image}
                           alt={currentTicket?.lawyer?.name}
-                          className="object-cover w-12 h-12 border-2 rounded-full border-blue-500/20"
+                          className="h-12 w-12 rounded-full border-2 border-blue-500/20 object-cover"
                         />
                         <div>
                           <h4 className="text-sm font-extrabold">
                             {currentTicket?.lawyer?.name}
                           </h4>
-                          <p className="text-[11px] text-blue-400 font-bold uppercase">
+                          <p className="text-[11px] font-bold text-blue-400 uppercase">
                             {currentTicket?.lawyer?.specialty}
                           </p>
                         </div>
@@ -1167,7 +1149,7 @@ export default function HireLawyer() {
 
                       <div className="grid grid-cols-2 gap-3 text-xs">
                         <div>
-                          <span className="text-[10px] text-slate-500 font-bold block uppercase">
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase">
                             Date
                           </span>
                           <span className="font-semibold text-slate-200">
@@ -1176,7 +1158,7 @@ export default function HireLawyer() {
                           </span>
                         </div>
                         <div>
-                          <span className="text-[10px] text-slate-500 font-bold block uppercase">
+                          <span className="block text-[10px] font-bold text-slate-500 uppercase">
                             Time Slot
                           </span>
                           <span className="font-semibold text-slate-200">
@@ -1186,21 +1168,21 @@ export default function HireLawyer() {
                       </div>
                     </div>
 
-                    <div className="p-5 pt-6 bg-slate-950/70">
+                    <div className="bg-slate-950/70 p-5 pt-6">
                       <div className="flex items-center justify-between">
                         <div className="space-y-0.5">
-                          <span className="text-[9px] text-slate-500 font-bold block uppercase">
+                          <span className="block text-[9px] font-bold text-slate-500 uppercase">
                             Legal Briefing
                           </span>
-                          <span className="text-[11px] font-bold text-slate-300 flex items-center gap-1">
+                          <span className="flex items-center gap-1 text-[11px] font-bold text-slate-300">
                             {currentTicket?.attachedContext ? (
                               <>
-                                <BadgeCheck className="w-3.5 h-3.5 text-emerald-400 shrink-0" />{' '}
+                                <BadgeCheck className="h-3.5 w-3.5 shrink-0 text-emerald-400" />{' '}
                                 Context Attached
                               </>
                             ) : (
                               <>
-                                <BadgeAlert className="w-3.5 h-3.5 text-amber-400 shrink-0" />{' '}
+                                <BadgeAlert className="h-3.5 w-3.5 shrink-0 text-amber-400" />{' '}
                                 No Context
                               </>
                             )}
@@ -1219,7 +1201,7 @@ export default function HireLawyer() {
                               )
                             )}
                           </div>
-                          <span className="text-[8px] font-mono text-slate-500">
+                          <span className="font-mono text-[8px] text-slate-500">
                             MEMBER SLOT
                           </span>
                         </div>
@@ -1232,14 +1214,14 @@ export default function HireLawyer() {
                       onClick={() =>
                         alert('Adding to Google Calendar... Done!')
                       }
-                      className="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-all text-xs flex items-center justify-center gap-1.5"
+                      className="flex flex-1 items-center justify-center gap-1.5 rounded-xl bg-slate-100 px-4 py-3 text-xs font-bold text-slate-700 transition-all hover:bg-slate-200"
                     >
-                      <CalendarDays className="w-4 h-4 text-slate-500" /> Add to
+                      <CalendarDays className="h-4 w-4 text-slate-500" /> Add to
                       Calendar
                     </button>
                     <button
                       onClick={() => setIsModalOpen(false)}
-                      className="flex-1 px-4 py-3 text-xs font-bold text-white transition-all bg-slate-900 hover:bg-blue-600 rounded-xl"
+                      className="flex-1 rounded-xl bg-slate-900 px-4 py-3 text-xs font-bold text-white transition-all hover:bg-blue-600"
                     >
                       Dismiss Ticket
                     </button>

@@ -245,7 +245,11 @@ export default function GeneralChat() {
   };
 
   const handleClearChat = async () => {
-    if (window.confirm('Clear all messages in this conversation? This will delete it from history.')) {
+    if (
+      window.confirm(
+        'Clear all messages in this conversation? This will delete it from history.'
+      )
+    ) {
       if (currentConversationId) {
         try {
           await deleteConversation(currentConversationId);
@@ -275,29 +279,29 @@ export default function GeneralChat() {
   }, [location.pathname]);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 flex flex-col transition-colors duration-300">
+    <div className="flex min-h-screen flex-col bg-slate-50 text-slate-900 transition-colors duration-300 dark:bg-slate-950 dark:text-slate-100">
       {/* Navigation Header */}
-      <nav className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 sticky top-0 z-20 shadow-sm transition-colors duration-300">
-        <div className="px-4 sm:px-6 h-16 flex items-center justify-between">
+      <nav className="sticky top-0 z-20 border-b border-slate-200 bg-white shadow-sm transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
+        <div className="flex h-16 items-center justify-between px-4 sm:px-6">
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate('/')}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               aria-label={ARIA_LABELS.GO_BACK_HOME}
             >
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div
-              className="flex items-center gap-2 text-xl font-bold tracking-tight text-slate-850 dark:text-white cursor-pointer"
+              className="text-slate-850 flex cursor-pointer items-center gap-2 text-xl font-bold tracking-tight dark:text-white"
               onClick={() => navigate('/')}
             >
-              <span className="inline-flex items-center justify-center w-9 h-9 rounded-full bg-nyaya-500/15 border border-nyaya-500/25">
-                <Scale className="text-nyaya-500 w-5 h-5" />
+              <span className="bg-nyaya-500/15 border-nyaya-500/25 inline-flex h-9 w-9 items-center justify-center rounded-full border">
+                <Scale className="text-nyaya-500 h-5 w-5" />
               </span>
               <span>
                 Nyaya<span className="text-nyaya-500">Vanni</span>
               </span>
-              <span className="text-slate-400 dark:text-slate-500 font-medium hidden sm:inline">
+              <span className="hidden font-medium text-slate-400 sm:inline dark:text-slate-500">
                 | Assistant
               </span>
             </div>
@@ -305,17 +309,17 @@ export default function GeneralChat() {
           <div className="flex items-center gap-3">
             <button
               onClick={handleDownload}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white cursor-pointer"
+              className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-white"
               title="Download Chat History"
             >
-              <Download className="w-5 h-5" />
+              <Download className="h-5 w-5" />
             </button>
             <button
               onClick={handleClearChat}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition-colors text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 cursor-pointer"
+              className="cursor-pointer rounded-xl p-2 text-slate-500 transition-colors hover:bg-slate-100 hover:text-red-600 dark:text-slate-400 dark:hover:bg-slate-800 dark:hover:text-red-400"
               title="Clear Chat"
             >
-              <Trash2 className="w-5 h-5" />
+              <Trash2 className="h-5 w-5" />
             </button>
             {isSaving && (
               <span className="text-xs text-slate-500 dark:text-slate-400">
@@ -327,7 +331,7 @@ export default function GeneralChat() {
         </div>
       </nav>
 
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex flex-1 overflow-hidden">
         {/* History Sidebar */}
         <HistorySidebar
           onSelectConversation={handleSelectConversation}
@@ -335,14 +339,14 @@ export default function GeneralChat() {
         />
 
         {/* Main Chat Area */}
-        <main className="flex-1 w-full flex flex-col overflow-hidden">
-          <div className="flex-1 p-4 sm:p-6 flex flex-col overflow-hidden">
+        <main className="flex w-full flex-1 flex-col overflow-hidden">
+          <div className="flex flex-1 flex-col overflow-hidden p-4 sm:p-6">
             {/* Main Chat Container Block */}
-            <div className="flex-1 bg-white dark:bg-slate-900 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col transition-colors duration-300 relative">
+            <div className="relative flex flex-1 flex-col overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-xl transition-colors duration-300 dark:border-slate-800 dark:bg-slate-900">
               {/* Scrollable Message Timeline Area */}
               <div
                 ref={chatContainerRef}
-                className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 bg-slate-50/50 dark:bg-slate-950/20"
+                className="flex-1 space-y-6 overflow-y-auto bg-slate-50/50 p-4 sm:p-6 dark:bg-slate-950/20"
               >
                 {chatHistory.map((msg, idx) => (
                   <div
@@ -353,30 +357,32 @@ export default function GeneralChat() {
                   >
                     {/* Avatar Icon Wrapper */}
                     <div
-                      className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center shrink-0 ${
+                      className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10 ${
                         msg.role === 'user'
                           ? 'bg-nyaya-500 text-white shadow-md'
-                          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300'
+                          : 'border border-slate-200 bg-slate-100 text-slate-600 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300'
                       }`}
                     >
                       {msg.role === 'user' ? (
-                        <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                        <User className="h-4 w-4 sm:h-5 sm:w-5" />
                       ) : (
-                        <Bot className="w-5 h-5 sm:w-6 sm:h-6" />
+                        <Bot className="h-5 w-5 sm:h-6 sm:w-6" />
                       )}
                     </div>
 
                     {/* Message Bubble Grid */}
                     <div
-                      className={`p-4 rounded-2xl max-w-[85%] sm:max-w-[75%] text-sm sm:text-base leading-relaxed whitespace-pre-wrap ${
+                      className={`max-w-[85%] rounded-2xl p-4 text-sm leading-relaxed whitespace-pre-wrap sm:max-w-[75%] sm:text-base ${
                         msg.role === 'user'
-                          ? 'bg-nyaya-900 text-white rounded-tr-sm shadow-md border border-nyaya-800'
-                          : 'bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-tl-sm text-slate-800 dark:text-slate-100 shadow-sm'
+                          ? 'bg-nyaya-900 border-nyaya-800 rounded-tr-sm border text-white shadow-md'
+                          : 'rounded-tl-sm border border-slate-200 bg-slate-100 text-slate-800 shadow-sm dark:border-slate-700 dark:bg-slate-800 dark:text-slate-100'
                       }`}
                     >
                       {msg.role === 'assistant' ? (
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.message}</ReactMarkdown>
+                        <div className="prose prose-sm dark:prose-invert max-w-none">
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                            {msg.message}
+                          </ReactMarkdown>
                         </div>
                       ) : (
                         msg.message
@@ -388,17 +394,17 @@ export default function GeneralChat() {
                 {/* Loading / Thinking State Indicator */}
                 {chatLoading && (
                   <div className="flex gap-3 sm:gap-4">
-                    <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center shrink-0">
-                      <Bot className="w-5 h-5 sm:w-6 sm:h-6" />
+                    <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-slate-200 bg-slate-100 text-slate-600 sm:h-10 sm:w-10 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                      <Bot className="h-5 w-5 sm:h-6 sm:w-6" />
                     </div>
-                    <div className="p-4 rounded-2xl bg-slate-150 dark:bg-slate-850/80 border border-slate-200 dark:border-slate-800 rounded-tl-sm text-slate-750 dark:text-slate-200 shadow-sm flex gap-1.5 items-center">
-                      <div className="w-2.5 h-2.5 rounded-full bg-nyaya-500 animate-bounce"></div>
+                    <div className="bg-slate-150 dark:bg-slate-850/80 text-slate-750 flex items-center gap-1.5 rounded-2xl rounded-tl-sm border border-slate-200 p-4 shadow-sm dark:border-slate-800 dark:text-slate-200">
+                      <div className="bg-nyaya-500 h-2.5 w-2.5 animate-bounce rounded-full"></div>
                       <div
-                        className="w-2.5 h-2.5 rounded-full bg-nyaya-500 animate-bounce"
+                        className="bg-nyaya-500 h-2.5 w-2.5 animate-bounce rounded-full"
                         style={{ animationDelay: '0.15s' }}
                       ></div>
                       <div
-                        className="w-2.5 h-2.5 rounded-full bg-nyaya-500 animate-bounce"
+                        className="bg-nyaya-500 h-2.5 w-2.5 animate-bounce rounded-full"
                         style={{ animationDelay: '0.3s' }}
                       ></div>
                     </div>
@@ -410,7 +416,7 @@ export default function GeneralChat() {
               {/* Form Message Submission Input Dock */}
               <form
                 onSubmit={handleChat}
-                className="p-3 sm:p-4 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 flex items-end gap-2 sm:gap-3 transition-colors duration-300"
+                className="flex items-end gap-2 border-t border-slate-200 bg-white p-3 transition-colors duration-300 sm:gap-3 sm:p-4 dark:border-slate-800 dark:bg-slate-900"
               >
                 <textarea
                   ref={textareaRef}
@@ -421,34 +427,14 @@ export default function GeneralChat() {
                   disabled={chatLoading}
                   rows={1}
                   autoFocus
-                  className="
-                    chat-textarea
-                    flex-1
-                    resize-none
-                    overflow-y-auto
-                    bg-slate-50 dark:bg-slate-950
-                    border border-slate-200 dark:border-slate-800
-                    text-slate-900 dark:text-slate-100
-                    placeholder-slate-500 dark:placeholder-slate-400
-                    focus:bg-white dark:focus:bg-slate-950
-                    focus:border-nyaya-500
-                    focus:ring-4 focus:ring-nyaya-500/10
-                    rounded-xl
-                    px-5 sm:px-6
-                    py-3
-                    outline-none
-                    transition-all
-                    text-sm sm:text-base
-                    min-h-[52px]
-                    max-h-[160px]
-                  "
+                  className="chat-textarea focus:border-nyaya-500 focus:ring-nyaya-500/10 max-h-[160px] min-h-[52px] flex-1 resize-none overflow-y-auto rounded-xl border border-slate-200 bg-slate-50 px-5 py-3 text-sm text-slate-900 placeholder-slate-500 transition-all outline-none focus:bg-white focus:ring-4 sm:px-6 sm:text-base dark:border-slate-800 dark:bg-slate-950 dark:text-slate-100 dark:placeholder-slate-400 dark:focus:bg-slate-950"
                 />
                 <button
                   type="submit"
                   disabled={chatLoading || !chatInput.trim()}
-                  className="bg-nyaya-600 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center hover:bg-nyaya-500 hover:shadow-lg transition-all disabled:opacity-40 disabled:hover:shadow-none shrink-0 cursor-pointer"
+                  className="bg-nyaya-600 hover:bg-nyaya-500 flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-xl text-white transition-all hover:shadow-lg disabled:opacity-40 disabled:hover:shadow-none sm:h-14 sm:w-14"
                 >
-                  <Send className="text-center w-5 h-5 sm:w-6 sm:h-6" />
+                  <Send className="h-5 w-5 text-center sm:h-6 sm:w-6" />
                 </button>
               </form>
             </div>

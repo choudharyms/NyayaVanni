@@ -29,8 +29,8 @@ import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
-import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
-import SearchShortcutHint from "../components/SearchShortcutHint";
+import useKeyboardShortcut from '../hooks/useKeyboardShortcut';
+import SearchShortcutHint from '../components/SearchShortcutHint';
 import { calculateLayout } from '../utils/graphLayout';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
@@ -255,7 +255,7 @@ export default function Dashboard() {
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
   const messagesEndRef = useRef(null);
-  
+
   // Ref for Knowledge Graph search input
   const kgSearchInputRef = useRef(null);
 
@@ -264,7 +264,9 @@ export default function Dashboard() {
     if (!flowElement) return;
 
     toPng(flowElement, {
-      backgroundColor: document.documentElement.classList.contains('dark') ? '#0f172a' : '#ffffff',
+      backgroundColor: document.documentElement.classList.contains('dark')
+        ? '#0f172a'
+        : '#ffffff',
       filter: (node) => {
         if (
           node?.classList?.contains('react-flow__minimap') ||
@@ -517,7 +519,7 @@ export default function Dashboard() {
   if (error) {
     return (
       <div className={ERROR_CONTAINER}>
-        <AlertTriangle className="w-16 h-16 text-red-500 mb-4" />
+        <AlertTriangle className="mb-4 h-16 w-16 text-red-500" />
         <h2 className={TEXT_PRIMARY + ' text-2xl font-bold'}>
           Something went wrong
         </h2>
@@ -550,10 +552,10 @@ export default function Dashboard() {
         <div className={NAV_CONTAINER}>
           <div className="flex items-center gap-4">
             <button onClick={() => navigate('/')} className={NAV_BUTTON}>
-              <ArrowLeft className="w-5 h-5" />
+              <ArrowLeft className="h-5 w-5" />
             </button>
             <div className={NAV_LOGO}>
-              <Scale className="text-nyaya-500 w-6 h-6" /> NyayaVanni
+              <Scale className="text-nyaya-500 h-6 w-6" /> NyayaVanni
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -562,10 +564,10 @@ export default function Dashboard() {
             </div>
             <button
               onClick={() => window.print()}
-              className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+              className="rounded-full border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
               aria-label="Print report"
             >
-              <Printer className="w-4 h-4" />
+              <Printer className="h-4 w-4" />
             </button>
             <button
               onClick={() => {
@@ -574,20 +576,20 @@ export default function Dashboard() {
                 const body = `Document Analysis Report\n\nDocument: ${file?.name || 'Document'}\nRisk Level: ${risk}\n\nView full analysis: ${window.location.href}`;
                 window.location.href = `mailto:?subject=Legal Document Analysis&body=${encodeURIComponent(body)}`;
               }}
-              className="p-2 rounded-full bg-white dark:bg-white/5 border border-slate-200 dark:border-white/10 hover:bg-slate-100 dark:hover:bg-white/10 text-slate-700 dark:text-slate-200 transition"
+              className="rounded-full border border-slate-200 bg-white p-2 text-slate-700 transition hover:bg-slate-100 dark:border-white/10 dark:bg-white/5 dark:text-slate-200 dark:hover:bg-white/10"
               aria-label="Share analysis via email"
             >
-              <Share2 className="w-4 h-4" />
+              <Share2 className="h-4 w-4" />
             </button>
             <ThemeToggle />
           </div>
         </div>
-        <div className="max-w-7xl mx-auto px-6 py-2 border-t border-slate-200 dark:border-slate-800">
+        <div className="mx-auto max-w-7xl border-t border-slate-200 px-6 py-2 dark:border-slate-800">
           <Breadcrumb />
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto px-6 mt-8 space-y-8">
+      <main className="mx-auto mt-8 max-w-7xl space-y-8 px-6">
         {/* OCR Verification Section */}
         <div className={`${CARD_BASE} p-6`}>
           <div className="mb-6">
@@ -598,30 +600,30 @@ export default function Dashboard() {
             </p>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
             {/* Uploaded Document */}
             <div>
               <h3 className={`${TEXT_SEMI} mb-3`}>Uploaded Document</h3>
 
               <div
-                className={`${BORDER_BASE} rounded-xl overflow-hidden h-[400px] bg-slate-50 dark:bg-slate-950`}
+                className={`${BORDER_BASE} h-[400px] overflow-hidden rounded-xl bg-slate-50 dark:bg-slate-950`}
               >
                 {previewUrl ? (
                   file?.type?.includes('pdf') ? (
                     <iframe
                       src={previewUrl}
                       title="Document Preview"
-                      className="w-full h-full"
+                      className="h-full w-full"
                     />
                   ) : (
                     <img
                       src={previewUrl}
                       alt="Uploaded Document"
-                      className="w-full h-full object-contain bg-white"
+                      className="h-full w-full bg-white object-contain"
                     />
                   )
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center text-slate-400 text-sm">
+                  <div className="flex h-full w-full items-center justify-center text-sm text-slate-400">
                     No document preview available
                   </div>
                 )}
@@ -630,7 +632,7 @@ export default function Dashboard() {
 
             {/* OCR Text */}
             <div>
-              <div className="flex items-center justify-between mb-3">
+              <div className="mb-3 flex items-center justify-between">
                 <h3 className={TEXT_SEMI}>Extracted OCR Text</h3>
 
                 <button
@@ -641,29 +643,29 @@ export default function Dashboard() {
                 </button>
               </div>
 
-              <div className="grid items-start grid-cols-1 gap-6 lg:grid-cols-12">
+              <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
                 <div className="space-y-6 lg:col-span-5">
-                  <div className="p-8 transition-all duration-300 transform bg-white border shadow-sm rounded-2xl dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:shadow-md">
-                    <div className="flex items-start justify-between mb-6">
+                  <div className="transform rounded-2xl border border-slate-200 bg-white p-8 shadow-sm transition-all duration-300 hover:shadow-md dark:border-slate-800 dark:bg-slate-900">
+                    <div className="mb-6 flex items-start justify-between">
                       <div>
-                        <span className="block mb-1 text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400">
+                        <span className="text-nyaya-600 dark:text-nyaya-400 mb-1 block text-sm font-bold tracking-wider uppercase">
                           {t('dashboard.doctype')}
                         </span>
                         <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
                           {analysis?.document_type || 'Unknown Document'}
                         </h1>
                         {classification && (
-                          <div className="p-3 mt-3 border rounded-xl bg-blue-50 dark:bg-blue-950/20 border-blue-200 dark:border-blue-800/40 text-blue-850 dark:text-blue-200">
+                          <div className="text-blue-850 mt-3 rounded-xl border border-blue-200 bg-blue-50 p-3 dark:border-blue-800/40 dark:bg-blue-950/20 dark:text-blue-200">
                             <div className="text-sm font-bold text-blue-700 dark:text-blue-300">
                               Detected Type: {classification.predicted_type}
                             </div>
-                            <div className="mt-1 text-xs text-slate-650 dark:text-slate-400">
+                            <div className="text-slate-650 mt-1 text-xs dark:text-slate-400">
                               Confidence:{' '}
                               {(classification.confidence * 100).toFixed(1)}%
                             </div>
                             <div className="mt-2 text-xs text-slate-500 dark:text-slate-400">
                               Alternatives:
-                              <ul className="ml-5 mt-1 list-disc">
+                              <ul className="mt-1 ml-5 list-disc">
                                 {classification.alternatives?.map((alt, i) => (
                                   <li key={i}>
                                     {alt.type} → {(alt.score * 100).toFixed(0)}%
@@ -675,18 +677,18 @@ export default function Dashboard() {
                         )}
                       </div>
                       <div
-                        className={`px-4 py-2 rounded-xl flex items-center gap-2 border font-bold ${getRiskColor(analysis?.risk_level)}`}
+                        className={`flex items-center gap-2 rounded-xl border px-4 py-2 font-bold ${getRiskColor(analysis?.risk_level)}`}
                       >
-                        <AlertTriangle className="w-5 h-5" />
+                        <AlertTriangle className="h-5 w-5" />
                         {analysis?.risk_level} {t('dashboard.risk')}
                       </div>
                     </div>
                     {/* AI Confidence Meter */}
                     {confidence && (
                       <>
-                        <div className="flex items-center gap-2 mb-4">
+                        <div className="mb-4 flex items-center gap-2">
                           <span
-                            className={`px-3 py-1 rounded-full text-sm font-semibold ${
+                            className={`rounded-full px-3 py-1 text-sm font-semibold ${
                               confidence.level === 'High'
                                 ? 'bg-green-100 text-green-700 dark:bg-green-950/30 dark:text-green-400'
                                 : confidence.level === 'Medium'
@@ -702,7 +704,7 @@ export default function Dashboard() {
                         </div>
 
                         {confidence.score < 60 && (
-                          <div className="p-4 mb-4 border rounded-xl bg-red-50 dark:bg-red-950/20 border-red-200 dark:border-red-800/40 text-red-700 dark:text-red-300">
+                          <div className="mb-4 rounded-xl border border-red-200 bg-red-50 p-4 text-red-700 dark:border-red-800/40 dark:bg-red-950/20 dark:text-red-300">
                             ⚠️ This analysis has low confidence. Please verify
                             the document manually before relying on the
                             generated legal insights.
@@ -718,9 +720,9 @@ export default function Dashboard() {
 
                     {/* Confidence Metrics */}
                     {confidence && (
-                      <div className="grid grid-cols-2 gap-3 mb-6">
-                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                      <div className="mb-6 grid grid-cols-2 gap-3">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+                          <div className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
                             Coverage
                           </div>
                           <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
@@ -728,8 +730,8 @@ export default function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+                          <div className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
                             Similarity
                           </div>
                           <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
@@ -737,8 +739,8 @@ export default function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+                          <div className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
                             Evidence
                           </div>
                           <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
@@ -746,8 +748,8 @@ export default function Dashboard() {
                           </div>
                         </div>
 
-                        <div className="p-3 border rounded-lg bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800">
-                          <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-400">
+                        <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 dark:border-slate-800 dark:bg-slate-950">
+                          <div className="text-xs font-semibold text-slate-500 uppercase dark:text-slate-400">
                             Supported Chunks
                           </div>
                           <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
@@ -761,7 +763,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* OCR Extracted Text Display */}
-                <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+                <div className="h-[400px] overflow-y-auto rounded-2xl border border-slate-200 bg-slate-50 p-6 lg:col-span-7 dark:border-slate-800 dark:bg-slate-950">
                   <pre className={TEXTAREA_PRE}>
                     {extractedText || 'No text extracted.'}
                   </pre>
@@ -772,15 +774,15 @@ export default function Dashboard() {
         </div>
 
         {/* Main Dashboard Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-12">
           {/* Left Column: Analysis Results */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="space-y-6 lg:col-span-5">
             <div
-              className={`${CARD_BASE} p-8 transition-all hover:shadow-md transition-colors duration-300`}
+              className={`${CARD_BASE} p-8 transition-all transition-colors duration-300 hover:shadow-md`}
             >
-              <div className="flex justify-between items-start mb-6">
+              <div className="mb-6 flex items-start justify-between">
                 <div>
-                  <span className="text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400 mb-1 block">
+                  <span className="text-nyaya-600 dark:text-nyaya-400 mb-1 block text-sm font-bold tracking-wider uppercase">
                     {t('dashboard.doctype')}
                   </span>
                   <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
@@ -799,7 +801,7 @@ export default function Dashboard() {
 
                       <div className={ALTERNATIVES_TEXT}>
                         Alternatives:
-                        <ul className="list-disc ml-5 mt-1">
+                        <ul className="mt-1 ml-5 list-disc">
                           {classification.alternatives?.map((alt, i) => (
                             <li key={i}>
                               {alt.type} → {(alt.score * 100).toFixed(0)}%
@@ -813,50 +815,50 @@ export default function Dashboard() {
                 <div
                   className={`${RISK_BADGE} ${getRiskColor(analysis?.risk_level)}`}
                 >
-                  <AlertTriangle className="w-5 h-5" />
+                  <AlertTriangle className="h-5 w-5" />
                   {analysis?.risk_level} {t('dashboard.risk')}
                 </div>
               </div>
 
-              <p className="text-lg text-slate-700 dark:text-slate-350 leading-relaxed mb-6">
+              <p className="dark:text-slate-350 mb-6 text-lg leading-relaxed text-slate-700">
                 {analysis?.summary}
               </p>
 
-              <div className="grid grid-cols-2 gap-4 mb-8">
+              <div className="mb-8 grid grid-cols-2 gap-4">
                 <div className={`${CARD_SUB} flex items-start gap-3`}>
-                  <Calendar className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400 mt-0.5" />
+                  <Calendar className="text-nyaya-600 dark:text-nyaya-400 mt-0.5 h-5 w-5" />
                   <div>
-                    <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-450 mb-1">
+                    <div className="dark:text-slate-450 mb-1 text-xs font-semibold text-slate-500 uppercase">
                       {t('dashboard.status')}
                     </div>
                     <div className="font-medium text-slate-900 dark:text-white">
                       {analysis?.urgency}
                     </div>
                     {analysis?.deadline && (
-                      <div className="text-sm text-red-600 dark:text-red-400 mt-1 font-semibold">
+                      <div className="mt-1 text-sm font-semibold text-red-600 dark:text-red-400">
                         {analysis.deadline}
                       </div>
                     )}
                   </div>
                 </div>
                 <div className={`${CARD_SUB} flex items-start gap-3`}>
-                  <FileText className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400 mt-0.5" />
+                  <FileText className="text-nyaya-600 dark:text-nyaya-400 mt-0.5 h-5 w-5" />
                   <div>
-                    <div className="text-xs font-semibold uppercase text-slate-500 dark:text-slate-450 mb-1">
+                    <div className="dark:text-slate-450 mb-1 text-xs font-semibold text-slate-500 uppercase">
                       {t('dashboard.sections')}
                     </div>
-                    <div className="font-medium text-slate-900 dark:text-white leading-tight">
+                    <div className="leading-tight font-medium text-slate-900 dark:text-white">
                       {analysis?.sections?.join(', ') || 'None identified'}
                     </div>
                   </div>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
+              <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-2">
                 {analysis?.parties && analysis.parties.length > 0 && (
                   <div className={CARD_SUB}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <Users className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
+                    <div className="mb-3 flex items-center gap-2">
+                      <Users className="text-nyaya-600 dark:text-nyaya-400 h-5 w-5" />
                       <h4 className="font-bold text-slate-900 dark:text-white">
                         {t('dashboard.parties')}
                       </h4>
@@ -865,9 +867,9 @@ export default function Dashboard() {
                       {analysis.parties.map((party, idx) => (
                         <li
                           key={idx}
-                          className="flex justify-between items-center text-sm"
+                          className="flex items-center justify-between text-sm"
                         >
-                          <span className="font-medium text-slate-805 dark:text-slate-200">
+                          <span className="text-slate-805 font-medium dark:text-slate-200">
                             {party.name}
                           </span>
                           <span className={PARTY_ROLE}>{party.role}</span>
@@ -879,13 +881,13 @@ export default function Dashboard() {
 
                 {analysis?.consequences && analysis.consequences.length > 0 && (
                   <div className={CARD_SUB}>
-                    <div className="flex items-center gap-2 mb-3">
-                      <AlertCircle className="w-5 h-5 text-nyaya-600 dark:text-nyaya-400" />
+                    <div className="mb-3 flex items-center gap-2">
+                      <AlertCircle className="text-nyaya-600 dark:text-nyaya-400 h-5 w-5" />
                       <h4 className="font-bold text-slate-900 dark:text-white">
                         {t('dashboard.consequences')}
                       </h4>
                     </div>
-                    <ul className="space-y-2 list-disc pl-4 text-sm text-slate-700 dark:text-slate-300">
+                    <ul className="list-disc space-y-2 pl-4 text-sm text-slate-700 dark:text-slate-300">
                       {analysis.consequences.map((cons, idx) => (
                         <li key={idx}>{cons}</li>
                       ))}
@@ -894,7 +896,7 @@ export default function Dashboard() {
                 )}
               </div>
 
-              <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-4">
+              <h3 className="mb-4 text-lg font-bold text-slate-900 dark:text-white">
                 {t('dashboard.actions')}
               </h3>
               <div className="space-y-3">
@@ -905,7 +907,7 @@ export default function Dashboard() {
                       <h4 className="font-semibold text-slate-900 dark:text-white">
                         {action.action}
                       </h4>
-                      <p className="text-sm text-slate-650 dark:text-slate-400 mt-1">
+                      <p className="text-slate-650 mt-1 text-sm dark:text-slate-400">
                         {action.timeline} • {action.why}
                       </p>
                     </div>
@@ -913,7 +915,7 @@ export default function Dashboard() {
                 ))}
               </div>
 
-              <div className="mt-8 flex flex-col sm:flex-row gap-4">
+              <div className="mt-8 flex flex-col gap-4 sm:flex-row">
                 <button
                   onClick={() => {
                     setChatInput(
@@ -927,7 +929,7 @@ export default function Dashboard() {
                   }}
                   className={DETAILED_BUTTON}
                 >
-                  <Search className="w-5 h-5" /> {t('dashboard.btn.detailed')}
+                  <Search className="h-5 w-5" /> {t('dashboard.btn.detailed')}
                 </button>
               </div>
 
@@ -936,13 +938,13 @@ export default function Dashboard() {
                 <div className={RISK_WARN_BOX}>
                   <div className="flex items-start gap-4">
                     <div className={RISK_WARN_ICON}>
-                      <Briefcase className="w-6 h-6" />
+                      <Briefcase className="h-6 w-6" />
                     </div>
                     <div>
-                      <h4 className="text-lg font-bold text-slate-900 dark:text-white mb-1">
+                      <h4 className="mb-1 text-lg font-bold text-slate-900 dark:text-white">
                         {t('dashboard.consult.title')}
                       </h4>
-                      <p className="text-slate-700 dark:text-slate-350 mb-4 whitespace-pre-wrap text-sm leading-relaxed">
+                      <p className="dark:text-slate-350 mb-4 text-sm leading-relaxed whitespace-pre-wrap text-slate-700">
                         Due to the {analysis?.risk_level?.toLowerCase()} risk
                         nature of this {analysis?.document_type}, we strongly
                         suggest consulting with a specialized lawyer to protect
@@ -961,37 +963,37 @@ export default function Dashboard() {
             </div>
             {knowledgeGraph && (
               <div className={KG_SECTION}>
-                <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h2 className={KG_TITLE}>Legal Knowledge Graph</h2>
 
                     <p className={TEXT_MUTED + ' mt-2'}>
-                      Interactive visualization of clauses, obligations, parties,
-                      and relationships
+                      Interactive visualization of clauses, obligations,
+                      parties, and relationships
                     </p>
                   </div>
 
                   <button
                     onClick={downloadImage}
-                    className="no-print px-4 py-2 text-xs font-semibold rounded-xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 transition flex items-center gap-2 cursor-pointer shadow-xs self-start sm:self-center"
+                    className="no-print flex cursor-pointer items-center gap-2 self-start rounded-xl border border-slate-200 bg-slate-100 px-4 py-2 text-xs font-semibold text-slate-700 shadow-xs transition hover:bg-slate-200 sm:self-center dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200 dark:hover:bg-slate-700"
                   >
-                    <Download className="w-4 h-4" />
+                    <Download className="h-4 w-4" />
                     {t('dashboard.kg.download')}
                   </button>
                 </div>
 
                 <div className="relative mt-4 mb-6">
-                    <input
-                      ref={kgSearchInputRef}
-                      type="text"
-                      placeholder="Search nodes... (Ctrl+K)"
-                      className={SEARCH_INPUT}
-                    />
-                    <div className="absolute inset-y-0 right-3 flex items-center pointer-events-none">
-                      <SearchShortcutHint />
-                    </div>
+                  <input
+                    ref={kgSearchInputRef}
+                    type="text"
+                    placeholder="Search nodes... (Ctrl+K)"
+                    className={SEARCH_INPUT}
+                  />
+                  <div className="pointer-events-none absolute inset-y-0 right-3 flex items-center">
+                    <SearchShortcutHint />
                   </div>
-                  <div className={KG_FLOW_CONTAINER}>
+                </div>
+                <div className={KG_FLOW_CONTAINER}>
                   <ReactFlow
                     nodes={graphNodes}
                     edges={graphEdges}
@@ -1008,7 +1010,7 @@ export default function Dashboard() {
 
                 {selectedNode && (
                   <div className={NODE_DETAILS}>
-                    <h3 className="text-lg font-bold text-slate-900 dark:text-white mb-3">
+                    <h3 className="mb-3 text-lg font-bold text-slate-900 dark:text-white">
                       Node Details
                     </h3>
 
@@ -1029,7 +1031,7 @@ export default function Dashboard() {
 
                       <div>
                         <span className={NODE_INFO_LABEL}>Node ID:</span>{' '}
-                        <span className="text-slate-850 dark:text-slate-200 font-mono text-[10px]">
+                        <span className="text-slate-850 font-mono text-[10px] dark:text-slate-200">
                           {selectedNode.id}
                         </span>
                       </div>
@@ -1037,7 +1039,7 @@ export default function Dashboard() {
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3 mt-5 text-sm">
+                <div className="mt-5 grid grid-cols-2 gap-3 text-sm">
                   <div className={KG_STAT_CARD}>
                     <div className={KG_STAT_LABEL}>Nodes</div>
                     <div className={KG_STAT_VALUE}>
@@ -1076,8 +1078,8 @@ export default function Dashboard() {
           {/* Right Column: AI Chat */}
           <div className={CHAT_PANEL}>
             <div className={CHAT_HEADER}>
-              <Bot className="w-6 h-6 text-nyaya-400" />
-              <h3 className="font-semibold text-lg">Nyaya Assistant</h3>
+              <Bot className="text-nyaya-400 h-6 w-6" />
+              <h3 className="text-lg font-semibold">Nyaya Assistant</h3>
             </div>
 
             <div className={CHAT_BODY}>
@@ -1090,9 +1092,9 @@ export default function Dashboard() {
                     className={`${msg.role === 'user' ? USER_AVATAR : ASSISTANT_AVATAR}`}
                   >
                     {msg.role === 'user' ? (
-                      <User className="w-5 h-5" />
+                      <User className="h-5 w-5" />
                     ) : (
-                      <Bot className="w-5 h-5" />
+                      <Bot className="h-5 w-5" />
                     )}
                   </div>
                   <div
@@ -1101,16 +1103,18 @@ export default function Dashboard() {
                     {msg.role === 'assistant' ? (
                       <>
                         <div className={PROSE}>
-                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.message}</ReactMarkdown>
+                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>
+                            {msg.message}
+                          </ReactMarkdown>
                         </div>
                         <button
                           onClick={() =>
                             navigator.clipboard.writeText(msg.message)
                           }
-                          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity p-1.5 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-300"
+                          className="absolute top-2 right-2 rounded-lg bg-slate-100 p-1.5 text-slate-500 opacity-0 transition-opacity group-hover:opacity-100 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
                           title="Copy to clipboard"
                         >
-                          <Copy className="w-3.5 h-3.5" />
+                          <Copy className="h-3.5 w-3.5" />
                         </button>
                       </>
                     ) : (
@@ -1122,7 +1126,7 @@ export default function Dashboard() {
               {chatLoading && (
                 <div className="flex gap-3">
                   <div className={ASSISTANT_AVATAR}>
-                    <Bot className="w-5 h-5" />
+                    <Bot className="h-5 w-5" />
                   </div>
                   <div className={TYPING_INDICATOR}>
                     <div className={TYPING_DOT}></div>
@@ -1165,7 +1169,7 @@ export default function Dashboard() {
                 className={SEND_BUTTON}
                 aria-label={ARIA_LABELS.SEND_MESSAGE}
               >
-                <Send className="w-5 h-5 pl-0.5" />
+                <Send className="h-5 w-5 pl-0.5" />
               </button>
             </form>
           </div>

@@ -10,13 +10,14 @@ const useKeyboardShortcut = (key, callback, requireCtrl = true) => {
   useEffect(() => {
     const handler = (event) => {
       // Don't trigger if user is typing in an input, textarea, or contenteditable
-      const isTyping = event.target?.tagName === 'INPUT' ||
-                       event.target?.tagName === 'TEXTAREA' ||
-                       event.target?.isContentEditable;
+      const isTyping =
+        event.target?.tagName === 'INPUT' ||
+        event.target?.tagName === 'TEXTAREA' ||
+        event.target?.isContentEditable;
 
       if (isTyping) return;
 
-      const isCtrlOrCmd = requireCtrl ? (event.ctrlKey || event.metaKey) : true;
+      const isCtrlOrCmd = requireCtrl ? event.ctrlKey || event.metaKey : true;
       const isKeyMatch = event.key.toLowerCase() === key.toLowerCase();
 
       if (isCtrlOrCmd && isKeyMatch) {

@@ -32,23 +32,23 @@ export default function Breadcrumb() {
   return (
     <nav
       aria-label="Breadcrumb"
-      className="flex items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400 flex-wrap"
+      className="flex flex-wrap items-center gap-1.5 text-sm font-medium text-slate-500 dark:text-slate-400"
     >
       <Link
         to="/"
-        className="flex items-center gap-1 hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-colors"
+        className="hover:text-nyaya-600 dark:hover:text-nyaya-400 flex items-center gap-1 transition-colors"
         aria-label="Home"
       >
-        <Home className="w-4 h-4" />
+        <Home className="h-4 w-4" />
         <span>Home</span>
       </Link>
 
       {crumbs.map(({ path, label, isLast }) => (
         <React.Fragment key={path}>
-          <ChevronRight className="w-3.5 h-3.5 text-slate-400 dark:text-slate-600 shrink-0" />
+          <ChevronRight className="h-3.5 w-3.5 shrink-0 text-slate-400 dark:text-slate-600" />
           {isLast ? (
             <span
-              className="text-slate-800 dark:text-slate-200 truncate max-w-[180px]"
+              className="max-w-[180px] truncate text-slate-800 dark:text-slate-200"
               aria-current="page"
             >
               {label}
@@ -56,7 +56,7 @@ export default function Breadcrumb() {
           ) : (
             <Link
               to={path}
-              className="hover:text-nyaya-600 dark:hover:text-nyaya-400 transition-colors truncate max-w-[180px]"
+              className="hover:text-nyaya-600 dark:hover:text-nyaya-400 max-w-[180px] truncate transition-colors"
             >
               {label}
             </Link>
