@@ -268,6 +268,9 @@ Example Structure:
         sys_inst = query_optimizer.get_system_instruction(language)
         chat_model_instance = _create_chat_model(sys_inst)
         response = chat_model_instance.generate_content(prompt, request_options={"timeout": GEMINI_TIMEOUT})
+        if response.text is None:
+            logger.warning("Gemini chat response was blocked by safety filters")
+            return "I'm unable to provide an answer to that query. Please try rephrasing your question."
         return response.text
 
     except DeadlineExceeded as e:

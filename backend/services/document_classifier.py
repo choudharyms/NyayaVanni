@@ -115,6 +115,8 @@ Document Text:
             request_options={"timeout": GEMINI_TIMEOUT},
         )
 
+        if response.text is None:
+            raise ValueError("Gemini response was blocked by safety filters")
         result = json.loads(response.text)
 
         # Validate that the predicted type is in the allowed list

@@ -383,12 +383,13 @@ def _analyze_document_sync(
             cached = get_cached_analysis(document_id, session_id, language)
             if cached:
                 logger.info(f"Cache HIT for document {document_id}")
-                knowledge_graph = graph_builder.generate_graph(cached["extracted_text"])
+                extracted = cached["extracted_text"] or ""
+                knowledge_graph = graph_builder.generate_graph(extracted)
                 return {
                     "documentId": document_id,
                     "analysis": cached["analysis"],
                     "knowledge_graph": knowledge_graph,
-                    "extracted_text": cached["extracted_text"][:500] + "...",
+                    "extracted_text": extracted[:500] + "..." if extracted else "",
                     "cached": True,
                 }
 
@@ -762,6 +763,8 @@ def chat_general(request: Request, chat_request: ChatRequest):
         response_text = generate_chat_response(
             analysis, history, chat_request.user_message, chat_request.language
         )
+        if not response_text:
+            response_text = "I'm sorry, I could not generate a response. Please try again."
         return ChatResponse(response=response_text)
 
     except RateLimitExceeded:
@@ -899,6 +902,8 @@ Provide a JSON response matching this exact schema:
         response = model.generate_content(
             prompt, request_options={"timeout": GEMINI_TIMEOUT}
         )
+        if response.text is None:
+            raise HTTPException(status_code=502, detail="AI response was blocked by safety filters")
         result = json.loads(response.text)
         return result
 
