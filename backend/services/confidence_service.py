@@ -57,7 +57,7 @@ class ConfidenceService:
         return "Low"
 
     @classmethod
-    def generate(cls, document_text, summary):
+    def generate(cls, document_text, summary, relevant_laws=None):
 
         if not document_text or len(document_text.strip()) < 50:
             return {

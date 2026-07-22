@@ -363,4 +363,5 @@ Example Structure:
         logger.error(f"Gemini Chat Stream Failed (model={GEMINI_MODEL_NAME}): {e}")
         if "not found" in str(e).lower() or "not supported" in str(e).lower():
             yield "AI service configuration error: The configured Gemini model is not available. Please contact the administrator."
-        yield "AI service is currently unavailable. Please contact the administrator."
+        else:
+            yield "AI service is currently unavailable. Please contact the administrator."

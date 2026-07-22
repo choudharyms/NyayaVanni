@@ -45,7 +45,7 @@ def redact_client_names(text: str, token: str = "[CLIENT_NAME]") -> str:
     the captured name with a token while keeping the prefix.
     """
     for pattern in NAME_PATTERNS:
-        text = pattern.sub(f"\\g<0>: {token}", text)
+        text = pattern.sub(f"Client: {token}", text)
     return text
 
 
