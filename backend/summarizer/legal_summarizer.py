@@ -2,7 +2,8 @@
 import pdfplumber
 from googletrans import Translator
 
-genai.configure(api_key="YOUR_GEMINI_API_KEY")
+import os
+genai.configure(api_key=os.getenv("GEMINI_API_KEY", ""))
 model = genai.GenerativeModel("gemini-pro")
 translator = Translator()
 
