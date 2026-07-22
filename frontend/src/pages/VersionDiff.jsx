@@ -454,7 +454,6 @@ export default function VersionDiff() {
       await ensureSessionId(API_BASE);
 
       const { data } = await axios.post(`${API_BASE}/api/diff-analysis`, form, {
-        headers: HEADERS.CONTENT_TYPE_MULTIPART,
         timeout: 120000,
         withCredentials: true,
       });
