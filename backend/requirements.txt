@@ -16,3 +16,4 @@ gunicorn
 reportlab
 python-docx
 slowapi
+cryptography
