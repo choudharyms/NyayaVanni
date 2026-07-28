@@ -804,6 +804,23 @@ export default function HireLawyer() {
               </div>
             </div>
 
+            {/* Filter chips */}
+            <div className="flex flex-wrap gap-2 mt-4">
+              {categories.filter(c => c !== 'All').map((cat) => (
+                <button
+                  key={cat}
+                  onClick={() => setFilterType(filterType === cat ? 'All' : cat)}
+                  className={`px-3 py-1.5 text-xs font-semibold rounded-full border transition-all cursor-pointer ${
+                    filterType === cat
+                      ? 'bg-nyaya-500 text-white border-nyaya-500 shadow-sm'
+                      : 'bg-slate-50 dark:bg-white/5 border-slate-200 dark:border-white/10 text-slate-600 dark:text-slate-300 hover:bg-nyaya-500/10 hover:border-nyaya-500/30 hover:text-nyaya-600 dark:hover:bg-nyaya-500/15 dark:hover:border-nyaya-500/30 dark:hover:text-nyaya-300'
+                  }`}
+                >
+                  {cat}
+                </button>
+              ))}
+            </div>
+
             <div className="flex items-center justify-between gap-3 mt-4 text-sm text-slate-500 dark:text-slate-400">
               <p>
                 {searchTerm.trim().length > 0 ? (
