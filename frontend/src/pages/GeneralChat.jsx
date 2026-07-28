@@ -9,6 +9,8 @@ import {
   Download,
   Copy,
   Trash2,
+  ThumbUp,
+  ThumbDown,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
@@ -44,6 +46,27 @@ export default function GeneralChat() {
         'Hello! I am NyayaVanni Legal Assistant. How can I help you understand your legal rights today?',
     },
   ]);
+
+  const [feedback, setFeedback] = useState({});
+
+  const submitFeedback = async (messageIndex, type) => {
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+    setFeedback((prev) => ({ ...prev, [messageIndex]: type }));
+    try {
+      await fetch(`${apiUrl}/api/chat/feedback`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({
+          conversation_id: currentConversationId,
+          message_index: messageIndex,
+          feedback: type,
+        }),
+      });
+    } catch {
+      // ignore
+    }
+  };
 
   React.useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -129,6 +152,7 @@ export default function GeneralChat() {
     setCurrentConversationId(null);
     setActiveConversationId(null);
     setChatInput('');
+    setFeedback({});
   };
 
   const submitMessage = async (messageText, currentHistory) => {
@@ -375,8 +399,34 @@ export default function GeneralChat() {
                       }`}
                     >
                       {msg.role === 'assistant' ? (
-                        <div className="prose prose-sm max-w-none dark:prose-invert">
-                          <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.message}</ReactMarkdown>
+                        <div>
+                          <div className="prose prose-sm max-w-none dark:prose-invert">
+                            <ReactMarkdown rehypePlugins={[rehypeSanitize]}>{msg.message}</ReactMarkdown>
+                          </div>
+                          <div className="flex items-center gap-2 mt-2 pt-2 border-t border-slate-200/50 dark:border-slate-700/50">
+                            <button
+                              onClick={() => submitFeedback(idx, 'up')}
+                              className={`p-1 rounded-lg transition-all cursor-pointer ${
+                                feedback[idx] === 'up'
+                                  ? 'text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20'
+                                  : 'text-slate-400 dark:text-slate-500 hover:text-green-600 dark:hover:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/20'
+                              }`}
+                              title="Helpful"
+                            >
+                              <ThumbUp className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => submitFeedback(idx, 'down')}
+                              className={`p-1 rounded-lg transition-all cursor-pointer ${
+                                feedback[idx] === 'down'
+                                  ? 'text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20'
+                                  : 'text-slate-400 dark:text-slate-500 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20'
+                              }`}
+                              title="Not helpful"
+                            >
+                              <ThumbDown className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
                         </div>
                       ) : (
                         msg.message

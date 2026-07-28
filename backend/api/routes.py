@@ -32,7 +32,7 @@ from ..config.rate_limits import (
     UPLOAD_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
 )
-from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
+from ..models.schemas import ChatFeedbackRequest, ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
@@ -57,6 +57,7 @@ from ..services.storage_service import (
     get_cached_analysis,
     get_document_record,
     save_cached_analysis,
+    save_chat_feedback,
     save_document_record,
     upload_to_local,
     validate_session,
@@ -815,6 +816,25 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
     except Exception as e:
         logger.error(f"Chat failed for document {document_id}: {e}")
         raise HTTPException(status_code=500, detail="Chat generation failed")
+
+
+@api_router.post("/chat/feedback")
+@limiter.limit("30/minute")
+async def chat_feedback(request: Request, body: ChatFeedbackRequest):
+    try:
+        session_id = request.cookies.get("session_id") or request.headers.get("X-Session-Id")
+        conversation_id = body.conversation_id or session_id
+        saved = save_chat_feedback(conversation_id, body.message_index, body.feedback)
+        if not saved:
+            raise HTTPException(status_code=500, detail="Failed to save feedback")
+        return {"status": "ok"}
+    except RateLimitExceeded:
+        raise
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Feedback save failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to save feedback")
 
 
 @api_router.post("/diff-analysis")

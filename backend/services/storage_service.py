@@ -53,6 +53,7 @@ def init_db(raise_on_error: bool = False):
         """)
 
         _ensure_analysis_cache_table(cursor)
+        _ensure_chat_feedback_table(cursor)
         _ensure_sessions_table(cursor)
 
         conn.commit()
@@ -154,6 +155,18 @@ def _ensure_analysis_cache_table(cursor):
     cursor.execute(f"DROP TABLE {backup_table}")
 
 
+def _ensure_chat_feedback_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS chat_feedback (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            conversation_id TEXT,
+            message_index INTEGER NOT NULL,
+            feedback TEXT NOT NULL CHECK(feedback IN ('up', 'down')),
+            created_at TEXT NOT NULL
+        )
+    """)
+
+
 def _ensure_sessions_table(cursor):
     cursor.execute("""
         CREATE TABLE IF NOT EXISTS sessions (
@@ -163,6 +176,33 @@ def _ensure_sessions_table(cursor):
             expires_at TEXT NOT NULL
         )
     """)
+
+
+def save_chat_feedback(
+    conversation_id: Optional[str],
+    message_index: int,
+    feedback: str,
+) -> bool:
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        now = datetime.now(timezone.utc).isoformat()
+        cursor.execute(
+            "INSERT INTO chat_feedback (conversation_id, message_index, feedback, created_at) VALUES (?, ?, ?, ?)",
+            (conversation_id, message_index, feedback, now),
+        )
+        conn.commit()
+        logger.info(f"Chat feedback saved: {feedback} for message {message_index}")
+        return True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Chat feedback save failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 
 SESSION_TTL = timedelta(days=30)
