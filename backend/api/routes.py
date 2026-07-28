@@ -129,11 +129,24 @@ async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
 
 
 class DocumentGenerationRequest(BaseModel):
-    effective_date: str = Field(..., max_length=100)
-    party_one_name: str = Field(..., max_length=500)
-    party_two_name: str = Field(..., max_length=500)
-    consideration_amount: str = Field(..., max_length=500)
-    jurisdiction: str = Field(..., max_length=200)
+    effective_date: str = Field(..., max_length=100, min_length=1)
+    party_one_name: str = Field(..., max_length=500, min_length=1)
+    party_two_name: str = Field(..., max_length=500, min_length=1)
+    consideration_amount: str = Field(..., max_length=500, min_length=1)
+    jurisdiction: str = Field(..., max_length=200, min_length=1)
+    export_format: str = Field(default="pdf", max_length=10)
+
+    class Config:
+        schema_extra = {
+            "example": {
+                "effective_date": "2026-01-15",
+                "party_one_name": "Acme Corporation",
+                "party_two_name": "John Doe",
+                "consideration_amount": "Rs. 1,00,000",
+                "jurisdiction": "India",
+                "export_format": "pdf",
+            }
+        }
 
 
 def require_session_id(request: Request) -> str:
@@ -914,35 +927,91 @@ Provide a JSON response matching this exact schema:
         raise HTTPException(status_code=500, detail="Diff analysis failed")
 
 
+ALLOWED_EXPORT_FORMATS = {"pdf", "txt"}
+VALID_JURISDICTIONS = {
+    "India", "United States", "United Kingdom", "Canada", "Australia",
+    "Germany", "France", "Japan", "Singapore", "United Arab Emirates",
+}
+
+
+def _validate_document_request(payload: DocumentGenerationRequest) -> None:
+    """Validate document generation request fields.
+
+    Args:
+        payload: The document generation request to validate.
+
+    Raises:
+        HTTPException 400: If any field validation fails.
+    """
+    import re
+
+    if payload.export_format.lower() not in ALLOWED_EXPORT_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid export format. Allowed formats: {', '.join(sorted(ALLOWED_EXPORT_FORMATS))}",
+        )
+
+    date_pattern = r"^\d{4}-\d{2}-\d{2}$"
+    if not re.match(date_pattern, payload.effective_date):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date format. Use YYYY-MM-DD format.",
+        )
+
+    try:
+        from datetime import datetime
+        datetime.strptime(payload.effective_date, "%Y-%m-%d")
+    except ValueError:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid date value. Please provide a valid date in YYYY-MM-DD format.",
+        )
+
+    for field_name, field_value in [
+        ("party_one_name", payload.party_one_name),
+        ("party_two_name", payload.party_two_name),
+    ]:
+        if not re.match(r"^[a-zA-Z0-9\s\.\,\-\(\)&]+$", field_value):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid characters in {field_name}. Only letters, numbers, spaces, and basic punctuation are allowed.",
+            )
+
+    if not re.match(r"^[a-zA-Z0-9\s\.\,\-\(\)₹$]+$", payload.consideration_amount):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid characters in consideration_amount. Only letters, numbers, spaces, and basic punctuation are allowed.",
+        )
+
+    if payload.jurisdiction not in VALID_JURISDICTIONS:
+        logger.warning(
+            "Non-standard jurisdiction submitted: %s",
+            payload.jurisdiction,
+        )
+
+
 @api_router.post("/generate-document")
 @limiter.limit("10/minute")
 def generate_document(request: Request, payload: DocumentGenerationRequest):
-    """Generate a standard NDA document as a downloadable PDF.
+    """Generate a standard NDA document as a downloadable PDF or text file.
 
     Args:
         request: The incoming HTTP request.
         payload: The document generation payload including party names,
-                 effective date, consideration amount, and jurisdiction.
+                 effective date, consideration amount, jurisdiction, and format.
 
     Returns:
-        StreamingResponse: A PDF file attachment of the generated NDA.
+        StreamingResponse: A file attachment of the generated NDA.
 
     Raises:
+        HTTPException 400: If input validation fails.
         HTTPException 401: If the session is missing or invalid.
-        HTTPException 500: If PDF generation fails.
+        HTTPException 500: If document generation fails.
     """
     try:
         session_id = require_session_id(request)
 
-        buffer = io.BytesIO()
-        c = canvas.Canvas(buffer, pagesize=letter)
-        width, height = letter
-
-        c.setFont("Helvetica-Bold", 16)
-        c.drawCentredString(width / 2.0, height - 50, "NON-DISCLOSURE AGREEMENT")
-
-        c.setFont("Helvetica", 12)
-        text = c.beginText(50, height - 100)
+        _validate_document_request(payload)
 
         template_text = (
             f'This Non-Disclosure Agreement (the "Agreement") is entered into on {payload.effective_date} '
@@ -955,6 +1024,28 @@ def generate_document(request: Request, payload: DocumentGenerationRequest):
             f"3. Jurisdiction: This Agreement shall be governed by the laws of {payload.jurisdiction}.\n\n"
             f"IN WITNESS WHEREOF, the parties have executed this Agreement as of the date first above written."
         )
+
+        export_format = payload.export_format.lower()
+
+        if export_format == "txt":
+            buffer = io.BytesIO()
+            buffer.write(template_text.encode("utf-8"))
+            buffer.seek(0)
+            return StreamingResponse(
+                buffer,
+                media_type="text/plain",
+                headers={"Content-Disposition": 'attachment; filename="NDA_Document.txt"'},
+            )
+
+        buffer = io.BytesIO()
+        c = canvas.Canvas(buffer, pagesize=letter)
+        width, height = letter
+
+        c.setFont("Helvetica-Bold", 16)
+        c.drawCentredString(width / 2.0, height - 50, "NON-DISCLOSURE AGREEMENT")
+
+        c.setFont("Helvetica", 12)
+        text = c.beginText(50, height - 100)
 
         lines = template_text.split("\n")
         for line in lines:
