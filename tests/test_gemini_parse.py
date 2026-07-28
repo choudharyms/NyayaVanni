@@ -51,3 +51,60 @@ def test_parse_from_embedded_text():
     resp = MockRespText(txt)
     parsed = _parse(resp)
     assert parsed == data
+
+
+def sample_diff_payload():
+    return {
+        "diff_stats": {
+            "lines_added": 15,
+            "lines_removed": 8
+        },
+        "analysis": {
+            "overall_risk_level": "high",
+            "summary": "The new version introduces additional employee obligations and increases penalty clauses.",
+            "added_obligations": [
+                {"clause": "Non-compete", "severity": "high", "detail": "12-month non-compete added"}
+            ],
+            "increased_penalties": [
+                {"clause": "Late fee", "old_value": "5%", "new_value": "10%", "detail": "Penalty doubled"}
+            ],
+            "reduced_employee_rights": [
+                {"clause": "Leave policy", "severity": "medium", "detail": "Sick leave reduced from 12 to 6 days"}
+            ],
+            "hidden_modifications": [
+                {"clause": "Arbitration", "risk": "critical", "detail": "Mandatory arbitration clause added in fine print"}
+            ],
+            "new_legal_exposure": [
+                {"clause": "Data sharing", "severity": "high", "detail": "Employee data may be shared with third parties"}
+            ],
+            "recommended_actions": [
+                "Consult a lawyer before signing",
+                "Negotiate non-compete clause"
+            ]
+        }
+    }
+
+
+def test_diff_parse_from_json_method():
+    data = sample_diff_payload()
+    resp = MockRespJSON(data)
+    parsed = _parse(resp)
+    assert parsed == data
+
+
+def test_diff_parse_from_fenced_text():
+    data = sample_diff_payload()
+    txt = "Diff analysis:\n```json\n" + json.dumps(data) + "\n```"
+    resp = MockRespText(txt)
+    parsed = _parse(resp)
+    assert parsed == data
+
+
+def test_diff_parse_schema_validation():
+    from backend.models.llm_schemas import DiffAnalysisResponse
+    data = sample_diff_payload()
+    validated = DiffAnalysisResponse(**data)
+    assert validated.diff_stats.lines_added == 15
+    assert validated.diff_stats.lines_removed == 8
+    assert validated.analysis.overall_risk_level.value == "high"
+    assert len(validated.analysis.recommended_actions) == 2

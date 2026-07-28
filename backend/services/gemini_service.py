@@ -9,7 +9,10 @@ import google.generativeai as genai
 from dotenv import load_dotenv
 from pydantic import BaseModel, Field
 
-from ..models.llm_schemas import DocumentAnalysis
+from ..models.llm_schemas import (
+    DiffAnalysisResponse,
+    DocumentAnalysis,
+)
 
 load_dotenv()
 
@@ -211,6 +214,87 @@ Extract and structure the output strictly in JSON format matching this schema:
         return parsed
     except Exception as e:
         logger.error(f"Gemini Analysis Failed (model={GEMINI_MODEL_NAME}): {e}")
+        if "not found" in str(e).lower() or "not supported" in str(e).lower():
+            raise RuntimeError(
+                f"Gemini model '{GEMINI_MODEL_NAME}' not found. Check GEMINI_MODEL_NAME environment variable."
+            )
+        raise
+
+
+def analyze_diff_with_gemini(
+    old_text: str, new_text: str
+) -> dict:
+    """Compare two document versions and return a structured diff analysis.
+
+    Uses Gemini's native structured output with the DiffAnalysisResponse schema
+    to guarantee valid JSON that strictly conforms to the expected format.
+
+    Args:
+        old_text: Text content of the original document version.
+        new_text: Text content of the updated document version.
+
+    Returns:
+        dict: A structured diff analysis including diff_stats and analysis
+            with added obligations, increased penalties, reduced rights,
+            hidden modifications, new legal exposure, and recommended actions.
+
+    Raises:
+        RuntimeError: If the Gemini model is not found or the API call fails.
+    """
+    old_text = old_text[:8000]
+    new_text = new_text[:8000]
+
+    diff_config = {
+        "temperature": 0.2,
+        "top_p": 0.8,
+        "top_k": 40,
+        "max_output_tokens": 8192,
+        "response_mime_type": "application/json",
+        "response_schema": DiffAnalysisResponse.model_json_schema(),
+    }
+
+    system_instruction = (
+        "You are an expert Indian Legal AI that compares two document versions "
+        "and provides structured difference analysis. Always respond with valid "
+        "JSON matching the provided schema exactly."
+    )
+
+    prompt = f"""Compare the following two document versions and provide a structured difference analysis.
+
+Old Document:
+<document_content>
+{old_text}
+</document_content>
+
+New Document:
+<document_content>
+{new_text}
+</document_content>
+
+Analyze the differences and return a JSON object with:
+- diff_stats: count of lines added and removed
+- analysis.overall_risk_level: one of low, medium, high, critical
+- analysis.summary: 2-3 sentence explanation of key differences
+- analysis.added_obligations: new duties introduced
+- analysis.increased_penalties: penalties/fees that increased
+- analysis.reduced_employee_rights: rights that were reduced or removed
+- analysis.hidden_modifications: subtle changes easy to overlook
+- analysis.new_legal_exposure: new areas of legal risk
+- analysis.recommended_actions: actionable recommendations"""
+
+    try:
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL_NAME,
+            generation_config=diff_config,
+            system_instruction=system_instruction,
+        )
+        response = model.generate_content(
+            prompt, request_options={"timeout": GEMINI_TIMEOUT}
+        )
+        parsed = _parse_structured_response(response)
+        return parsed
+    except Exception as e:
+        logger.error(f"Diff Analysis Failed (model={GEMINI_MODEL_NAME}): {e}")
         if "not found" in str(e).lower() or "not supported" in str(e).lower():
             raise RuntimeError(
                 f"Gemini model '{GEMINI_MODEL_NAME}' not found. Check GEMINI_MODEL_NAME environment variable."

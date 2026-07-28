@@ -69,6 +69,38 @@ def sample_payload():
     }
 
 
+def sample_diff_payload():
+    return {
+        "diff_stats": {
+            "lines_added": 15,
+            "lines_removed": 8
+        },
+        "analysis": {
+            "overall_risk_level": "high",
+            "summary": "The new version introduces additional employee obligations and increases penalty clauses.",
+            "added_obligations": [
+                {"clause": "Non-compete", "severity": "high", "detail": "12-month non-compete added"}
+            ],
+            "increased_penalties": [
+                {"clause": "Late fee", "old_value": "5%", "new_value": "10%", "detail": "Penalty doubled"}
+            ],
+            "reduced_employee_rights": [
+                {"clause": "Leave policy", "severity": "medium", "detail": "Sick leave reduced from 12 to 6 days"}
+            ],
+            "hidden_modifications": [
+                {"clause": "Arbitration", "risk": "critical", "detail": "Mandatory arbitration clause added in fine print"}
+            ],
+            "new_legal_exposure": [
+                {"clause": "Data sharing", "severity": "high", "detail": "Employee data may be shared with third parties"}
+            ],
+            "recommended_actions": [
+                "Consult a lawyer before signing",
+                "Negotiate non-compete clause"
+            ]
+        }
+    }
+
+
 def run_all():
     data = sample_payload()
     # Test json method
@@ -90,6 +122,31 @@ def run_all():
     parsed3 = _parse(resp3)
     assert parsed3 == data, f"embedded text test failed: {parsed3}"
     print('test_parse_from_embedded_text: OK')
+
+    # Diff analysis parse tests
+    diff_data = sample_diff_payload()
+
+    # Test diff json method
+    resp4 = MockRespJSON(diff_data)
+    parsed4 = _parse(resp4)
+    assert parsed4 == diff_data, f"diff json method test failed: {parsed4}"
+    print('test_diff_parse_from_json_method: OK')
+
+    # Test diff fenced text
+    txt5 = "Diff analysis:\n```json\n" + json.dumps(diff_data) + "\n```"
+    resp5 = MockRespText(txt5)
+    parsed5 = _parse(resp5)
+    assert parsed5 == diff_data, f"diff fenced text test failed: {parsed5}"
+    print('test_diff_parse_from_fenced_text: OK')
+
+    # Test DiffAnalysisResponse schema validation
+    from backend.models.llm_schemas import DiffAnalysisResponse
+    validated = DiffAnalysisResponse(**diff_data)
+    assert validated.diff_stats.lines_added == 15
+    assert validated.diff_stats.lines_removed == 8
+    assert validated.analysis.overall_risk_level.value == "high"
+    assert len(validated.analysis.recommended_actions) == 2
+    print('test_diff_parse_schema_validation: OK')
 
 if __name__ == '__main__':
     try:
