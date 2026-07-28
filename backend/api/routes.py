@@ -61,6 +61,7 @@ from ..services.storage_service import (
     upload_to_local,
     validate_session,
 )
+from ..services.auth_service import validate_auth_token
 
 logger = logging.getLogger(__name__)
 
@@ -139,15 +140,42 @@ class DocumentGenerationRequest(BaseModel):
 def require_session_id(request: Request) -> str:
     """Extract and validate the session ID from the request cookie.
 
+    Supports both session cookies and SSO/JWT tokens via Authorization header.
+
     Args:
         request: The incoming HTTP request.
 
     Returns:
-        str: The validated session ID.
+        str: The validated session ID or user identifier.
 
     Raises:
         HTTPException 401: If the session_id cookie is missing or invalid.
     """
+    auth_header = request.headers.get("Authorization") or request.headers.get("authorization")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header[7:]
+        token_data = validate_auth_token(token)
+        if token_data:
+            user_id = token_data.get("sub") or token_data.get("user_id", "")
+            if user_id:
+                return f"sso:{user_id}"
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired SSO token",
+        )
+
+    sso_token = request.headers.get("X-SSO-Token") or request.headers.get("x-sso-token")
+    if sso_token:
+        token_data = validate_auth_token(sso_token)
+        if token_data:
+            user_id = token_data.get("sub") or token_data.get("user_id", "")
+            if user_id:
+                return f"sso:{user_id}"
+        raise HTTPException(
+            status_code=401,
+            detail="Invalid or expired SSO token",
+        )
+
     session_id = request.cookies.get("session_id")
     if not session_id:
         session_id = request.headers.get("X-Session-Id")
