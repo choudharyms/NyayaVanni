@@ -28,6 +28,39 @@ DOCUMENT_TYPES = [
     "Other / Unknown",
 ]
 
+MAX_CLASSIFICATION_TEXT_LENGTH = 50000
+MIN_CLASSIFICATION_TEXT_LENGTH = 10
+
+
+def _validate_classification_input(text: str) -> str:
+    """Validate and sanitize document text before classification.
+
+    Args:
+        text: Raw document text to validate.
+
+    Returns:
+        Cleaned and validated text.
+
+    Raises:
+        ValueError: If text is empty, too short, or contains only whitespace.
+    """
+    if not text or not isinstance(text, str):
+        raise ValueError("Document text is required for classification")
+
+    text = text.strip()
+
+    if len(text) < MIN_CLASSIFICATION_TEXT_LENGTH:
+        raise ValueError(
+            f"Document text is too short for classification (minimum {MIN_CLASSIFICATION_TEXT_LENGTH} characters)"
+        )
+
+    if len(text) > MAX_CLASSIFICATION_TEXT_LENGTH:
+        text = text[:MAX_CLASSIFICATION_TEXT_LENGTH]
+
+    text = re.sub(r"[\x00-\x08\x0b\x0c\x0e-\x1f\x7f]", "", text)
+
+    return text
+
 
 def _heuristic_classify(text: str) -> Dict:
     """Fallback heuristic-based classifier."""
@@ -78,17 +111,27 @@ def classify_document(text: str) -> Dict:
     AI-powered document classifier using Gemini 1.5 Flash.
     Falls back to heuristic model on failure.
     """
+    try:
+        validated_text = _validate_classification_input(text)
+    except ValueError as e:
+        logger.warning(f"Classification input validation failed: {e}")
+        return {
+            "predicted_type": "Other / Unknown",
+            "confidence": 0.0,
+            "alternatives": [],
+            "error": str(e),
+        }
+
     if not api_key:
         logger.warning(
             "GEMINI_API_KEY not set. Using heuristic fallback for classification."
         )
-        return _heuristic_classify(text)
+        return _heuristic_classify(validated_text)
 
     try:
         model = genai.GenerativeModel("models/gemini-1.5-flash")
 
-        # Read only the first 10k chars to save tokens (classification only needs the top)
-        truncated_text = text[:10000]
+        truncated_text = validated_text[:10000]
 
         prompt = f"""
 You are an expert legal AI classifier.
@@ -117,7 +160,6 @@ Document Text:
 
         result = json.loads(response.text)
 
-        # Validate that the predicted type is in the allowed list
         if result.get("predicted_type") not in DOCUMENT_TYPES:
             result["predicted_type"] = "Other / Unknown"
 
@@ -125,4 +167,4 @@ Document Text:
 
     except Exception as e:
         logger.error(f"Gemini classification failed: {e}. Falling back to heuristics.")
-        return _heuristic_classify(text)
+        return _heuristic_classify(validated_text)
