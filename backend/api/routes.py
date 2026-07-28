@@ -23,7 +23,7 @@ from reportlab.pdfgen import canvas
 from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
-from ..middleware.rate_limit import limiter
+from ..middleware.rate_limit import check_email_rate_limit, limiter
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -185,7 +185,7 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
-    """Receive and log contact form submissions with IP-based rate limiting.
+    """Receive and log contact form submissions with IP and email rate limiting.
 
     Args:
         request: The incoming HTTP request.
@@ -195,8 +195,19 @@ async def contact_us(request: Request, body: ContactRequest):
         dict: A status ok message confirming receipt.
 
     Raises:
-        HTTPException 429: If the rate limit is exceeded.
+        HTTPException 429: If the rate limit is exceeded (IP or email-based).
     """
+    if not check_email_rate_limit(body.email):
+        logger.warning(
+            "Email rate limit exceeded for %s from %s",
+            body.email,
+            request.client.host if request.client else "unknown",
+        )
+        raise HTTPException(
+            status_code=429,
+            detail="Too many submissions from this email address. Please try again later.",
+        )
+
     logger.info(
         "Contact submission from %s: name=%s email=%s subject=%s",
         request.client.host if request.client else "unknown",
