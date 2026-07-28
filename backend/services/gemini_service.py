@@ -218,6 +218,52 @@ Extract and structure the output strictly in JSON format matching this schema:
         raise
 
 
+def translate_document_text(text: str, target_language: str = "hi") -> str:
+    text = text[:30000]
+    lang_name = "Hindi" if target_language == "hi" else "English"
+
+    prompt = f"""Translate the following legal document text into {lang_name}.
+
+IMPORTANT RULES:
+- Preserve the original formatting, paragraph breaks, and structure.
+- Keep all dates, numbers, legal citations, and section numbers exactly as-is.
+- Use formal legal language appropriate for {lang_name}.
+- Do NOT add any commentary, explanations, or notes outside the translation.
+- Translate the ENTIRE document block by block.
+
+Document Text:
+<document_content>
+{text}
+</document_content>
+
+Provide ONLY the translated text, nothing else."""
+
+    try:
+        translation_config = {
+            "temperature": 0.2,
+            "top_p": 0.9,
+            "max_output_tokens": 32768,
+        }
+        model = genai.GenerativeModel(
+            model_name=GEMINI_MODEL_NAME,
+            generation_config=translation_config,
+        )
+        response = model.generate_content(
+            prompt, request_options={"timeout": GEMINI_TIMEOUT}
+        )
+        translated = response.text.strip()
+        if not translated:
+            raise ValueError("Empty translation response from model")
+        return translated
+    except Exception as e:
+        logger.error(f"Document translation failed (target={target_language}): {e}")
+        if "not found" in str(e).lower() or "not supported" in str(e).lower():
+            raise RuntimeError(
+                f"Gemini model '{GEMINI_MODEL_NAME}' not found. Check GEMINI_MODEL_NAME environment variable."
+            )
+        raise
+
+
 def generate_chat_response(
     document_analysis: dict, chat_history: list, user_message: str, language: str = "en"
 ) -> str:

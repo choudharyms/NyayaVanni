@@ -41,6 +41,7 @@ from ..services.gemini_service import (
     analyze_document_with_gemini,
     generate_chat_response,
     stream_chat_response,
+    translate_document_text,
 )
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from ..services.ocr_service import extract_document
@@ -513,9 +514,30 @@ def _analyze_document_sync(
         raise HTTPException(status_code=500, detail="Document analysis failed")
 
 
+class TranslateTextRequest(BaseModel):
+    text: str = Field(..., min_length=1, max_length=30000)
+    target_language: str = Field(default="hi", max_length=10)
+
+
 class AnalyzeTextRequest(BaseModel):
     text: str = Field(..., min_length=1)
     language: str = "en"
+
+
+@api_router.post("/translate-text")
+@limiter.limit("10/minute")
+async def translate_text(request: Request, body: TranslateTextRequest):
+    try:
+        session_id = require_session_id(request)
+        result = translate_document_text(body.text, body.target_language)
+        return {"translated_text": result}
+    except RateLimitExceeded:
+        raise
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Translation failed: {e}")
+        raise HTTPException(status_code=500, detail="Translation failed")
 
 
 @api_router.post("/analyze-text")

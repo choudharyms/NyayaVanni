@@ -254,6 +254,9 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
+  const [translatedText, setTranslatedText] = useState(null);
+  const [translationLoading, setTranslationLoading] = useState(false);
+  const [showTranslation, setShowTranslation] = useState(false);
   const messagesEndRef = useRef(null);
   
   // Ref for Knowledge Graph search input
@@ -633,12 +636,49 @@ export default function Dashboard() {
               <div className="flex items-center justify-between mb-3">
                 <h3 className={TEXT_SEMI}>Extracted OCR Text</h3>
 
-                <button
-                  onClick={() => navigator.clipboard.writeText(extractedText)}
-                  className={COPY_BUTTON}
-                >
-                  Copy Text
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={async () => {
+                      if (translatedText && showTranslation) {
+                        setShowTranslation(false);
+                        return;
+                      }
+                      setTranslationLoading(true);
+                      try {
+                        const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+                        const res = await fetch(`${apiUrl}/api/translate-text`, {
+                          method: 'POST',
+                          headers: { 'Content-Type': 'application/json' },
+                          credentials: 'include',
+                          body: JSON.stringify({
+                            text: extractedText,
+                            target_language: language === 'hi' ? 'en' : 'hi',
+                          }),
+                        });
+                        const data = await res.json();
+                        setTranslatedText(data.translated_text);
+                        setShowTranslation(true);
+                      } catch {
+                        // ignore
+                      } finally {
+                        setTranslationLoading(false);
+                      }
+                    }}
+                    className={`px-3 py-1.5 text-xs font-semibold rounded-xl border transition-all cursor-pointer ${
+                      showTranslation
+                        ? 'bg-nyaya-500 text-white border-nyaya-500'
+                        : 'bg-slate-50 dark:bg-slate-950 border-slate-200 dark:border-slate-800 text-slate-600 dark:text-slate-400 hover:bg-nyaya-500/10 hover:border-nyaya-500/30 hover:text-nyaya-600 dark:hover:text-nyaya-400'
+                    }`}
+                  >
+                    {translationLoading ? 'Translating...' : showTranslation ? 'Original' : `Translate to ${language === 'hi' ? 'English' : 'Hindi'}`}
+                  </button>
+                  <button
+                    onClick={() => navigator.clipboard.writeText(extractedText)}
+                    className={COPY_BUTTON}
+                  >
+                    Copy Text
+                  </button>
+                </div>
               </div>
 
               <div className="grid items-start grid-cols-1 gap-6 lg:grid-cols-12">
@@ -761,10 +801,22 @@ export default function Dashboard() {
                 </div>
 
                 {/* OCR Extracted Text Display */}
-                <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
-                  <pre className={TEXTAREA_PRE}>
-                    {extractedText || 'No text extracted.'}
-                  </pre>
+                <div className={`lg:col-span-7 ${showTranslation ? 'grid grid-cols-2 gap-4' : ''}`}>
+                  <div className={`overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 ${showTranslation ? 'h-[400px]' : 'h-[400px]'}`}>
+                    <pre className={TEXTAREA_PRE}>
+                      {extractedText || 'No text extracted.'}
+                    </pre>
+                  </div>
+                  {showTranslation && translatedText && (
+                    <div className="overflow-y-auto h-[400px] p-6 bg-nyaya-50/50 dark:bg-nyaya-950/20 rounded-2xl border border-nyaya-200 dark:border-nyaya-800/40">
+                      <div className="text-xs font-semibold uppercase text-nyaya-600 dark:text-nyaya-400 mb-3">
+                        Translated Text ({language === 'hi' ? 'English' : 'Hindi'})
+                      </div>
+                      <pre className="text-sm leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-wrap font-sans">
+                        {translatedText}
+                      </pre>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
