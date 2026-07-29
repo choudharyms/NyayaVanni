@@ -1073,3 +1073,57 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Document copy (#878) — request body validation
+# ---------------------------------------------------------------------------
+class DocumentCopyRequest(BaseModel):
+    new_filename: str = Field(..., min_length=1, max_length=255)
+    include_analysis: bool = Field(default=True)
+
+
+@api_router.post("/documents/{document_id}/copy")
+@limiter.limit("10/minute")
+async def copy_document(request: Request, document_id: str, body: DocumentCopyRequest):
+    """Copy a document with validated request body.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The source document ID.
+        body: Copy request with filename and analysis flag.
+
+    Returns:
+        dict: The new document ID and filename.
+    """
+    session_id = require_session_id(request)
+    record = require_document_owner(document_id, session_id)
+
+    safe_filename = "".join(
+        ch for ch in body.new_filename if ch.isalnum() or ch in ("._- ")
+    ).strip()
+    if not safe_filename:
+        raise HTTPException(status_code=400, detail="Invalid filename after sanitization")
+
+    ext = record["filename"].split(".")[-1] if "." in record["filename"] else ""
+    new_doc_id = str(uuid.uuid4())
+    new_local_path = None
+
+    src_path = record.get("local_path")
+    if src_path and os.path.exists(src_path):
+        new_local_path = os.path.join(os.path.dirname(src_path), f"{new_doc_id}.{ext}")
+        try:
+            import shutil
+            shutil.copy2(src_path, new_local_path)
+        except OSError as exc:
+            logger.error(f"File copy failed: {exc}")
+            raise HTTPException(status_code=500, detail="Failed to copy document file")
+
+    save_document_record(session_id, new_doc_id, safe_filename or record["filename"], new_local_path or "")
+
+    if body.include_analysis:
+        cached = get_cached_analysis(document_id, session_id, "en")
+        if cached:
+            save_cached_analysis(new_doc_id, session_id, "en", cached["extracted_text"], cached["analysis"])
+
+    return {"documentId": new_doc_id, "filename": safe_filename or record["filename"], "copied": True}
+
