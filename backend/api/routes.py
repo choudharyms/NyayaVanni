@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,129 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Template CRUD (#884) — rate limited endpoints
+# ---------------------------------------------------------------------------
+TEMPLATE_RATE_LIMIT = os.getenv("TEMPLATE_RATE_LIMIT", "20/minute")
+
+
+class TemplateCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1, max_length=50000)
+    category: str = Field(default="", max_length=100)
+
+
+@api_router.post("/templates")
+@limiter.limit(TEMPLATE_RATE_LIMIT)
+async def create_template(request: Request, body: TemplateCreateRequest):
+    """Create a new document template with rate limiting.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Template creation payload.
+
+    Returns:
+        dict: The created template ID.
+    """
+    session_id = require_session_id(request)
+    template_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO document_templates (template_id, session_id, name, content, category, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (template_id, session_id, body.name, body.content, body.category, now, now),
+        )
+        conn.commit()
+        return {"templateId": template_id, "name": body.name, "created": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Template creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create template")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.get("/templates")
+@limiter.limit(TEMPLATE_RATE_LIMIT)
+async def list_templates(request: Request, category: str = ""):
+    """List document templates with optional category filter.
+
+    Args:
+        request: The incoming HTTP request.
+        category: Optional category filter.
+
+    Returns:
+        dict: List of templates.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        if category:
+            cursor.execute(
+                "SELECT * FROM document_templates WHERE session_id = ? AND category = ? ORDER BY created_at DESC",
+                (session_id, category),
+            )
+        else:
+            cursor.execute(
+                "SELECT * FROM document_templates WHERE session_id = ? ORDER BY created_at DESC",
+                (session_id,),
+            )
+        templates = [dict(row) for row in cursor.fetchall()]
+        return {"templates": templates, "count": len(templates)}
+    except Exception as e:
+        logger.error(f"Template list failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list templates")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.delete("/templates/{template_id}")
+@limiter.limit(TEMPLATE_RATE_LIMIT)
+async def delete_template(request: Request, template_id: str):
+    """Delete a document template.
+
+    Args:
+        request: The incoming HTTP request.
+        template_id: The template ID to delete.
+
+    Returns:
+        dict: Deletion confirmation.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM document_templates WHERE template_id = ? AND session_id = ?",
+            (template_id, session_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Template not found")
+        return {"templateId": template_id, "deleted": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Template deletion failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete template")
+    finally:
+        if conn:
+            conn.close()
 
