@@ -1,4 +1,5 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
@@ -24,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +53,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1075,62 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Notification send (#885) — request body validation
+# ---------------------------------------------------------------------------
+ALLOWED_NOTIFICATION_TYPES = {"info", "warning", "error", "success"}
+
+class NotificationSendRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    message: str = Field(..., min_length=1, max_length=5000)
+    type: str = Field(default="info", max_length=20)
+
+
+NOTIFICATION_SEND_RATE_LIMIT = os.getenv("NOTIFICATION_SEND_RATE_LIMIT", "10/minute")
+
+
+@api_router.post("/notifications/send")
+@limiter.limit(NOTIFICATION_SEND_RATE_LIMIT)
+async def send_notification(request: Request, body: NotificationSendRequest):
+    """Send a notification with validated request body.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Notification payload with title, message, and type.
+
+    Returns:
+        dict: The created notification ID.
+    """
+    session_id = require_session_id(request)
+
+    notif_type = body.type.lower()
+    if notif_type not in ALLOWED_NOTIFICATION_TYPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid notification type. Allowed: {', '.join(sorted(ALLOWED_NOTIFICATION_TYPES))}",
+        )
+
+    notification_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO notifications (notification_id, session_id, title, message, type, is_read, created_at) VALUES (?, ?, ?, ?, ?, 0, ?)",
+            (notification_id, session_id, body.title, body.message, notif_type, now),
+        )
+        conn.commit()
+        return {"notificationId": notification_id, "sent": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Notification send failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to send notification")
+    finally:
+        if conn:
+            conn.close()
 
