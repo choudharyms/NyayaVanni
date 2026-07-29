@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,82 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Notification read (#881) — requires session check
+# ---------------------------------------------------------------------------
+NOTIFICATION_RATE_LIMIT = os.getenv("NOTIFICATION_RATE_LIMIT", "30/minute")
+
+
+@api_router.get("/notifications")
+@limiter.limit(NOTIFICATION_RATE_LIMIT)
+async def list_notifications(request: Request):
+    """List notifications for the current session.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        dict: List of notifications with unread count.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM notifications WHERE session_id = ? ORDER BY created_at DESC LIMIT 50",
+            (session_id,),
+        )
+        notifications = [dict(row) for row in cursor.fetchall()]
+        unread = sum(1 for n in notifications if not n["is_read"])
+        return {"notifications": notifications, "unread_count": unread}
+    except Exception as e:
+        logger.error(f"Notification list failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list notifications")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.post("/notifications/{notification_id}/read")
+@limiter.limit(NOTIFICATION_RATE_LIMIT)
+async def mark_notification_read(request: Request, notification_id: str):
+    """Mark a notification as read. Requires valid session.
+
+    Args:
+        request: The incoming HTTP request.
+        notification_id: The notification ID to mark as read.
+
+    Returns:
+        dict: Confirmation of the read status update.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+        cursor.execute(
+            "UPDATE notifications SET is_read = 1, read_at = ? WHERE notification_id = ? AND session_id = ?",
+            (now, notification_id, session_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Notification not found")
+        return {"notificationId": notification_id, "read": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Notification read failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to mark notification as read")
+    finally:
+        if conn:
+            conn.close()
 
