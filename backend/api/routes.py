@@ -1,8 +1,10 @@
 import asyncio
+import csv
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,78 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document export (#876) — column whitelist validation
+# ---------------------------------------------------------------------------
+ALLOWED_EXPORT_COLUMNS = {
+    "document_id", "filename", "status", "uploaded_at",
+    "category", "risk_level", "summary", "language",
+}
+
+class DocumentExportRequest(BaseModel):
+    columns: list[str] = Field(default=list(ALLOWED_EXPORT_COLUMNS), max_length=20)
+    format: str = Field(default="csv", max_length=10)
+
+
+@api_router.post("/documents/export")
+@limiter.limit("10/minute")
+async def export_documents(request: Request, body: DocumentExportRequest):
+    """Export documents as CSV with validated column selection.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Export request with column whitelist and format.
+
+    Returns:
+        StreamingResponse: A CSV file with the requested columns.
+    """
+    session_id = require_session_id(request)
+
+    invalid_cols = set(body.columns) - ALLOWED_EXPORT_COLUMNS
+    if invalid_cols:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid columns: {', '.join(sorted(invalid_cols))}. Allowed: {', '.join(sorted(ALLOWED_EXPORT_COLUMNS))}",
+        )
+
+    if body.format not in {"csv", "json"}:
+        raise HTTPException(status_code=400, detail="Format must be 'csv' or 'json'")
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM documents WHERE session_id = ? ORDER BY uploaded_at DESC",
+            (session_id,),
+        )
+        rows = [dict(row) for row in cursor.fetchall()]
+
+        if body.format == "json":
+            export_data = [{col: row.get(col, "") for col in body.columns} for row in rows]
+            return JSONResponse(content={"documents": export_data, "count": len(export_data)})
+
+        output = io.StringIO()
+        writer = csv.DictWriter(output, fieldnames=body.columns)
+        writer.writeheader()
+        for row in rows:
+            writer.writerow({col: row.get(col, "") for col in body.columns})
+        output.seek(0)
+
+        return StreamingResponse(
+            iter([output.getvalue()]),
+            media_type="text/csv",
+            headers={"Content-Disposition": "attachment; filename=documents_export.csv"},
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Export failed: {e}")
+        raise HTTPException(status_code=500, detail="Document export failed")
+    finally:
+        if conn:
+            conn.close()
 
