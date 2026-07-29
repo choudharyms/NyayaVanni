@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +53,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1075,86 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document fetch (#883) — validated query/filter params
+# ---------------------------------------------------------------------------
+ALLOWED_FETCH_FILTERS = {"status", "language", "category"}
+
+
+class DocumentFetchRequest(BaseModel):
+    document_ids: list[str] = Field(default=[], max_length=50)
+    status: str = Field(default="", max_length=50)
+    language: str = Field(default="", max_length=10)
+    category: str = Field(default="", max_length=100)
+    page: int = Field(default=1, ge=1)
+    page_size: int = Field(default=10, ge=1, le=100)
+    sort_by: str = Field(default="uploaded_at", max_length=50)
+    sort_direction: str = Field(default="desc", max_length=4)
+
+
+@api_router.post("/documents/fetch")
+@limiter.limit("30/minute")
+async def fetch_documents(request: Request, body: DocumentFetchRequest):
+    """Fetch documents with validated filter parameters.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Fetch request with filters, pagination, sorting.
+
+    Returns:
+        dict: Filtered document list with metadata.
+    """
+    session_id = require_session_id(request)
+
+    sort_dir = body.sort_direction.lower()
+    if sort_dir not in {"asc", "desc"}:
+        raise HTTPException(status_code=400, detail="sort_direction must be 'asc' or 'desc'")
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        conditions = ["session_id = ?"]
+        params: list = [session_id]
+
+        if body.document_ids:
+            placeholders = ",".join("?" for _ in body.document_ids)
+            conditions.append(f"document_id IN ({placeholders})")
+            params.extend(body.document_ids)
+        if body.status:
+            conditions.append("status = ?")
+            params.append(body.status)
+
+        where = " AND ".join(conditions)
+        order = "ASC" if sort_dir == "asc" else "DESC"
+        safe_sort = "uploaded_at"  # Default sort column
+        offset = (body.page - 1) * body.page_size
+
+        cursor.execute(f"SELECT COUNT(*) as count FROM documents WHERE {where}", params)
+        total = cursor.fetchone()["count"]
+
+        cursor.execute(
+            f"SELECT * FROM documents WHERE {where} ORDER BY {safe_sort} {order} LIMIT ? OFFSET ?",
+            [*params, body.page_size, offset],
+        )
+        docs = [dict(row) for row in cursor.fetchall()]
+
+        return {
+            "documents": docs,
+            "total": total,
+            "page": body.page,
+            "page_size": body.page_size,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Document fetch failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch documents")
+    finally:
+        if conn:
+            conn.close()
 
