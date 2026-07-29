@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +53,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1075,75 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document list (#880) — validate sort direction
+# ---------------------------------------------------------------------------
+ALLOWED_SORT_COLUMNS = {"uploaded_at", "filename", "status", "document_id"}
+ALLOWED_SORT_DIRECTIONS = {"asc", "desc"}
+
+
+@api_router.get("/documents")
+@limiter.limit("30/minute")
+async def list_documents(
+    request: Request,
+    page: int = 1,
+    page_size: int = 10,
+    sort_direction: str = "desc",
+):
+    """List documents with validated sort direction.
+
+    Args:
+        request: The incoming HTTP request.
+        page: Page number (must be >= 1).
+        page_size: Results per page (1-100).
+        sort_direction: Sort direction ('asc' or 'desc').
+
+    Returns:
+        dict: Paginated document list.
+    """
+    session_id = require_session_id(request)
+
+    if page < 1:
+        raise HTTPException(status_code=400, detail="Page must be >= 1")
+    if page_size < 1 or page_size > 100:
+        raise HTTPException(status_code=400, detail="page_size must be between 1 and 100")
+
+    sort_dir = sort_direction.lower()
+    if sort_dir not in ALLOWED_SORT_DIRECTIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid sort_direction. Must be 'asc' or 'desc'",
+        )
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        order = "ASC" if sort_dir == "asc" else "DESC"
+        offset = (page - 1) * page_size
+
+        cursor.execute(
+            "SELECT COUNT(*) as count FROM documents WHERE session_id = ?",
+            (session_id,),
+        )
+        total = cursor.fetchone()["count"]
+
+        cursor.execute(
+            f"SELECT * FROM documents WHERE session_id = ? ORDER BY uploaded_at {order} LIMIT ? OFFSET ?",
+            (session_id, page_size, offset),
+        )
+        docs = [dict(row) for row in cursor.fetchall()]
+
+        return {"documents": docs, "total": total, "page": page, "page_size": page_size}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Document list failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list documents")
+    finally:
+        if conn:
+            conn.close()
 
