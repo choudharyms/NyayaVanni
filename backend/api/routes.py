@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +53,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1075,79 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document favorite (#886) — requires session check
+# ---------------------------------------------------------------------------
+@api_router.post("/documents/{document_id}/favorite")
+@limiter.limit("20/minute")
+async def toggle_favorite(request: Request, document_id: str, favorite: bool = True):
+    """Toggle favorite status on a document. Requires valid session.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The document ID to favorite/unfavorite.
+        favorite: Whether to mark as favorite (default True).
+
+    Returns:
+        dict: Updated favorite status.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET is_favorite = ? WHERE document_id = ? AND session_id = ?",
+            (1 if favorite else 0, document_id, session_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return {"documentId": document_id, "favorite": favorite, "updated": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Favorite toggle failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update favorite status")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.get("/documents/favorites")
+@limiter.limit("30/minute")
+async def list_favorites(request: Request):
+    """List favorited documents for the current session.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        dict: List of favorited documents.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT * FROM documents WHERE session_id = ? AND is_favorite = 1 ORDER BY uploaded_at DESC",
+            (session_id,),
+        )
+        docs = [dict(row) for row in cursor.fetchall()]
+        return {"documents": docs, "count": len(docs)}
+    except Exception as e:
+        logger.error(f"Favorites list failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list favorites")
+    finally:
+        if conn:
+            conn.close()
 
