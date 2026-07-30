@@ -40,3 +40,4 @@ backend/data/
 dist/
 build/
 models.txt
+test_ocr_pipeline.py

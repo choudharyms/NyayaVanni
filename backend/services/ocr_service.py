@@ -3,6 +3,8 @@ import logging
 import os
 import re
 import zipfile
+import cv2
+import numpy as np
 
 import docx
 import fitz  # PyMuPDF
@@ -56,17 +58,71 @@ def is_invalid_extracted_text(text: str) -> bool:
 
 def preprocess_image_for_ocr(img: Image.Image) -> Image.Image:
     """
-    Improve image quality before OCR.
+    Improve image quality before OCR using an adaptive preprocessing pipeline:
+    grayscale -> deskew -> denoise -> adaptive threshold -> smart rescale.
     """
 
-    # Convert to grayscale
     img = img.convert("L")
+    np_img = np.array(img)
 
-    # Resize for better OCR accuracy
-    img = img.resize((img.width * 2, img.height * 2))
+    # Step 2: Deskew (straighten tilted/rotated pages)
+    deskew_thresh = cv2.threshold(
+        np_img, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
+    )[1]
+    coords = np.column_stack(np.where(deskew_thresh > 0))
 
-    # Apply thresholding
-    img = img.point(lambda x: 0 if x < 140 else 255, "1")
+    if len(coords) > 0:
+        angle = cv2.minAreaRect(coords)[-1]
+        if angle < -45:
+            angle = -(90 + angle)
+        else:
+            angle = -angle
+
+        (h, w) = np_img.shape
+        center = (w // 2, h // 2)
+        rotation_matrix = cv2.getRotationMatrix2D(center, angle, 1.0)
+        np_img = cv2.warpAffine(
+            np_img,
+            rotation_matrix,
+            (w, h),
+            flags=cv2.INTER_CUBIC,
+            borderMode=cv2.BORDER_REPLICATE,
+        )
+
+    # Step 3: Denoise (remove scanner speckles and small artifacts)
+    np_img = cv2.GaussianBlur(np_img, (3, 3), 0)
+
+    # Step 1: Adaptive thresholding (replaces the old fixed threshold of 140)
+    np_img = cv2.adaptiveThreshold(
+        np_img,
+        255,
+        cv2.ADAPTIVE_THRESH_GAUSSIAN_C,
+        cv2.THRESH_BINARY,
+        blockSize=31,
+        C=15,
+    )
+
+    # Convert back to PIL for the rest of the existing pipeline
+    img = Image.fromarray(np_img)
+
+    # Step 4: Smart rescaling based on detected text height
+    TARGET_CHAR_HEIGHT = 35
+
+    contours, _ = cv2.findContours(
+        np.array(img), cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+    )
+    heights = [cv2.boundingRect(c)[3] for c in contours if cv2.boundingRect(c)[3] > 5]
+
+    if heights:
+        median_height = sorted(heights)[len(heights) // 2]
+        scale_factor = TARGET_CHAR_HEIGHT / median_height
+        scale_factor = max(0.5, min(scale_factor, 4.0))
+    else:
+        scale_factor = 2.0
+
+    img = img.resize(
+        (int(img.width * scale_factor), int(img.height * scale_factor))
+    )
 
     return img
 
