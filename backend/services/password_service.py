@@ -70,6 +70,10 @@ def verify_password(password: str, hashed_password: str) -> bool:
 def needs_rehash(hashed_password: str) -> bool:
     """Check if a password hash needs to be rehashed with a higher work factor.
 
+    Bcrypt hashes are stored as ``$2b$<cost>$<salt><checksum>``. If the
+    embedded cost factor is lower than the currently configured
+    ``BCRYPT_ROUNDS``, the hash should be regenerated on next login.
+
     Args:
         hashed_password: The bcrypt hash to check.
 
@@ -80,11 +84,13 @@ def needs_rehash(hashed_password: str) -> bool:
         return False
 
     try:
-        hash_bytes = hashed_password.encode("utf-8")
-        current_rounds = bcrypt.gensalt(rounds=BCRYPT_ROUNDS)
-        return bcrypt.checkpw(hash_bytes, current_rounds) and len(hashed_password) < 60
-    except Exception:
-        return False
+        parts = hashed_password.split("$")
+        if len(parts) < 3 or not parts[1].startswith("2"):
+            return True
+        current_cost = int(parts[2])
+        return current_cost < BCRYPT_ROUNDS
+    except (IndexError, ValueError):
+        return True
 
 
 def generate_password(length: int = 16) -> str:
