@@ -14,9 +14,19 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
+import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import HistorySidebar from '../components/HistorySidebar';
+
+const SUGGESTED_QUESTIONS = [
+  'What is the difference between a lease and a license agreement?',
+  'How do I register an FIR in India?',
+  'What are my rights as a tenant against eviction?',
+  'Explain Section 498A of the Indian Penal Code.',
+  'How can I file a consumer complaint online?',
+  'What documents are needed to verify a property title?',
+];
 
 export default function GeneralChat() {
   const { t, language } = useLanguage();
@@ -203,6 +213,18 @@ export default function GeneralChat() {
       textareaRef.current.style.height = 'auto';
     }
     await submitMessage(text, chatHistory);
+  };
+
+  /**
+   * Send a suggested question directly as a chat message.
+   */
+  const handleSuggestedQuestion = (question) => {
+    if (chatLoading) return;
+    setChatInput('');
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+    submitMessage(question, chatHistory);
   };
 
   const handleInputChange = (e) => {
@@ -406,6 +428,24 @@ export default function GeneralChat() {
                 )}
                 <div ref={messagesEndRef} />
               </div>
+
+              {/* Suggested Questions */}
+              {!chatLoading && (
+                <div className="px-3 sm:px-4 pt-3 bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 transition-colors duration-300">
+                  <div className="flex gap-2 overflow-x-auto pb-1">
+                    {SUGGESTED_QUESTIONS.map((question) => (
+                      <button
+                        key={question}
+                        type="button"
+                        onClick={() => handleSuggestedQuestion(question)}
+                        className="whitespace-nowrap shrink-0 px-3 py-1.5 rounded-full text-xs sm:text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-950 text-slate-600 dark:text-slate-300 hover:border-nyaya-500/60 hover:bg-nyaya-50 dark:hover:bg-nyaya-900/30 hover:text-nyaya-700 dark:hover:text-nyaya-300 transition-colors cursor-pointer"
+                      >
+                        {question}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Form Message Submission Input Dock */}
               <form
