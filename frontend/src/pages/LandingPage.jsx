@@ -22,12 +22,14 @@ import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import RecentDocuments from '../components/RecentDocuments';
+import { validateUploadFile } from '../utils/uploadValidation';
 
 export default function LandingPage() {
   const { t } = useLanguage();
   const [dragActive, setDragActive] = useState(false);
   const [file, setFile] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [uploadError, setUploadError] = useState(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
   const { history, clearHistory } = useDocumentHistory();
@@ -43,19 +45,31 @@ export default function LandingPage() {
     }
   };
 
+  const acceptFile = (candidate) => {
+    if (!candidate) return;
+    const result = validateUploadFile(candidate);
+    if (!result.valid) {
+      setFile(null);
+      setUploadError(result.message);
+      return;
+    }
+    setUploadError(null);
+    setFile(candidate);
+  };
+
   const handleDrop = (e) => {
     e.preventDefault();
     e.stopPropagation();
     setDragActive(false);
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
+      acceptFile(e.dataTransfer.files[0]);
     }
   };
 
   const handleChange = (e) => {
     e.preventDefault();
     if (e.target.files && e.target.files[0]) {
-      setFile(e.target.files[0]);
+      acceptFile(e.target.files[0]);
     }
   };
 
@@ -89,7 +103,9 @@ export default function LandingPage() {
           try {
             const errText = await response.text();
             if (errText) errMessage = errText;
-          } catch {}
+          } catch {
+            // Ignore: response body is not readable.
+          }
         }
         throw new Error(errMessage);
       }
@@ -210,6 +226,14 @@ export default function LandingPage() {
                     <p className="flex-1 mb-6 text-sm text-court-muted leading-relaxed">
                       {t('landing.upload.desc')}
                     </p>
+                    {uploadError && (
+                      <p
+                        role="alert"
+                        className="mb-4 px-4 py-2 text-xs text-red-200 border border-red-400/40 bg-red-500/10 rounded-lg max-w-full break-words"
+                      >
+                        {uploadError}
+                      </p>
+                    )}
                     <button
                       onClick={onButtonClick}
                       className="flex items-center justify-center gap-2 px-6 py-2.5 font-bold bg-court-gold hover:bg-yellow-500 text-court-walnut rounded-full shadow-lg shadow-court-gold/10 hover:scale-105 transition-all text-sm"
@@ -234,6 +258,7 @@ export default function LandingPage() {
                         onClick={(e) => {
                           e.stopPropagation();
                           setFile(null);
+                          setUploadError(null);
                         }}
                         className="px-5 py-2 font-semibold text-court-muted hover:text-court-cream hover:bg-white/5 rounded-full transition-colors text-sm"
                         disabled={loading}
