@@ -27,11 +27,13 @@ import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
 import { calculateLayout } from '../utils/graphLayout';
+import { ARIA_LABELS } from '../constants';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -579,6 +581,7 @@ export default function Dashboard() {
             >
               <Share2 className="w-4 h-4" />
             </button>
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>

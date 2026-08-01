@@ -15,8 +15,10 @@ import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
 import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 import Footer from '../components/Footer';
 import HistorySidebar from '../components/HistorySidebar';
+import { ARIA_LABELS } from '../constants';
 
 export default function GeneralChat() {
   const { t, language } = useLanguage();
@@ -322,6 +324,7 @@ export default function GeneralChat() {
                 Saving...
               </span>
             )}
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>
