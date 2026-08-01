@@ -32,7 +32,19 @@ from ..config.rate_limits import (
     UPLOAD_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
 )
-from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
+from ..models.schemas import (
+    ChatRequest,
+    ChatResponse,
+    ClauseIndexRequest,
+    ClauseSearchRequest,
+    ContactRequest,
+)
+from ..services.clause_parser import parse_document_clauses
+from ..services.clause_retriever import (
+    index_clauses,
+    remove_clause_index,
+    retrieve_clauses as retrieve_clause_vectors,
+)
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
@@ -1018,6 +1030,9 @@ async def delete_document(document_id: str, request: Request):
     # Remove document from search index
     remove_document_from_index(document_id)
 
+    # Remove document's clause-level RAG index
+    remove_clause_index(document_id)
+
     return {"documentId": document_id, "deleted": True}
 
 
@@ -1072,4 +1087,72 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+@api_router.post("/clauses/index")
+@limiter.limit(RATE_LIMIT_ANALYZE)
+def index_document_clauses_endpoint(
+    request: Request, clause_request: ClauseIndexRequest
+):
+    """Segment a document into clauses and index them for clause-level retrieval.
+
+    Body:
+    - document_id: The document whose text is being indexed.
+    - text: Full extracted document text.
+
+    Returns:
+        - indexed: Number of clauses indexed
+        - has_vectors: Whether embeddings were generated
+    """
+    try:
+        session_id = require_session_id(request)
+        require_document_owner(clause_request.document_id, session_id)
+
+        clauses = parse_document_clauses(clause_request.text)
+        result = index_clauses(clause_request.document_id, clauses)
+        return {
+            "document_id": clause_request.document_id,
+            "indexed": result["indexed"],
+            "has_vectors": result["has_vectors"],
+        }
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Clause indexing failed: {e}")
+        raise HTTPException(status_code=500, detail="Clause indexing failed")
+
+
+@api_router.post("/clauses/search")
+@limiter.limit(RATE_LIMIT_CHAT)
+def search_document_clauses_endpoint(
+    request: Request, clause_request: ClauseSearchRequest
+):
+    """Return the most relevant clauses of a document for a query.
+
+    Body:
+    - document_id: Document to search within.
+    - query: User question/query.
+    - k: Number of clauses to return (default 5, max 25).
+
+    Returns:
+        - clauses: Ranked list of matching clauses with metadata.
+    """
+    try:
+        session_id = require_session_id(request)
+        require_document_owner(clause_request.document_id, session_id)
+
+        clauses = retrieve_clause_vectors(
+            clause_request.document_id, clause_request.query, k=clause_request.k
+        )
+        return {
+            "document_id": clause_request.document_id,
+            "query": clause_request.query,
+            "clauses": clauses,
+            "count": len(clauses),
+        }
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Clause search failed: {e}")
+        raise HTTPException(status_code=500, detail="Clause search failed")
 

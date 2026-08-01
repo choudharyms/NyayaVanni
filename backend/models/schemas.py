@@ -32,3 +32,14 @@ class DocumentGenerationRequest(BaseModel):
     effective_date: str
     consideration_amount: str
     jurisdiction: str
+
+
+class ClauseIndexRequest(BaseModel):
+    document_id: str = Field(..., min_length=1, max_length=200)
+    text: str = Field(..., min_length=1, max_length=1000000)
+
+
+class ClauseSearchRequest(BaseModel):
+    document_id: str = Field(..., min_length=1, max_length=200)
+    query: str = Field(..., min_length=1, max_length=10000)
+    k: int = Field(default=5, ge=1, le=25)
