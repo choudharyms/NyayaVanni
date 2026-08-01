@@ -117,10 +117,16 @@ export default function ContactUs() {
 
             <form
               onSubmit={handleSubmit}
+              aria-busy={isSubmitting}
+              aria-label={language === 'en' ? 'Contact form' : 'संपर्क फ़ॉर्म'}
               className="bg-white/80 dark:bg-slate-900/80 backdrop-blur-xl p-8 rounded-3xl border border-slate-200 dark:border-slate-800 shadow-sm flex flex-col gap-6"
             >
               {submitStatus === 'success' && (
-                <div className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl flex items-start gap-3">
+                <div
+                  role="status"
+                  aria-live="polite"
+                  className="bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 text-emerald-700 dark:text-emerald-400 p-4 rounded-xl flex items-start gap-3"
+                >
                   <CheckCircle className="w-5 h-5 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">
@@ -136,7 +142,11 @@ export default function ContactUs() {
               )}
 
               {submitStatus === 'error' && (
-                <div className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-start gap-3">
+                <div
+                  role="alert"
+                  aria-live="assertive"
+                  className="bg-red-50 dark:bg-red-500/10 border border-red-200 dark:border-red-500/20 text-red-700 dark:text-red-400 p-4 rounded-xl flex items-start gap-3"
+                >
                   <AlertCircle className="w-5 h-5 mt-0.5 shrink-0" />
                   <div>
                     <p className="font-semibold">
@@ -264,7 +274,12 @@ export default function ContactUs() {
               >
                 {isSubmitting ? (
                   <>
-                    <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                    <div
+                      aria-label={
+                        language === 'en' ? 'Sending message' : 'संदेश भेजा जा रहा है'
+                      }
+                      className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin"
+                    ></div>
                     {L.SENDING}
                   </>
                 ) : (
