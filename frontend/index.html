@@ -12,6 +12,24 @@
 
     <meta name="description" content="NyayaVanni is an AI-powered legal assistant that simplifies Indian legal documents." />
     <title>NyayaVanni — AI-Powered Legal Assistant</title>
+
+    <script>
+      // Apply the saved or system color-scheme before paint to avoid a
+      // flash of the wrong theme (FOUC).
+      (function () {
+        var stored = null;
+        try {
+          stored = localStorage.getItem('nyaya_theme');
+        } catch (e) {}
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)')
+          .matches;
+        var isDark =
+          stored === 'dark' || (stored === null && prefersDark);
+        if (isDark) {
+          document.documentElement.classList.add('dark');
+        }
+      })();
+    </script>
   </head>
 
   <body>
