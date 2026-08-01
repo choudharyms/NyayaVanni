@@ -18,6 +18,7 @@ import NotFound from './pages/NotFound';
 import LanguageSwitcher from './components/LanguageSwitcher';
 import BackToTop from './components/Backtotop';
 import ScrollToTop from './components/Scrolltotop';
+import SkipLink from './components/SkipLink';
 
 function App() {
   return (
@@ -26,8 +27,12 @@ function App() {
         <ConversationHistoryProvider>
           <Router>
             <ScrollToTop />
+            <SkipLink />
             {/* Theme-Responsive Root Layout Wrapper */}
-            <div className="min-h-screen font-sans bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-nyaya-500 selection:text-white relative transition-colors duration-300">
+            <div
+              id="main-content"
+              className="min-h-screen font-sans bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 selection:bg-nyaya-500 selection:text-white relative transition-colors duration-300"
+            >
               <Routes>
                 <Route path="/" element={<LandingPage />} />
                 <Route path="/dashboard/:documentId" element={<Dashboard />} />
