@@ -32,6 +32,8 @@ import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
 import { calculateLayout } from '../utils/graphLayout';
+import LegalTimeline from '../components/dashboard/LegalTimeline';
+import { ARIA_LABELS } from '../constants';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -589,7 +591,7 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-6 mt-8 space-y-8">
         {/* OCR Verification Section */}
-        <div className={`${CARD_BASE} p-6`}>
+        <div id="ocr-section" className={`${CARD_BASE} p-6`}>
           <div className="mb-6">
             <h2 className={SECTION_TITLE}>OCR Verification</h2>
 
@@ -770,6 +772,13 @@ export default function Dashboard() {
             </div>
           </div>
         </div>
+
+        {/* Legal Timeline Section */}
+        {analysis?.dates?.length > 0 && (
+          <div className={`${CARD_BASE} p-6`}>
+            <LegalTimeline dates={analysis.dates} />
+          </div>
+        )}
 
         {/* Main Dashboard Grid */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
