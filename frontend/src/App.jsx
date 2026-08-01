@@ -11,6 +11,7 @@ import TermsOfService from './pages/TermsOfService';
 import DocumentGenerator from './pages/DocumentGenerator';
 import VersionDiff from './pages/VersionDiff';
 import ContactUs from './pages/ContactUs';
+import LegalSearch from './pages/LegalSearch';
 import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ConversationHistoryProvider } from './contexts/ConversationHistoryContext';
@@ -40,6 +41,7 @@ function App() {
                   element={<DocumentGenerator />}
                 />
                 <Route path="/contact" element={<ContactUs />} />
+                <Route path="/legal-search" element={<LegalSearch />} />
                 <Route path="/privacy-policy" element={<PrivacyPolicy />} />
                 <Route path="/terms" element={<TermsOfService />} />
                 <Route path="/version-diff" element={<VersionDiff />} />

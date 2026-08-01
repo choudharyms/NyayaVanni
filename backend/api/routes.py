@@ -40,8 +40,10 @@ from ..services.gemini_service import (
     GEMINI_TIMEOUT,
     analyze_document_with_gemini,
     generate_chat_response,
+    retry_with_backoff,
     stream_chat_response,
 )
+from ..services.legal_search_service import search_legal
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
@@ -1072,4 +1074,48 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+@api_router.get("/legal/search")
+@limiter.limit(SEARCH_RATE_LIMIT)
+def legal_search_endpoint(
+    request: Request,
+    q: str,
+    limit: int = 10,
+    source: str = "",
+):
+    """Integrated legal search over the built-in Indian legal corpus.
+
+    Searchable by section numbers (IPC/BNS), Constitution articles, names of
+    Acts, keywords and legal phrases. Results are structured and ranked.
+
+    Query Parameters:
+    - q: Search query (required, min 2 chars)
+    - limit: Max results (default: 10, max: 25)
+    - source: Optional source filter (IPC, BNS, CONSTITUTION, ...)
+
+    Returns:
+        - results: List of structured legal provisions
+        - total_count: Number of results
+        - query: The original query
+    """
+    if not q or len(q.strip()) < 2:
+        raise HTTPException(
+            status_code=400, detail="Search query must be at least 2 characters"
+        )
+    limit = max(1, min(limit, 25))
+    source_filter = source.strip() or None
+    try:
+        results = search_legal(q, limit=limit, source_filter=source_filter)
+        return {
+            "results": results,
+            "total_count": len(results),
+            "query": q,
+            "source_filter": source_filter,
+        }
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Legal search failed: {e}")
+        raise HTTPException(status_code=500, detail="Legal search failed")
 
