@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sqlite3
+import time
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -15,6 +16,10 @@ logger = logging.getLogger(__name__)
 # Render ephemeral storage / local temp directory
 UPLOAD_DIR = os.path.join(os.path.dirname(__file__), "..", "uploads")
 os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# Untrusted uploads are staged here until they pass content validation.
+QUARANTINE_DIR = os.path.join(UPLOAD_DIR, ".quarantine")
+os.makedirs(QUARANTINE_DIR, exist_ok=True)
 
 # SQLite Database setup
 DB_PATH = os.path.join(os.path.dirname(__file__), "..", "data", "nyayavanni.db")
@@ -264,6 +269,30 @@ def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
         raise e
 
 
+def stage_upload_to_quarantine(file_bytes: bytes, doc_id: str, ext: str) -> str:
+    """Write an untrusted upload into the quarantine area before validation."""
+    quarantine_path = os.path.join(QUARANTINE_DIR, f"{doc_id}.{ext}")
+    with open(quarantine_path, "wb") as f:
+        f.write(file_bytes)
+    return quarantine_path
+
+
+def promote_from_quarantine(quarantine_path: str, doc_id: str, ext: str) -> str:
+    """Move a validated file from quarantine into the served uploads directory."""
+    final_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+    os.replace(quarantine_path, final_path)
+    return final_path
+
+
+def discard_quarantined(path: str) -> None:
+    """Remove a quarantined file that failed validation or promotion."""
+    if path and os.path.exists(path):
+        try:
+            os.remove(path)
+        except OSError as exc:
+            logger.warning(f"Failed to remove quarantined file {path}: {exc}")
+
+
 def save_document_record(session_id: str, doc_id: str, filename: str, local_path: str):
     """Save document metadata to SQLite"""
     timestamp = datetime.utcnow().isoformat()
@@ -411,6 +440,9 @@ def cleanup_expired_documents_once() -> int:
         conn.commit()
         if expired_docs:
             logger.info(f"Cleaned up {len(expired_docs)} expired documents.")
+
+        _cleanup_stale_quarantine()
+
         return len(expired_docs)
     except Exception:
         if conn:
@@ -419,6 +451,19 @@ def cleanup_expired_documents_once() -> int:
     finally:
         if conn:
             conn.close()
+
+
+def _cleanup_stale_quarantine() -> None:
+    """Remove quarantined files left behind by failed/interrupted uploads."""
+    threshold = time.time() - 24 * 3600
+    if not os.path.isdir(QUARANTINE_DIR):
+        return
+    for entry in os.scandir(QUARANTINE_DIR):
+        if entry.is_file() and entry.stat().st_mtime < threshold:
+            try:
+                os.remove(entry.path)
+            except OSError as exc:
+                logger.warning(f"Failed to remove stale quarantined file {entry.path}: {exc}")
 
 
 async def cleanup_expired_documents():

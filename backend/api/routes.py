@@ -51,13 +51,15 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
-    UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
+    discard_quarantined,
     get_cached_analysis,
     get_document_record,
+    promote_from_quarantine,
     save_cached_analysis,
     save_document_record,
+    stage_upload_to_quarantine,
     upload_to_local,
     validate_session,
 )
@@ -289,7 +291,20 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 detail="File size exceeds the maximum allowed limit of 10MB.",
             )
 
+        doc_id = str(uuid.uuid4())
+
+        # Stage the untrusted upload in quarantine before it is scanned/promoted.
+        try:
+            quarantine_path = stage_upload_to_quarantine(raw_bytes, doc_id, ext)
+        except Exception as e:
+            logger.error("Quarantine write failed: %s", e, exc_info=True)
+            raise HTTPException(
+                status_code=500,
+                detail="An internal error occurred while saving the file.",
+            )
+
         if not validate_file_magic_bytes(raw_bytes, ext):
+            discard_quarantined(quarantine_path)
             actual_mime = detect_actual_mime(raw_bytes)
             logger.warning(
                 "MIME type mismatch: claimed=%s, detected=%s, ext=%s",
@@ -302,16 +317,11 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
                 detail="File content does not match the claimed file type. Upload rejected.",
             )
 
-        doc_id = str(uuid.uuid4())
-        local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
-
         try:
-            with open(local_path, "wb") as buffer:
-                buffer.write(raw_bytes)
+            local_path = promote_from_quarantine(quarantine_path, doc_id, ext)
         except Exception as e:
-            if os.path.exists(local_path):
-                os.remove(local_path)
-            logger.error("File save failed: %s", e, exc_info=True)
+            discard_quarantined(quarantine_path)
+            logger.error("File promote failed: %s", e, exc_info=True)
             raise HTTPException(
                 status_code=500,
                 detail="An internal error occurred while saving the file.",
