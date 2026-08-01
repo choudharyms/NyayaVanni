@@ -414,7 +414,12 @@ def _analyze_document_sync(
                     status_code=400, detail="Stored document has unsupported file type"
                 )
         else:
-            contents = file.file.read()
+            contents = file.file.read(MAX_FILE_SIZE + 1)
+            if len(contents) > MAX_FILE_SIZE:
+                raise HTTPException(
+                    status_code=413,
+                    detail="File size exceeds the maximum allowed limit of 10MB.",
+                )
             filename = file.filename
 
         text = extract_document(
