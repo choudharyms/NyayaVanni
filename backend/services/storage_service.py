@@ -2,6 +2,7 @@ import asyncio
 import json
 import logging
 import os
+import secrets
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -169,7 +170,9 @@ SESSION_TTL = timedelta(days=30)
 
 
 def create_session_id() -> str:
-    session_id = str(uuid.uuid4())
+    # Use a cryptographically strong random token (256 bits of entropy) instead
+    # of a UUID, so session tokens are not guessable or predictable.
+    session_id = secrets.token_urlsafe(32)
     now = datetime.now(timezone.utc)
     expires_at = now + SESSION_TTL
     conn = None
