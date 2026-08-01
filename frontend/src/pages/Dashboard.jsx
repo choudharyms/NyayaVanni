@@ -32,6 +32,8 @@ import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
 import { calculateLayout } from '../utils/graphLayout';
+import DocumentSearch from '../components/dashboard/DocumentSearch';
+import { ARIA_LABELS } from '../constants';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -1072,6 +1074,13 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Document Search Section */}
+          {extractedText && (
+            <div className={`${CARD_BASE} p-6`}>
+              <DocumentSearch text={extractedText} />
+            </div>
+          )}
 
           {/* Right Column: AI Chat */}
           <div className={CHAT_PANEL}>
