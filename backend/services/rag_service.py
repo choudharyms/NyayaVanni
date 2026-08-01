@@ -75,6 +75,13 @@ def get_embeddings(texts: list) -> np.ndarray:
         return np.array([])
 
 
+# Maximum number of vectors kept in the in-memory FAISS index.
+# The index is built from the fixed legal corpus (not from user uploads) and is
+# persisted to disk, but this cap provides a defensive guard against unbounded
+# memory growth if the corpus ever exceeds safe capacity.
+MAX_VECTORS = 10_000
+
+
 def build_index():
     """
     Build a FAISS index from the legal corpus embeddings.
@@ -82,7 +89,8 @@ def build_index():
     Generates embeddings for all documents in the legal corpus and
     adds them to a FAISS flat L2 index stored in a global variable.
     Logs a warning and returns early if the corpus is empty or
-    embedding generation fails.
+    embedding generation fails. Truncates the corpus to MAX_VECTORS
+    if it exceeds the configured capacity.
     """
     global corpus_embeddings, index
 
@@ -97,6 +105,14 @@ def build_index():
     if corpus_embeddings is None or corpus_embeddings.size == 0:
         logger.warning("RAG system degraded: embedding generation failed.")
         return
+
+    if corpus_embeddings.shape[0] > MAX_VECTORS:
+        logger.warning(
+            "RAG capacity exceeded: corpus has %d entries, truncating to %d.",
+            corpus_embeddings.shape[0],
+            MAX_VECTORS,
+        )
+        corpus_embeddings = corpus_embeddings[:MAX_VECTORS]
 
     d = corpus_embeddings.shape[1]
     index = faiss.IndexFlatL2(d)
