@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
+import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import HistorySidebar from '../components/HistorySidebar';
@@ -152,7 +153,19 @@ export default function GeneralChat() {
         }),
       });
 
-      if (!response.ok) throw new Error('Chat failed');
+      if (!response.ok) {
+        let detail = '';
+        try {
+          const body = await response.json();
+          detail = (body && body.detail) || '';
+        } catch {
+          // Non-JSON error body; fall through to a status-based message.
+        }
+        throw new Error(
+          detail ||
+            `The server returned an error (${response.status}). Please try again.`,
+        );
+      }
 
       const data = await response.json();
       const assistantMsg = data?.response || '';
@@ -161,13 +174,17 @@ export default function GeneralChat() {
         ...newHistory,
         { role: 'assistant', message: assistantMsg },
       ]);
-    } catch {
-      //console.error(err);
+    } catch (err) {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      let errorMessage =
+      const genericMessage =
         "I'm having trouble connecting to the server. Please try again later.";
+      // Surface the real backend error instead of masking it with a generic
+      // connection message. `detail` (e.g. "Chat generation failed") is more
+      // useful for diagnosing why the assistant did not respond.
+      let errorMessage = err?.message || genericMessage;
 
       if (
+        errorMessage === genericMessage &&
         apiUrl.includes('localhost') &&
         window.location.hostname !== 'localhost'
       ) {

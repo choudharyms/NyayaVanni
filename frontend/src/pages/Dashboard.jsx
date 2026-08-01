@@ -26,6 +26,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
+import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
@@ -398,7 +399,19 @@ export default function Dashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error('Chat failed');
+      if (!response.ok) {
+        let detail = '';
+        try {
+          const body = await response.json();
+          detail = (body && body.detail) || '';
+        } catch {
+          // Non-JSON error body; fall through to a status-based message.
+        }
+        throw new Error(
+          detail ||
+            `The server returned an error (${response.status}). Please try again.`,
+        );
+      }
 
       // Set up a stream reader to consume the plaintext chunks
       const reader = response.body.getReader();
@@ -429,13 +442,16 @@ export default function Dashboard() {
           });
         }
       }
-    } catch {
-      //console.error(err);
+    } catch (err) {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
-      let msg =
+      const fallbackMsg =
         'This is a fallback response. The backend might not be running correctly.';
+      // Surface the real backend error instead of masking it with a generic
+      // fallback message.
+      let msg = err?.message || fallbackMsg;
 
       if (
+        msg === fallbackMsg &&
         apiUrl.includes('localhost') &&
         window.location.hostname !== 'localhost'
       ) {
