@@ -32,6 +32,12 @@ import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
 import { calculateLayout } from '../utils/graphLayout';
+import {
+  getStoredChat,
+  storeChat,
+  clearStoredChat,
+} from '../utils/chatPersistence';
+import { ARIA_LABELS } from '../constants';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -244,13 +250,17 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [classification, setClassification] = useState(null);
-  const [chatHistory, setChatHistory] = useState([
-    {
-      role: 'assistant',
-      message:
-        'I have analyzed your document. How can I help you understand it better?',
-    },
-  ]);
+  const [chatHistory, setChatHistory] = useState(() => {
+    const stored = getStoredChat(documentId);
+    if (stored && stored.length) return stored;
+    return [
+      {
+        role: 'assistant',
+        message:
+          'I have analyzed your document. How can I help you understand it better?',
+      },
+    ];
+  });
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
@@ -370,6 +380,27 @@ export default function Dashboard() {
     fetchAnalysis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, file, language]);
+
+  useEffect(() => {
+    const stored = getStoredChat(documentId);
+    setChatHistory(
+      stored && stored.length
+        ? stored
+        : [
+            {
+              role: 'assistant',
+              message:
+                'I have analyzed your document. How can I help you understand it better?',
+            },
+          ]
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [documentId]);
+
+  useEffect(() => {
+    if (!documentId) return;
+    storeChat(documentId, chatHistory);
+  }, [chatHistory, documentId]);
 
   const handleChat = async (e) => {
     e.preventDefault();
@@ -1078,6 +1109,23 @@ export default function Dashboard() {
             <div className={CHAT_HEADER}>
               <Bot className="w-6 h-6 text-nyaya-400" />
               <h3 className="font-semibold text-lg">Nyaya Assistant</h3>
+              <button
+                onClick={() => {
+                  clearStoredChat(documentId);
+                  setChatHistory([
+                    {
+                      role: 'assistant',
+                      message:
+                        'I have analyzed your document. How can I help you understand it better?',
+                    },
+                  ]);
+                }}
+                className="ml-auto p-2 rounded-lg text-slate-500 hover:text-red-600 dark:text-slate-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors cursor-pointer"
+                aria-label="Clear chat history"
+                title="Clear chat history"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             </div>
 
             <div className={CHAT_BODY}>
