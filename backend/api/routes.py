@@ -42,7 +42,9 @@ from ..services.gemini_service import (
     generate_chat_response,
     stream_chat_response,
 )
+from ..services.hallucination_detector import detect_hallucinations
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
+from ..services.legal_confidence_scorer import compute_legal_confidence
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
 from ..services.search_service import (
@@ -442,12 +444,20 @@ def _analyze_document_sync(
         knowledge_graph = graph_builder.generate_graph(text)
         save_cached_analysis(document_id, session_id, language, text, analysis_result)
 
+        # Verify generated insights against the document evidence.
+        verification = detect_hallucinations(text, analysis_result)
+        legal_confidence = compute_legal_confidence(
+            verification["evidence_score"]
+        )
+
         return {
             "documentId": document_id,
             "analysis": analysis_result,
             "confidence": confidence,
             "classification": classification,
             "knowledge_graph": knowledge_graph,
+            "verification": verification,
+            "legal_confidence": legal_confidence,
             "extracted_text": text[:500] + "...",
             "cached": False,
         }
