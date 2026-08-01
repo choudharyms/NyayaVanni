@@ -14,6 +14,7 @@ import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
+import { ensureSessionId } from '../utils/session';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import HistorySidebar from '../components/HistorySidebar';
@@ -141,6 +142,7 @@ export default function GeneralChat() {
 
     try {
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      await ensureSessionId(apiUrl);
       const response = await fetch(`${apiUrl}/api/chat/general`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

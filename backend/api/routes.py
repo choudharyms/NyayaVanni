@@ -697,6 +697,7 @@ def chat_stream_sse(
 
     Raises:
         HTTPException 400: If the user message is empty.
+        HTTPException 401: If the session is missing or invalid.
         HTTPException 429: If the rate limit is exceeded.
     """
     import json as _json
@@ -704,9 +705,9 @@ def chat_stream_sse(
     if not user_message or not user_message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
+    session_id = require_session_id(request)
     analysis = {}
     if document_id:
-        session_id = require_session_id(request)
         require_document_owner(document_id, session_id)
         cached = get_cached_analysis(document_id, session_id, language)
         if cached:
@@ -748,9 +749,12 @@ def chat_general(request: Request, chat_request: ChatRequest):
 
     Raises:
         HTTPException 400: If the message is empty.
+        HTTPException 401: If the session is missing or invalid.
         HTTPException 500: If chat generation fails.
     """
     try:
+        require_session_id(request)
+
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
