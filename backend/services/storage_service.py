@@ -3,6 +3,7 @@ import json
 import logging
 import os
 import sqlite3
+import threading
 import uuid
 from datetime import datetime, timedelta, timezone
 from typing import Optional
@@ -167,27 +168,33 @@ def _ensure_sessions_table(cursor):
 
 SESSION_TTL = timedelta(days=30)
 
+# Serializes concurrent session creation/validation so simultaneous requests
+# cannot race on the SQLite sessions table (duplicate writes or "database is
+# locked" errors) during high-concurrency session bootstrap.
+_session_lock = threading.Lock()
+
 
 def create_session_id() -> str:
     session_id = str(uuid.uuid4())
     now = datetime.now(timezone.utc)
     expires_at = now + SESSION_TTL
     conn = None
-    try:
-        conn = _connect_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            "INSERT OR IGNORE INTO sessions (session_id, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?)",
-            (session_id, now.isoformat(), now.isoformat(), expires_at.isoformat()),
-        )
-        conn.commit()
-    except Exception as e:
-        if conn:
-            conn.rollback()
-        logger.error(f"Session creation failed: {e}")
-    finally:
-        if conn:
-            conn.close()
+    with _session_lock:
+        try:
+            conn = _connect_db()
+            cursor = conn.cursor()
+            cursor.execute(
+                "INSERT OR IGNORE INTO sessions (session_id, created_at, last_used_at, expires_at) VALUES (?, ?, ?, ?)",
+                (session_id, now.isoformat(), now.isoformat(), expires_at.isoformat()),
+            )
+            conn.commit()
+        except Exception as e:
+            if conn:
+                conn.rollback()
+            logger.error(f"Session creation failed: {e}")
+        finally:
+            if conn:
+                conn.close()
     return session_id
 
 
@@ -195,32 +202,33 @@ def validate_session(session_id: str) -> bool:
     if not session_id or not session_id.strip():
         return False
     conn = None
-    try:
-        conn = _connect_db()
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT expires_at FROM sessions WHERE session_id = ?", (session_id,)
-        )
-        row = cursor.fetchone()
-        if not row:
+    with _session_lock:
+        try:
+            conn = _connect_db()
+            cursor = conn.cursor()
+            cursor.execute(
+                "SELECT expires_at FROM sessions WHERE session_id = ?", (session_id,)
+            )
+            row = cursor.fetchone()
+            if not row:
+                return False
+            expires_at = datetime.fromisoformat(row[0])
+            if expires_at < datetime.now(timezone.utc):
+                logger.warning(f"Expired session attempted: {session_id}")
+                return False
+            now = datetime.now(timezone.utc).isoformat()
+            cursor.execute(
+                "UPDATE sessions SET last_used_at = ? WHERE session_id = ?",
+                (now, session_id),
+            )
+            conn.commit()
+            return True
+        except Exception as e:
+            logger.error(f"Session validation failed: {e}")
             return False
-        expires_at = datetime.fromisoformat(row[0])
-        if expires_at < datetime.now(timezone.utc):
-            logger.warning(f"Expired session attempted: {session_id}")
-            return False
-        now = datetime.now(timezone.utc).isoformat()
-        cursor.execute(
-            "UPDATE sessions SET last_used_at = ? WHERE session_id = ?",
-            (now, session_id),
-        )
-        conn.commit()
-        return True
-    except Exception as e:
-        logger.error(f"Session validation failed: {e}")
-        return False
-    finally:
-        if conn:
-            conn.close()
+        finally:
+            if conn:
+                conn.close()
 
 
 def cleanup_expired_sessions_once() -> int:
