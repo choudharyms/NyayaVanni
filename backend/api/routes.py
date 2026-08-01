@@ -32,9 +32,15 @@ from ..config.rate_limits import (
     UPLOAD_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
 )
-from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
+from ..models.schemas import (
+    ChatRequest,
+    ChatResponse,
+    CompareRequest,
+    ContactRequest,
+)
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
+from ..services.document_comparator import compare_documents
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
 from ..services.gemini_service import (
     GEMINI_TIMEOUT,
@@ -912,6 +918,74 @@ Provide a JSON response matching this exact schema:
     except Exception as e:
         logger.error(f"Diff analysis failed: {e}")
         raise HTTPException(status_code=500, detail="Diff analysis failed")
+
+
+@api_router.post("/compare")
+@limiter.limit(RATE_LIMIT_ANALYZE)
+async def compare_documents_endpoint(
+    request: Request, compare_request: CompareRequest
+):
+    """Compare two uploaded document versions clause by clause.
+
+    Body:
+    - old_document_id: The document id of the older version.
+    - new_document_id: The document id of the newer version.
+
+    Returns:
+        Structured change report: summary, overall risk level, per-clause
+        changes (added/removed/modified), risk changes and critical changes.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own a document.
+        HTTPException 404: If a document is not found.
+    """
+    try:
+        session_id = require_session_id(request)
+
+        old_record = require_document_owner(
+            compare_request.old_document_id, session_id
+        )
+        new_record = require_document_owner(
+            compare_request.new_document_id, session_id
+        )
+
+        def _read_text(record: dict) -> str:
+            if not record.get("local_path"):
+                raise HTTPException(
+                    status_code=404, detail="Document file missing from storage"
+                )
+            with open(record["local_path"], "rb") as f:
+                contents = f.read()
+            filename = record.get("filename") or "document.txt"
+            return extract_document(contents, filename)
+
+        old_text = await asyncio.to_thread(_read_text, old_record)
+        new_text = await asyncio.to_thread(_read_text, new_record)
+
+        document_meta = {
+            "old": {
+                "document_id": compare_request.old_document_id,
+                "filename": old_record.get("filename"),
+            },
+            "new": {
+                "document_id": compare_request.new_document_id,
+                "filename": new_record.get("filename"),
+            },
+        }
+
+        report = await asyncio.to_thread(
+            compare_documents, old_text, new_text, document_meta
+        )
+        return report
+
+    except RateLimitExceeded:
+        raise
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Document comparison failed: {e}")
+        raise HTTPException(status_code=500, detail="Document comparison failed")
 
 
 @api_router.post("/generate-document")

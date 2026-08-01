@@ -32,3 +32,8 @@ class DocumentGenerationRequest(BaseModel):
     effective_date: str
     consideration_amount: str
     jurisdiction: str
+
+
+class CompareRequest(BaseModel):
+    old_document_id: str = Field(..., min_length=1, max_length=200)
+    new_document_id: str = Field(..., min_length=1, max_length=200)
