@@ -35,6 +35,11 @@ from ..config.rate_limits import (
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
+from ..services.document_vector_store import (
+    index_document_clauses,
+    remove_document_index,
+    retrieve_clauses,
+)
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
 from ..services.gemini_service import (
     GEMINI_TIMEOUT,
@@ -431,6 +436,14 @@ def _analyze_document_sync(
         # Index document content for full-text search
         index_document(document_id, filename, text)
 
+        # Persist per-document clause vector index so chat context survives restarts
+        try:
+            index_document_clauses(
+                document_id, text, metadata={"filename": filename, "language": language}
+            )
+        except Exception as exc:
+            logger.warning("Failed to persist clause vector index: %s", exc)
+
         relevant_laws = retrieve_relevant_laws(text, k=3)
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
         confidence = ConfidenceService.generate(
@@ -711,6 +724,19 @@ def chat_stream_sse(
         cached = get_cached_analysis(document_id, session_id, language)
         if cached:
             analysis = cached.get("analysis", {})
+        # Surface the most relevant clauses from the persisted vector index.
+        # A missing index means the session context expired.
+        try:
+            clauses = retrieve_clauses(document_id, user_message, k=3)
+            if clauses:
+                analysis["retrieved_clauses"] = clauses
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=404,
+                detail="Session expired. Please re-upload your document.",
+            )
+        except Exception as exc:
+            logger.warning("Clause retrieval failed for %s: %s", document_id, exc)
 
     def event_generator():
         try:
@@ -795,6 +821,20 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
         require_document_owner(document_id, session_id)
         cached = get_cached_analysis(document_id, session_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
+
+        # Surface the most relevant clauses from the persisted vector index.
+        # A missing index means the session context expired.
+        try:
+            clauses = retrieve_clauses(document_id, chat_request.user_message, k=3)
+            if clauses:
+                analysis["retrieved_clauses"] = clauses
+        except FileNotFoundError:
+            raise HTTPException(
+                status_code=404,
+                detail="Session expired. Please re-upload your document.",
+            )
+        except Exception as exc:
+            logger.warning("Clause retrieval failed for %s: %s", document_id, exc)
 
         history = [
             {"role": msg.role, "message": msg.message}
@@ -1017,6 +1057,9 @@ async def delete_document(document_id: str, request: Request):
 
     # Remove document from search index
     remove_document_from_index(document_id)
+
+    # Remove persisted clause vector index
+    remove_document_index(document_id)
 
     return {"documentId": document_id, "deleted": True}
 
