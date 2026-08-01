@@ -32,6 +32,8 @@ import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
 import { calculateLayout } from '../utils/graphLayout';
+import ClausePanel from '../components/dashboard/ClausePanel';
+import { ARIA_LABELS } from '../constants';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
@@ -254,6 +256,8 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
+const [selectedClause, setSelectedClause] = useState(null);
+const clauseDetailRef = useRef(null);
   const messagesEndRef = useRef(null);
   
   // Ref for Knowledge Graph search input
@@ -370,6 +374,15 @@ export default function Dashboard() {
     fetchAnalysis();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [documentId, file, language]);
+
+  const handleSelectClause = (index) => {
+    setSelectedClause(index);
+    requestAnimationFrame(() => {
+      clauseDetailRef.current
+        ?.querySelector(`[data-clause-index="${index}"]`)
+        ?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  };
 
   const handleChat = async (e) => {
     e.preventDefault();
@@ -1170,6 +1183,49 @@ export default function Dashboard() {
             </form>
           </div>
         </div>
+
+        {/* Clause Navigation Section */}
+        {analysis?.clauses?.length > 0 && (
+          <div className={`${CARD_BASE} p-6`}>
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              <div className="lg:col-span-4">
+                <ClausePanel
+                  clauses={analysis.clauses}
+                  selectedIndex={selectedClause}
+                  onSelect={handleSelectClause}
+                />
+              </div>
+              <div
+                ref={clauseDetailRef}
+                className="lg:col-span-8 max-h-[600px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800"
+              >
+                <h4 className="mb-4 text-sm font-bold tracking-wider uppercase text-nyaya-600 dark:text-nyaya-400">
+                  Clause Details
+                </h4>
+                {analysis.clauses.map((clause, idx) => (
+                  <div
+                    key={idx}
+                    data-clause-index={idx}
+                    className={`mb-4 p-4 rounded-xl border transition-all duration-300 ${
+                      selectedClause === idx
+                        ? 'border-nyaya-500 bg-nyaya-50 dark:bg-nyaya-950/40 shadow-sm'
+                        : 'border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
+                    <p className="text-sm leading-relaxed text-slate-700 dark:text-slate-300">
+                      {clause}
+                    </p>
+                  </div>
+                ))}
+                {!selectedClause && (
+                  <p className="text-sm text-slate-500 dark:text-slate-400">
+                    Select a clause from the panel to jump to its full text.
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </main>
     </div>
   );
