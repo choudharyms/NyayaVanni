@@ -845,11 +845,37 @@ async def diff_analysis(
         HTTPException 500: If the diff analysis fails.
     """
     try:
-        session_id = require_session_id(request)
+        require_session_id(request)
 
         old_contents, old_filename = await read_validated_upload(old_document)
         new_contents, new_filename = await read_validated_upload(new_document)
 
+        # Heavy OCR/LLM work is executed in a worker thread to avoid blocking the event loop.
+        return await asyncio.to_thread(
+            _diff_analysis_sync,
+            old_contents,
+            old_filename,
+            new_contents,
+            new_filename,
+        )
+
+    except RateLimitExceeded:
+        raise
+    except HTTPException as http_err:
+        raise http_err
+    except Exception as e:
+        logger.error(f"Diff analysis failed: {e}")
+        raise HTTPException(status_code=500, detail="Diff analysis failed")
+
+
+def _diff_analysis_sync(
+    old_contents: bytes,
+    old_filename: str,
+    new_contents: bytes,
+    new_filename: str,
+) -> dict:
+    """Run the blocking document diff pipeline in a worker thread."""
+    try:
         old_text = extract_document(old_contents, old_filename)
         new_text = extract_document(new_contents, new_filename)
 
