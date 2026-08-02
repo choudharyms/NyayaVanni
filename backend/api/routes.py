@@ -75,6 +75,11 @@ graph_builder = LegalKnowledgeGraphBuilder()
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 
+# Document generation rate limit (configurable, default 5/minute)
+DOCUMENT_GENERATION_RATE_LIMIT = os.getenv(
+    "DOCUMENT_GENERATION_RATE_LIMIT", "5/minute"
+)
+
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "docx"}
@@ -915,7 +920,7 @@ Provide a JSON response matching this exact schema:
 
 
 @api_router.post("/generate-document")
-@limiter.limit("10/minute")
+@limiter.limit(DOCUMENT_GENERATION_RATE_LIMIT)
 def generate_document(request: Request, payload: DocumentGenerationRequest):
     """Generate a standard NDA document as a downloadable PDF.
 
