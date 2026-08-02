@@ -30,7 +30,6 @@ from ..config.rate_limits import (
     DELETE_RATE_LIMIT,
     SEARCH_RATE_LIMIT,
     UPLOAD_RATE_LIMIT,
-    SEARCH_RATE_LIMIT,
 )
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
@@ -74,6 +73,9 @@ graph_builder = LegalKnowledgeGraphBuilder()
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+
+# Explicit search endpoint rate limit (configurable, default 20/minute)
+SEARCH_ENDPOINT_RATE_LIMIT = os.getenv("SEARCH_RATE_LIMIT", "20/minute")
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
@@ -1022,7 +1024,7 @@ async def delete_document(document_id: str, request: Request):
 
 
 @api_router.get("/search")
-@limiter.limit(SEARCH_RATE_LIMIT)
+@limiter.limit(SEARCH_ENDPOINT_RATE_LIMIT)
 def search_documents_endpoint(
     request: Request, q: str, page: int = 1, page_size: int = 10
 ):
