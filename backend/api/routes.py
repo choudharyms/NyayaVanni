@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,96 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Profile picture (#853) — validated profile picture upload
+# ---------------------------------------------------------------------------
+PROFILE_PICTURE_MAX_SIZE = int(os.getenv("PROFILE_PICTURE_MAX_SIZE", str(2 * 1024 * 1024)))
+PROFILE_PICTURE_EXTENSIONS = {"png", "jpg", "jpeg"}
+
+
+@api_router.post("/profile/picture")
+@limiter.limit("5/minute")
+async def upload_profile_picture(
+    request: Request, file: UploadFile = File(...)
+):
+    """Upload a profile picture with strict size and type validation.
+
+    Args:
+        request: The incoming HTTP request.
+        file: The uploaded profile picture (PNG, JPG, or JPEG).
+
+    Returns:
+        dict: Confirmation with the stored picture reference.
+
+    Raises:
+        HTTPException 400: If the file type or content is invalid.
+        HTTPException 413: If the file exceeds 2MB.
+    """
+    session_id = require_session_id(request)
+
+    filename = file.filename
+    if not filename:
+        raise HTTPException(
+            status_code=400, detail="Uploaded file must have a valid filename."
+        )
+    ext = filename.rsplit(".", 1)[-1].lower() if "." in filename else ""
+    if ext not in PROFILE_PICTURE_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail="Profile picture must be a PNG, JPG, or JPEG image.",
+        )
+
+    raw_bytes = await file.read()
+    if len(raw_bytes) > PROFILE_PICTURE_MAX_SIZE:
+        raise HTTPException(
+            status_code=413,
+            detail="Profile picture exceeds the maximum allowed size of 2MB.",
+        )
+
+    if not validate_file_magic_bytes(raw_bytes, ext):
+        logger.warning("Profile picture magic bytes mismatch: ext=%s", ext)
+        raise HTTPException(
+            status_code=400,
+            detail="File content does not match the claimed image type. Upload rejected.",
+        )
+
+    picture_id = str(uuid.uuid4())
+    local_path = os.path.join(UPLOAD_DIR, f"{picture_id}.{ext}")
+    try:
+        with open(local_path, "wb") as buffer:
+            buffer.write(raw_bytes)
+    except Exception as e:
+        if os.path.exists(local_path):
+            os.remove(local_path)
+        logger.error("Profile picture save failed: %s", e, exc_info=True)
+        raise HTTPException(
+            status_code=500, detail="Failed to save profile picture."
+        )
+
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO profiles (profile_id, session_id, picture_path, updated_at) VALUES (?, ?, ?, ?) "
+            "ON CONFLICT(session_id) DO UPDATE SET picture_path = excluded.picture_path, updated_at = excluded.updated_at",
+            (picture_id, session_id, local_path, now),
+        )
+        conn.commit()
+        return {"pictureId": picture_id, "uploaded": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        if os.path.exists(local_path):
+            os.remove(local_path)
+        logger.error(f"Profile picture persistence failed: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to persist profile picture."
+        )
+    finally:
+        if conn:
+            conn.close()
 
