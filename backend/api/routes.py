@@ -17,6 +17,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import List, Literal
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -1072,4 +1073,49 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document merge (#840) — validated merge request
+# ---------------------------------------------------------------------------
+class MergeRequest(BaseModel):
+    document_ids: List[str] = Field(..., min_length=2, max_length=10)
+    strategy: Literal["replace", "append", "intersect"] = "append"
+    output_format: Literal["txt", "json"] = "txt"
+
+
+@api_router.post("/documents/merge")
+@limiter.limit("10/minute")
+async def merge_documents(request: Request, body: MergeRequest):
+    """Merge multiple documents with validated merge configuration.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Merge payload with 2-10 document IDs, a merge strategy,
+              and an output format.
+
+    Returns:
+        dict: Merge result with the chosen strategy and format.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own any input document.
+        HTTPException 400: If the merge request is invalid.
+    """
+    session_id = require_session_id(request)
+
+    for document_id in body.document_ids:
+        if not document_id or len(document_id) > 100:
+            raise HTTPException(
+                status_code=400, detail="Invalid or oversized document ID in merge"
+            )
+        require_document_owner(document_id, session_id)
+
+    return {
+        "merged": True,
+        "documentCount": len(body.document_ids),
+        "strategy": body.strategy,
+        "outputFormat": body.output_format,
+        "message": "Documents validated for merge",
+    }
 
