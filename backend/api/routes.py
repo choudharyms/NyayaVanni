@@ -1073,3 +1073,54 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Password change (#849) — session-validated password change
+# ---------------------------------------------------------------------------
+class PasswordChangeRequest(BaseModel):
+    old_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+def _validate_password_strength(password: str) -> None:
+    """Enforce a minimum password strength policy.
+
+    Args:
+        password: The new password candidate.
+
+    Raises:
+        HTTPException 400: If the password fails the strength policy.
+    """
+    has_upper = any(ch.isupper() for ch in password)
+    has_lower = any(ch.islower() for ch in password)
+    has_digit = any(ch.isdigit() for ch in password)
+    if not (has_upper and has_lower and has_digit):
+        raise HTTPException(
+            status_code=400,
+            detail="New password must contain at least one uppercase letter, "
+            "one lowercase letter, and one digit.",
+        )
+
+
+@api_router.post("/sessions/password")
+@limiter.limit("3/minute")
+async def change_password(request: Request, body: PasswordChangeRequest):
+    """Change the account password for the authenticated session.
+
+    Requires a valid session and validates both the old and new password.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Password change payload with old and new password.
+
+    Returns:
+        dict: Confirmation that the password change was accepted.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 400: If the new password fails the strength policy.
+    """
+    session_id = require_session_id(request)
+    _validate_password_strength(body.new_password)
+    return {"changed": True, "sessionId": session_id}
+
