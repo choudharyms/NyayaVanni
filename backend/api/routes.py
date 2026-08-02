@@ -1,8 +1,11 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import secrets
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +27,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +55,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1077,128 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# API keys (#797) — brute force protection via strict rate limits
+# ---------------------------------------------------------------------------
+API_KEY_RATE_LIMIT = os.getenv("API_KEY_RATE_LIMIT", "5/minute")
+
+
+class ApiKeyCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+
+
+@api_router.post("/api-keys")
+@limiter.limit(API_KEY_RATE_LIMIT)
+async def create_api_key(request: Request, body: ApiKeyCreateRequest):
+    """Create a new API key. Strictly rate limited to prevent brute force.
+
+    Args:
+        request: The incoming HTTP request.
+        body: The API key name payload.
+
+    Returns:
+        dict: The created key ID and the full API key (shown once).
+    """
+    session_id = require_session_id(request)
+    key_id = str(uuid.uuid4())
+    api_key = secrets.token_urlsafe(32)
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO api_keys (key_id, session_id, api_key, name, created_at, expires_at, revoked) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (key_id, session_id, api_key, body.name, now, None, 0),
+        )
+        conn.commit()
+        return {
+            "keyId": key_id,
+            "apiKey": api_key,
+            "name": body.name,
+            "created": True,
+        }
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"API key creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create API key")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.get("/api-keys")
+@limiter.limit(API_KEY_RATE_LIMIT)
+async def list_api_keys(request: Request):
+    """List API keys for the current session.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        dict: List of API keys (secret values never returned).
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT key_id, name, created_at, expires_at, revoked FROM api_keys WHERE session_id = ? ORDER BY created_at DESC",
+            (session_id,),
+        )
+        keys = [dict(row) for row in cursor.fetchall()]
+        return {"apiKeys": keys, "count": len(keys)}
+    except Exception as e:
+        logger.error(f"API key listing failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list API keys")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.delete("/api-keys/{key_id}")
+@limiter.limit(API_KEY_RATE_LIMIT)
+async def delete_api_key(request: Request, key_id: str):
+    """Revoke an API key. Ownership is enforced via the session.
+
+    Args:
+        request: The incoming HTTP request.
+        key_id: The API key ID to revoke.
+
+    Returns:
+        dict: Confirmation that the key was revoked.
+    """
+    session_id = require_session_id(request)
+    if not key_id or len(key_id) > 64:
+        raise HTTPException(status_code=400, detail="Invalid API key ID")
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE api_keys SET revoked = 1 WHERE key_id = ? AND session_id = ?",
+            (key_id, session_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="API key not found")
+        return {"keyId": key_id, "revoked": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"API key deletion failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete API key")
+    finally:
+        if conn:
+            conn.close()
 
