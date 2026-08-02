@@ -1,9 +1,13 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
+
+from typing import Optional
 
 import google.generativeai as genai
 from fastapi import (
@@ -24,6 +28,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +56,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1078,73 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document share link (#862) — rate-limited document sharing
+# ---------------------------------------------------------------------------
+SHARE_LINK_RATE_LIMIT = os.getenv("SHARE_LINK_RATE_LIMIT", "10/minute")
+
+
+class ShareLinkRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+    expires_at: Optional[str] = Field(None, max_length=50)
+
+
+@api_router.post("/documents/{document_id}/share-link")
+@limiter.limit(SHARE_LINK_RATE_LIMIT)
+async def create_share_link(
+    request: Request, document_id: str, body: ShareLinkRequest
+):
+    """Create a share link for an owned document with a rate limit.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The unique identifier of the document to share.
+        body: Share link payload with recipient email and optional expiry.
+
+    Returns:
+        dict: Confirmation with the created share link.
+
+    Raises:
+        HTTPException 429: If the share creation rate limit is exceeded.
+        HTTPException 400: If the email or expiry is invalid.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    if "@" not in body.email or len(body.email) > 320:
+        raise HTTPException(
+            status_code=400, detail="Invalid recipient email address."
+        )
+    if body.expires_at:
+        try:
+            datetime.datetime.fromisoformat(body.expires_at)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="expires_at must be a valid ISO-8601 timestamp.",
+            )
+
+    share_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO share_links (share_id, document_id, session_id, email, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (share_id, document_id, session_id, body.email, body.expires_at, now),
+        )
+        conn.commit()
+        return {"shareId": share_id, "documentId": document_id, "shared": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Share link creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create share link")
+    finally:
+        if conn:
+            conn.close()
 
