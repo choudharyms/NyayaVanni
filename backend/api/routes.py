@@ -1073,3 +1073,40 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Notification templates (#832) — validated notification template input
+# ---------------------------------------------------------------------------
+class NotificationTemplateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    subject: str = Field(..., min_length=1, max_length=500)
+    body: str = Field(..., min_length=1, max_length=20000)
+    event_type: str = Field(default="", max_length=100)
+
+
+@api_router.post("/notification-templates/validate")
+@limiter.limit("30/minute")
+async def validate_notification_template(
+    request: Request, body: NotificationTemplateRequest
+):
+    """Validate a notification template payload server-side.
+
+    Applies the same bounds used at creation time so invalid templates
+    are rejected before they are persisted.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Notification template payload to validate.
+
+    Returns:
+        dict: Validation result for the template.
+    """
+    session_id = require_session_id(request)
+    return {
+        "valid": True,
+        "name": body.name,
+        "subjectLength": len(body.subject),
+        "bodyLength": len(body.body),
+        "sessionId": session_id,
+    }
+
