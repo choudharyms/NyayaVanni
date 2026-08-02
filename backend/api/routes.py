@@ -1073,3 +1073,75 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Document export (#803) — validated export format
+# ---------------------------------------------------------------------------
+ALLOWED_EXPORT_FORMATS = {"txt", "pdf"}
+
+
+@api_router.get("/documents/{document_id}/export")
+@limiter.limit("10/minute")
+async def export_document(request: Request, document_id: str, format: str = "txt"):
+    """Export a document in a validated export format.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The document ID to export.
+        format: Export format. Must be one of "txt" or "pdf".
+
+    Returns:
+        StreamingResponse: The exported file content.
+
+    Raises:
+        HTTPException 400: If the requested export format is invalid.
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document or its file is not found.
+    """
+    session_id = require_session_id(request)
+    record = require_document_owner(document_id, session_id)
+
+    if format not in ALLOWED_EXPORT_FORMATS:
+        raise HTTPException(
+            status_code=400,
+            detail="Unsupported export format. Allowed formats: txt, pdf.",
+        )
+
+    local_path = record.get("local_path")
+    if not local_path or not os.path.exists(local_path):
+        raise HTTPException(status_code=404, detail="Document file missing")
+
+    try:
+        with open(local_path, "rb") as f:
+            contents = f.read()
+    except OSError:
+        raise HTTPException(status_code=500, detail="Failed to read document")
+
+    if format == "txt":
+        return StreamingResponse(
+            io.BytesIO(contents),
+            media_type="text/plain",
+            headers={"Content-Disposition": 'attachment; filename="export.txt"'},
+        )
+
+    buffer = io.BytesIO()
+    pdf = SimpleDocTemplate(buffer, pagesize=letter)
+    styles = getSampleStyleSheet()
+    decoded = contents.decode("utf-8", errors="replace")[:50000]
+    flowables = [
+        Paragraph(
+            line.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"),
+            styles["BodyText"],
+        )
+        for line in decoded.splitlines()
+        if line.strip()
+    ]
+    pdf.build(flowables)
+    buffer.seek(0)
+    return StreamingResponse(
+        buffer,
+        media_type="application/pdf",
+        headers={"Content-Disposition": 'attachment; filename="export.pdf"'},
+    )
+
