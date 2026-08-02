@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import re
 import uuid
 
 import google.generativeai as genai
@@ -1072,4 +1073,58 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Password strength (#821) — enforced server-side
+# ---------------------------------------------------------------------------
+class PasswordStrengthRequest(BaseModel):
+    password: str = Field(..., min_length=1, max_length=128)
+
+
+def validate_password_strength(password: str) -> dict:
+    """Validate a password against server-side strength rules.
+
+    Returns:
+        dict: Contains `valid`, `score` (0-4), and `errors` list.
+    """
+    errors = []
+    if len(password) < 8:
+        errors.append("Password must be at least 8 characters long")
+    if not re.search(r"[A-Z]", password):
+        errors.append("Password must contain at least one uppercase letter")
+    if not re.search(r"[a-z]", password):
+        errors.append("Password must contain at least one lowercase letter")
+    if not re.search(r"\d", password):
+        errors.append("Password must contain at least one digit")
+    if not re.search(r"[^A-Za-z0-9]", password):
+        errors.append("Password must contain at least one special character")
+
+    score = 4 - len(errors)
+    return {"valid": not errors, "score": max(score, 0), "errors": errors}
+
+
+@api_router.post("/auth/password-strength")
+@limiter.limit("10/minute")
+async def password_strength(request: Request, body: PasswordStrengthRequest):
+    """Evaluate password strength entirely server-side.
+
+    Client-side meters can be bypassed; this endpoint applies the same
+    policy on the server so weak passwords are rejected regardless of
+    the client implementation.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Password payload to evaluate.
+
+    Returns:
+        dict: Validation result with score and list of policy errors.
+    """
+    result = validate_password_strength(body.password)
+    if not result["valid"]:
+        raise HTTPException(
+            status_code=400,
+            detail="Password does not meet strength requirements",
+        )
+    return result
 
