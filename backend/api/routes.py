@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,73 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Notification templates (#848) — rate-limited template creation
+# ---------------------------------------------------------------------------
+NOTIFICATION_TEMPLATE_CREATE_RATE_LIMIT = os.getenv(
+    "NOTIFICATION_TEMPLATE_CREATE_RATE_LIMIT", "5/minute"
+)
+
+
+class NotificationTemplateCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    subject: str = Field(..., min_length=1, max_length=500)
+    body: str = Field(..., min_length=1, max_length=20000)
+    event_type: str = Field(..., min_length=1, max_length=100)
+
+
+@api_router.post("/notification-templates")
+@limiter.limit(NOTIFICATION_TEMPLATE_CREATE_RATE_LIMIT)
+async def create_notification_template(
+    request: Request, body: NotificationTemplateCreateRequest
+):
+    """Create a notification template with a rate limit applied.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Notification template payload with bounded name, subject,
+              body, and event type.
+
+    Returns:
+        dict: Confirmation with the created template ID.
+
+    Raises:
+        HTTPException 429: If the creation rate limit is exceeded.
+    """
+    session_id = require_session_id(request)
+
+    template_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO notification_templates (template_id, session_id, name, subject, body, event_type, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                template_id,
+                session_id,
+                body.name,
+                body.subject,
+                body.body,
+                body.event_type,
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        return {"templateId": template_id, "name": body.name, "created": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Notification template creation failed: {e}")
+        raise HTTPException(
+            status_code=500, detail="Failed to create notification template"
+        )
+    finally:
+        if conn:
+            conn.close()
 
