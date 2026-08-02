@@ -56,6 +56,7 @@ from ..services.storage_service import (
     delete_document_and_cache,
     get_cached_analysis,
     get_document_record,
+    revoke_session,
     save_cached_analysis,
     save_document_record,
     upload_to_local,
@@ -1072,4 +1073,28 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Session revocation (#799) — deactivation invalidates sessions
+# ---------------------------------------------------------------------------
+@api_router.post("/session/revoke")
+@limiter.limit("10/minute")
+async def revoke_current_session(request: Request, response: Response):
+    """Revoke the current session so that deactivated users are logged out.
+
+    Deletion from the sessions table immediately invalidates the session so
+    that a deactivated account can no longer access protected resources.
+
+    Args:
+        request: The incoming HTTP request.
+        response: The outgoing HTTP response (cookie cleared).
+
+    Returns:
+        dict: Confirmation that the session was revoked.
+    """
+    session_id = require_session_id(request)
+    revoke_session(session_id)
+    response.delete_cookie("session_id")
+    return {"status": "Session revoked", "revoked": True}
 

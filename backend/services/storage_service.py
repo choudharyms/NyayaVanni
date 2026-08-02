@@ -223,6 +223,27 @@ def validate_session(session_id: str) -> bool:
             conn.close()
 
 
+def revoke_session(session_id: str) -> bool:
+    """Revoke a session by deleting it, invalidating access immediately."""
+    if not session_id or not session_id.strip():
+        return False
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM sessions WHERE session_id = ?", (session_id,))
+        conn.commit()
+        return cursor.rowcount > 0
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Session revocation failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+
 def cleanup_expired_sessions_once() -> int:
     now = datetime.now(timezone.utc).isoformat()
     conn = None
