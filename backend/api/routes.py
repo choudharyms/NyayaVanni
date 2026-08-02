@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,49 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Categories (#808) — validated category creation
+# ---------------------------------------------------------------------------
+class CategoryCreateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+    color: str = Field(default="", max_length=50)
+    description: str = Field(default="", max_length=500)
+
+
+@api_router.post("/categories")
+@limiter.limit("20/minute")
+async def create_category(request: Request, body: CategoryCreateRequest):
+    """Create a document category with validated inputs.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Category payload with name, color, and description.
+
+    Returns:
+        dict: Confirmation with the created category ID.
+    """
+    session_id = require_session_id(request)
+    category_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO categories (category_id, session_id, name, color, description, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+            (category_id, session_id, body.name, body.color, body.description, now),
+        )
+        conn.commit()
+        return {"categoryId": category_id, "name": body.name, "created": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Category creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create category")
+    finally:
+        if conn:
+            conn.close()
 
