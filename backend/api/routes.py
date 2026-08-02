@@ -17,6 +17,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import List
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -24,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +53,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1075,61 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Bulk operations (#801) — enforced request body size limit
+# ---------------------------------------------------------------------------
+class BulkDeleteRequest(BaseModel):
+    document_ids: List[str] = Field(..., min_length=1, max_length=100)
+
+
+@api_router.post("/documents/bulk-delete")
+@limiter.limit("10/minute")
+async def bulk_delete_documents(request: Request, body: BulkDeleteRequest):
+    """Delete multiple documents at once with a strict body size cap.
+
+    The list length cap (max 100) and per-ID length validation bound the
+    request body so oversized bulk payloads are rejected before processing.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Bulk payload with up to 100 document IDs.
+
+    Returns:
+        dict: Deleted count and per-ID results.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 413: If the payload exceeds the size limit.
+    """
+    session_id = require_session_id(request)
+
+    for document_id in body.document_ids:
+        if not document_id or len(document_id) > 100:
+            raise HTTPException(
+                status_code=413,
+                detail="Bulk payload contains an invalid or oversized document ID",
+            )
+
+    deleted = []
+    not_found = []
+    for document_id in body.document_ids:
+        try:
+            require_document_owner(document_id, session_id)
+            if delete_document_and_cache(document_id):
+                from ..services.search_service import remove_document_from_index
+
+                remove_document_from_index(document_id)
+                deleted.append(document_id)
+            else:
+                not_found.append(document_id)
+        except HTTPException:
+            not_found.append(document_id)
+
+    return {
+        "deleted": deleted,
+        "not_found": not_found,
+        "deleted_count": len(deleted),
+    }
 
