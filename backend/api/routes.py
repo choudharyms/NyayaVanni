@@ -5,6 +5,8 @@ import logging
 import os
 import uuid
 
+from typing import List, Literal, Optional
+
 import google.generativeai as genai
 from fastapi import (
     APIRouter,
@@ -56,6 +58,7 @@ from ..services.storage_service import (
     delete_document_and_cache,
     get_cached_analysis,
     get_document_record,
+    list_documents,
     save_cached_analysis,
     save_document_record,
     upload_to_local,
@@ -1072,4 +1075,58 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document list (#861) — validated document sorting and pagination
+# ---------------------------------------------------------------------------
+@api_router.get("/documents")
+@limiter.limit("30/minute")
+def list_documents_endpoint(
+    request: Request,
+    page: int = 1,
+    page_size: int = 10,
+    sort_by: str = "uploaded_at",
+    sort_order: str = "desc",
+):
+    """List the session's documents with validated sort and pagination.
+
+    Args:
+        request: The incoming HTTP request.
+        page: The page number (>= 1).
+        page_size: Results per page (1-100).
+        sort_by: Sort field; must be 'uploaded_at' or 'filename'.
+        sort_order: Sort direction; must be 'asc' or 'desc'.
+
+    Returns:
+        dict: Paginated, sorted list of documents for the session.
+
+    Raises:
+        HTTPException 400: If sort or pagination parameters are invalid.
+    """
+    session_id = require_session_id(request)
+
+    allowed_sort_by = {"uploaded_at", "filename"}
+    if sort_by not in allowed_sort_by:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid sort_by; allowed values: {', '.join(sorted(allowed_sort_by))}",
+        )
+    if sort_order not in ("asc", "desc"):
+        raise HTTPException(
+            status_code=400, detail="Invalid sort_order; must be 'asc' or 'desc'"
+        )
+    if page < 1:
+        raise HTTPException(status_code=400, detail="page must be >= 1")
+    if page_size < 1 or page_size > 100:
+        raise HTTPException(status_code=400, detail="page_size must be between 1 and 100")
+
+    result = list_documents(
+        session_id,
+        sort_by=sort_by,
+        sort_order=sort_order,
+        page=page,
+        page_size=page_size,
+    )
+    return result
 

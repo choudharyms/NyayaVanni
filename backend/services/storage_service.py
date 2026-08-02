@@ -165,6 +165,70 @@ def _ensure_sessions_table(cursor):
     """)
 
 
+def list_documents(
+    session_id: str,
+    sort_by: str = "uploaded_at",
+    sort_order: str = "desc",
+    page: int = 1,
+    page_size: int = 10,
+) -> dict:
+    """List documents for a session with sorting and pagination.
+
+    Args:
+        session_id: The session identifier.
+        sort_by: Sort field; only 'uploaded_at' or 'filename' allowed.
+        sort_order: Sort direction; 'asc' or 'desc'.
+        page: The page number (>= 1).
+        page_size: Results per page.
+
+    Returns:
+        dict: Paginated results with total count.
+    """
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        direction = "ASC" if sort_order == "asc" else "DESC"
+        column = "filename" if sort_by == "filename" else "uploaded_at"
+        offset = (page - 1) * page_size
+        cursor.execute(
+            f"SELECT COUNT(*) FROM documents WHERE session_id = ?", (session_id,)
+        )
+        total = int(cursor.fetchone()[0])
+        cursor.execute(
+            f"""
+            SELECT document_id, filename, status, uploaded_at
+            FROM documents
+            WHERE session_id = ?
+            ORDER BY {column} {direction}
+            LIMIT ? OFFSET ?
+            """,
+            (session_id, page_size, offset),
+        )
+        rows = cursor.fetchall()
+        documents = [
+            {
+                "documentId": row[0],
+                "filename": row[1],
+                "status": row[2],
+                "uploadedAt": row[3],
+            }
+            for row in rows
+        ]
+        return {
+            "documents": documents,
+            "total_count": total,
+            "page": page,
+            "page_size": page_size,
+        }
+    except Exception as e:
+        logger.error(f"Document list query failed: {e}")
+        return {"documents": [], "total_count": 0, "page": page, "page_size": page_size}
+    finally:
+        if conn:
+            conn.close()
+
+
 SESSION_TTL = timedelta(days=30)
 
 
