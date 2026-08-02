@@ -54,6 +54,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_activity_log_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -163,6 +164,50 @@ def _ensure_sessions_table(cursor):
             expires_at TEXT NOT NULL
         )
     """)
+
+
+def _ensure_activity_log_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS activity_log (
+            activity_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            action TEXT NOT NULL,
+            detail TEXT DEFAULT '{}',
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_activity_log_session_id
+        ON activity_log(session_id)
+    """)
+
+
+def log_activity(session_id: str, action: str, details: dict = None) -> bool:
+    """Persist a session activity event, storing details as JSON.
+
+    Sensitive values must be redacted by the caller before this helper
+    is invoked; the plaintext password is never stored.
+    """
+    activity_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO activity_log (activity_id, session_id, action, detail, created_at) VALUES (?, ?, ?, ?, ?)",
+            (activity_id, session_id, action, json.dumps(details or {}), now),
+        )
+        conn.commit()
+        return True
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Activity logging failed: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
 
 
 SESSION_TTL = timedelta(days=30)

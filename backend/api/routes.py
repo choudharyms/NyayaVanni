@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -17,6 +19,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import Any, Dict
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -24,6 +27,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,11 +55,13 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
     get_cached_analysis,
     get_document_record,
+    log_activity,
     save_cached_analysis,
     save_document_record,
     upload_to_local,
@@ -1072,4 +1078,97 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Activity log (#814) — password values never stored in plaintext
+# ---------------------------------------------------------------------------
+SENSITIVE_LOG_KEYS = {
+    "password",
+    "new_password",
+    "confirm_password",
+    "current_password",
+    "old_password",
+    "token",
+    "api_key",
+}
+
+
+class ActivityRequest(BaseModel):
+    action: str = Field(..., min_length=1, max_length=100)
+    details: Dict[str, Any] = Field(default_factory=dict)
+
+
+def _redact_sensitive_details(details: dict) -> dict:
+    """Replace any sensitive values (e.g. passwords) with redacted markers."""
+    redacted = {}
+    for key, value in details.items():
+        if key.lower() in SENSITIVE_LOG_KEYS:
+            redacted[key] = "******"
+        else:
+            redacted[key] = value
+    return redacted
+
+
+@api_router.post("/activity")
+@limiter.limit("30/minute")
+async def record_activity(request: Request, body: ActivityRequest):
+    """Record a session activity event with sensitive values redacted.
+
+    Password-related fields are stored as `******` so password changes
+    never appear in plaintext in the activity log.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Activity payload with an action and optional details.
+
+    Returns:
+        dict: Confirmation that the activity was logged.
+    """
+    session_id = require_session_id(request)
+    redacted = _redact_sensitive_details(body.details)
+    log_activity(session_id, body.action, redacted)
+    return {"status": "Activity recorded", "logged": True}
+
+
+@api_router.get("/activity")
+@limiter.limit("30/minute")
+async def list_activity(request: Request, limit: int = 50):
+    """List recent activity for the current session.
+
+    Args:
+        request: The incoming HTTP request.
+        limit: Maximum number of entries to return (default 50, max 200).
+
+    Returns:
+        dict: Recent activity log entries.
+    """
+    session_id = require_session_id(request)
+    if limit < 1 or limit > 200:
+        limit = 50
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT activity_id, action, detail, created_at FROM activity_log WHERE session_id = ? ORDER BY created_at DESC LIMIT ?",
+            (session_id, limit),
+        )
+        entries = []
+        for row in cursor.fetchall():
+            entry = dict(row)
+            try:
+                entry["details"] = json.loads(entry.pop("detail"))
+            except (json.JSONDecodeError, TypeError):
+                entry["details"] = {}
+            entries.append(entry)
+        return {"activity": entries, "count": len(entries)}
+    except Exception as e:
+        logger.error(f"Activity listing failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to list activity")
+    finally:
+        if conn:
+            conn.close()
 
