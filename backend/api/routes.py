@@ -78,6 +78,38 @@ RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "docx"}
+
+# Maximum length for an uploaded filename (configurable via env).
+MAX_FILENAME_LENGTH = int(os.getenv("MAX_FILENAME_LENGTH", "255"))
+
+
+def _validate_upload_filename(filename: str) -> str:
+    """Validate and sanitize an uploaded filename.
+
+    Args:
+        filename: The raw filename supplied by the client.
+
+    Returns:
+        str: The sanitized, storage-safe basename.
+
+    Raises:
+        HTTPException 400: If the filename is empty, too long, or
+            contains unsafe path or control characters.
+    """
+    if not filename or not filename.strip():
+        raise HTTPException(
+            status_code=400, detail="Uploaded file must have a valid filename."
+        )
+    if len(filename) > MAX_FILENAME_LENGTH:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Filename is too long; maximum allowed length is {MAX_FILENAME_LENGTH} characters.",
+        )
+    if any(ch in filename for ch in ("/", "\\", "\x00")) or ".." in filename:
+        raise HTTPException(
+            status_code=400, detail="Filename contains invalid path characters."
+        )
+    return os.path.basename(filename)
 ALLOWED_MIME_TYPES = {
     "application/pdf",
     "image/png",
@@ -261,13 +293,9 @@ async def upload_document(request: Request, file: UploadFile = File(...)):
         session_id = require_session_id(request)
 
         filename = file.filename
-        if not filename:
-            raise HTTPException(
-                status_code=400, detail="Uploaded file must have a valid filename."
-            )
+        safe_filename = _validate_upload_filename(filename)
 
         # Only allow safe filenames to be stored; do not trust user-controlled paths/characters.
-        safe_filename = os.path.basename(filename)
         safe_filename = "".join(
             ch for ch in safe_filename if ch.isalnum() or ch in ("._-")
         )
@@ -415,7 +443,7 @@ def _analyze_document_sync(
                 )
         else:
             contents = file.file.read()
-            filename = file.filename
+            filename = _validate_upload_filename(file.filename)
 
         text = extract_document(
             contents, filename, force_ocr=force_ocr, language=language
