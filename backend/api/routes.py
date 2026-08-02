@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,54 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document create (#864) — session-checked document creation
+# ---------------------------------------------------------------------------
+class CreateDocumentRequest(BaseModel):
+    title: str = Field(..., min_length=1, max_length=300)
+    content: str = Field(..., min_length=1, max_length=100000)
+    category: str = Field("", max_length=100)
+
+
+@api_router.post("/documents")
+@limiter.limit("10/minute")
+async def create_document(request: Request, body: CreateDocumentRequest):
+    """Create a new document record bound to the authenticated session.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Document creation payload with bounded title, content,
+              and category.
+
+    Returns:
+        dict: Confirmation with the created document ID.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+    """
+    session_id = require_session_id(request)
+
+    document_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO documents (document_id, session_id, filename, status, uploaded_at) VALUES (?, ?, ?, ?, ?)",
+            (document_id, session_id, body.title, "draft", now),
+        )
+        conn.commit()
+        return {"documentId": document_id, "title": body.title, "created": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Document creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create document")
+    finally:
+        if conn:
+            conn.close()
 
