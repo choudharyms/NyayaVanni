@@ -54,6 +54,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_document_shares_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -162,6 +163,24 @@ def _ensure_sessions_table(cursor):
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
+    """)
+
+
+def _ensure_document_shares_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS document_shares (
+            share_id TEXT PRIMARY KEY,
+            document_id TEXT NOT NULL,
+            owner_session_id TEXT NOT NULL,
+            email TEXT NOT NULL,
+            permission TEXT NOT NULL,
+            expires_at TEXT,
+            created_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_document_shares_document
+        ON document_shares(document_id)
     """)
 
 

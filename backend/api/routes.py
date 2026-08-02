@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -17,6 +19,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import Literal, Optional
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -24,6 +27,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +55,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1077,58 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document sharing (#798) — validated sharing permissions
+# ---------------------------------------------------------------------------
+class ShareRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+    permission: Literal["view", "edit", "comment"] = "view"
+    expires_at: Optional[str] = Field(default=None, max_length=64)
+
+
+@api_router.post("/documents/{document_id}/share")
+@limiter.limit("20/minute")
+async def share_document(request: Request, document_id: str, body: ShareRequest):
+    """Share a document with validated permission levels.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The document ID to share.
+        body: Share payload including email and permission level.
+
+    Returns:
+        dict: Confirmation with the share ID.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document is not found.
+        HTTPException 400: If the permission value is invalid.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    share_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO document_shares (share_id, document_id, owner_session_id, email, permission, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (share_id, document_id, session_id, body.email, body.permission, body.expires_at, now),
+        )
+        conn.commit()
+        return {"shareId": share_id, "documentId": document_id, "permission": body.permission}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Document share failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to share document")
+    finally:
+        if conn:
+            conn.close()
 
