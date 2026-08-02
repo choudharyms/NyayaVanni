@@ -1073,3 +1073,52 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Document preview (#836) — requires auth, returns snippet only
+# ---------------------------------------------------------------------------
+PREVIEW_MAX_CHARS = 500
+
+
+@api_router.get("/documents/{document_id}/preview")
+@limiter.limit("30/minute")
+async def preview_document(request: Request, document_id: str):
+    """Return a short preview snippet for an owned document.
+
+    The endpoint requires a valid session and document ownership, and
+    deliberately returns only the first PREVIEW_MAX_CHARS characters so
+    the full content is never exposed without authentication.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The document ID to preview.
+
+    Returns:
+        dict: Document preview snippet (never the full content).
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document or its file is not found.
+    """
+    session_id = require_session_id(request)
+    record = require_document_owner(document_id, session_id)
+
+    local_path = record.get("local_path")
+    if not local_path or not os.path.exists(local_path):
+        raise HTTPException(status_code=404, detail="Document file missing")
+
+    try:
+        with open(local_path, "rb") as f:
+            contents = f.read()
+    except OSError:
+        raise HTTPException(status_code=500, detail="Failed to read document")
+
+    preview = contents.decode("utf-8", errors="replace")[:PREVIEW_MAX_CHARS]
+    return {
+        "documentId": document_id,
+        "filename": record.get("filename"),
+        "preview": preview,
+        "truncated": len(contents) > PREVIEW_MAX_CHARS,
+    }
+
