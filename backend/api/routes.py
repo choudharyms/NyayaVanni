@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -17,6 +19,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import List
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -24,6 +27,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +55,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1077,67 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Email templates (#837) — validated email template input
+# ---------------------------------------------------------------------------
+class EmailTemplateRequest(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    subject: str = Field(..., min_length=1, max_length=500)
+    body: str = Field(..., min_length=1, max_length=20000)
+    required_placeholders: List[str] = Field(default_factory=list, max_length=20)
+
+
+@api_router.post("/email-templates")
+@limiter.limit("20/minute")
+async def create_email_template(request: Request, body: EmailTemplateRequest):
+    """Create an email template with validated inputs.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Email template payload with bounded name, subject, body,
+              and required placeholders.
+
+    Returns:
+        dict: Confirmation with the created template ID.
+    """
+    session_id = require_session_id(request)
+    for placeholder in body.required_placeholders:
+        if not placeholder or len(placeholder) > 100:
+            raise HTTPException(
+                status_code=400,
+                detail="Placeholders must be between 1 and 100 characters",
+            )
+
+    template_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO email_templates (template_id, session_id, name, subject, body, required_placeholders, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            (
+                template_id,
+                session_id,
+                body.name,
+                body.subject,
+                body.body,
+                json.dumps(body.required_placeholders),
+                now,
+                now,
+            ),
+        )
+        conn.commit()
+        return {"templateId": template_id, "name": body.name, "created": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Email template creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create email template")
+    finally:
+        if conn:
+            conn.close()
 
