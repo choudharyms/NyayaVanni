@@ -75,6 +75,28 @@ graph_builder = LegalKnowledgeGraphBuilder()
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 
+# Chat message size limits (bytes/turns) — bound the request body size
+MAX_CHAT_MESSAGE_LENGTH = int(os.getenv("MAX_CHAT_MESSAGE_LENGTH", "10000"))
+MAX_CHAT_HISTORY_TURNS = 50
+
+
+def _validate_chat_message_size(message: str):
+    """Reject chat messages that exceed the configured body size limit."""
+    if len(message.encode("utf-8", errors="replace")) > MAX_CHAT_MESSAGE_LENGTH:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Chat message exceeds the maximum allowed size of {MAX_CHAT_MESSAGE_LENGTH} bytes",
+        )
+
+
+def _validate_chat_history_size(chat_history: list):
+    """Reject oversized chat history arrays."""
+    if len(chat_history) > MAX_CHAT_HISTORY_TURNS:
+        raise HTTPException(
+            status_code=413,
+            detail=f"Chat history exceeds the maximum allowed {MAX_CHAT_HISTORY_TURNS} turns",
+        )
+
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "docx"}
@@ -704,6 +726,8 @@ def chat_stream_sse(
     if not user_message or not user_message.strip():
         raise HTTPException(status_code=400, detail="Message cannot be empty")
 
+    _validate_chat_message_size(user_message)
+
     analysis = {}
     if document_id:
         session_id = require_session_id(request)
@@ -754,6 +778,9 @@ def chat_general(request: Request, chat_request: ChatRequest):
         if not chat_request.user_message or not chat_request.user_message.strip():
             raise HTTPException(status_code=400, detail="Message cannot be empty")
 
+        _validate_chat_message_size(chat_request.user_message)
+        _validate_chat_history_size(chat_request.chat_history)
+
         analysis = {}
         history = [
             {"role": msg.role, "message": msg.message}
@@ -795,6 +822,9 @@ def chat_with_document(request: Request, document_id: str, chat_request: ChatReq
         require_document_owner(document_id, session_id)
         cached = get_cached_analysis(document_id, session_id, chat_request.language)
         analysis = cached["analysis"] if cached else {}
+
+        _validate_chat_message_size(chat_request.user_message)
+        _validate_chat_history_size(chat_request.chat_history)
 
         history = [
             {"role": msg.role, "message": msg.message}
