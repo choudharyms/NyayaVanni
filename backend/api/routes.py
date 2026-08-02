@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,57 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Profile update (#868) — session-checked profile update
+# ---------------------------------------------------------------------------
+class ProfileUpdateRequest(BaseModel):
+    name: str = Field("", max_length=200)
+    email: str = Field("", max_length=320)
+
+
+@api_router.patch("/profile")
+@limiter.limit("10/minute")
+async def update_profile(request: Request, body: ProfileUpdateRequest):
+    """Update the authenticated user's profile.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Profile update payload with bounded name and email.
+
+    Returns:
+        dict: Confirmation that the profile was updated.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 400: If the email is malformed.
+    """
+    session_id = require_session_id(request)
+
+    if body.email and "@" not in body.email:
+        raise HTTPException(
+            status_code=400, detail="Invalid email address in profile."
+        )
+
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO profiles (profile_id, session_id, name, email, updated_at) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(session_id) DO UPDATE SET name = excluded.name, email = excluded.email, updated_at = excluded.updated_at",
+            (str(uuid.uuid4()), session_id, body.name, body.email, now),
+        )
+        conn.commit()
+        return {"updated": True, "sessionId": session_id}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Profile update failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update profile")
+    finally:
+        if conn:
+            conn.close()
 

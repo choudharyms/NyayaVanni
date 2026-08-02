@@ -54,6 +54,8 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_profiles_table(cursor)
+        _ensure_profiles_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -161,6 +163,19 @@ def _ensure_sessions_table(cursor):
             created_at TEXT NOT NULL,
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
+        )
+    """)
+
+
+def _ensure_profiles_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS profiles (
+            profile_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL UNIQUE,
+            name TEXT DEFAULT '',
+            email TEXT DEFAULT '',
+            picture_path TEXT DEFAULT '',
+            updated_at TEXT NOT NULL
         )
     """)
 
