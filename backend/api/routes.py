@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1076,79 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Password reset verify (#826) — brute force protection
+# ---------------------------------------------------------------------------
+PASSWORD_RESET_VERIFY_LIMIT = os.getenv("PASSWORD_RESET_VERIFY_LIMIT", "3/minute")
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+    token: str = Field(..., min_length=6, max_length=128)
+
+
+@api_router.post("/password-reset/verify")
+@limiter.limit(PASSWORD_RESET_VERIFY_LIMIT)
+async def verify_password_reset_token(request: Request, body: PasswordResetVerifyRequest):
+    """Verify a password reset token with strict rate limiting.
+
+    The endpoint is limited to a few attempts per minute per IP so that
+    reset tokens cannot be brute forced. Errors are intentionally generic
+    to avoid leaking whether an email or token exists.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Email and reset token to verify.
+
+    Returns:
+        dict: Confirmation that the token is valid.
+
+    Raises:
+        HTTPException 401: If the token is invalid or expired.
+    """
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            """
+            SELECT reset_id, expires_at, used FROM password_resets
+            WHERE email = ? AND token = ?
+            """,
+            (body.email.lower().strip(), body.token),
+        )
+        row = cursor.fetchone()
+        if not row:
+            raise HTTPException(
+                status_code=401, detail="Invalid verification code"
+            )
+        reset_id, expires_at, used = row
+        if used:
+            raise HTTPException(
+                status_code=401, detail="Invalid verification code"
+            )
+        if expires_at and expires_at < now:
+            raise HTTPException(
+                status_code=401, detail="Verification code has expired"
+            )
+        cursor.execute(
+            "UPDATE password_resets SET used = 1 WHERE reset_id = ?",
+            (reset_id,),
+        )
+        conn.commit()
+        return {"status": "Verification code accepted", "valid": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Password reset verification failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to verify code")
+    finally:
+        if conn:
+            conn.close()
 

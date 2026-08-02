@@ -54,6 +54,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_password_resets_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -162,6 +163,23 @@ def _ensure_sessions_table(cursor):
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
+    """)
+
+
+def _ensure_password_resets_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS password_resets (
+            reset_id TEXT PRIMARY KEY,
+            email TEXT NOT NULL,
+            token TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT,
+            used INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_password_resets_email
+        ON password_resets(email)
     """)
 
 
