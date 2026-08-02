@@ -75,6 +75,9 @@ graph_builder = LegalKnowledgeGraphBuilder()
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
 
+# AI analysis request timeout (seconds) — guards against hung model calls
+AI_ANALYSIS_TIMEOUT = float(os.getenv("AI_ANALYSIS_TIMEOUT", "90"))
+
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
 ALLOWED_EXTENSIONS = {"pdf", "png", "jpg", "jpeg", "docx"}
@@ -432,7 +435,9 @@ def _analyze_document_sync(
         index_document(document_id, filename, text)
 
         relevant_laws = retrieve_relevant_laws(text, k=3)
-        analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+        analysis_result = analyze_document_with_gemini(
+            text, relevant_laws, language, timeout=AI_ANALYSIS_TIMEOUT
+        )
         confidence = ConfidenceService.generate(
             document_text=text,
             summary=analysis_result.get("summary", ""),
@@ -607,7 +612,9 @@ def _analyze_text_sync(request: Request, text: str, language: str = "en"):
             classification = "terms_of_service"
             knowledge_graph = {"nodes": [], "edges": []}
         else:
-            analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
+            analysis_result = analyze_document_with_gemini(
+                text, relevant_laws, language, timeout=AI_ANALYSIS_TIMEOUT
+            )
             confidence = ConfidenceService.generate(
                 document_text=text,
                 summary=analysis_result.get("summary", ""),
