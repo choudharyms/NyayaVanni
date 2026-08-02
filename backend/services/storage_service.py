@@ -165,6 +165,32 @@ def _ensure_sessions_table(cursor):
     """)
 
 
+def get_document_count(session_id: str) -> int:
+    """Return the number of documents owned by a session.
+
+    Args:
+        session_id: The session identifier.
+
+    Returns:
+        int: The count of documents for the session.
+    """
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) FROM documents WHERE session_id = ?", (session_id,)
+        )
+        row = cursor.fetchone()
+        return int(row[0]) if row else 0
+    except Exception as e:
+        logger.error(f"Document count query failed: {e}")
+        return 0
+    finally:
+        if conn:
+            conn.close()
+
+
 SESSION_TTL = timedelta(days=30)
 
 

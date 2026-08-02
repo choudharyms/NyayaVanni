@@ -55,6 +55,7 @@ from ..services.storage_service import (
     create_session_id,
     delete_document_and_cache,
     get_cached_analysis,
+    get_document_count,
     get_document_record,
     save_cached_analysis,
     save_document_record,
@@ -1072,4 +1073,33 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Dashboard (#854) — session expiry check on dashboard access
+# ---------------------------------------------------------------------------
+@api_router.get("/dashboard")
+@limiter.limit("30/minute")
+def get_dashboard(request: Request):
+    """Return dashboard statistics for the current session.
+
+    Requires a valid, non-expired session (require_session_id validates
+    session expiry) before any dashboard data is exposed.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        dict: Dashboard statistics scoped to the session.
+
+    Raises:
+        HTTPException 401: If the session is missing or expired.
+    """
+    session_id = require_session_id(request)
+    document_count = get_document_count(session_id)
+    return {
+        "sessionId": session_id,
+        "documentCount": document_count,
+        "status": "ok",
+    }
 
