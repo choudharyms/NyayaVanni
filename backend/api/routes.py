@@ -1,9 +1,13 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
+
+from typing import List, Literal
 
 import google.generativeai as genai
 from fastapi import (
@@ -24,6 +28,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +56,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1078,73 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Bulk share (#870) — validated bulk document sharing
+# ---------------------------------------------------------------------------
+class BulkShareRequest(BaseModel):
+    document_ids: List[str] = Field(..., min_length=1, max_length=100)
+    emails: List[str] = Field(..., min_length=1, max_length=50)
+    permission: Literal["view", "edit"] = "view"
+
+
+@api_router.post("/documents/bulk-share")
+@limiter.limit("5/minute")
+async def bulk_share_documents(request: Request, body: BulkShareRequest):
+    """Share multiple documents with multiple recipients.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Bulk share payload with 1-100 document IDs, 1-50 recipient
+              emails, and a permission level.
+
+    Returns:
+        dict: Confirmation with the number of shares created.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own any input document.
+        HTTPException 400: If the payload is invalid.
+    """
+    session_id = require_session_id(request)
+
+    for document_id in body.document_ids:
+        if not document_id or len(document_id) > 100:
+            raise HTTPException(
+                status_code=400, detail="Invalid or oversized document ID in bulk share"
+            )
+        require_document_owner(document_id, session_id)
+
+    seen_emails = set()
+    for email in body.emails:
+        if not email or len(email) > 320 or "@" not in email:
+            raise HTTPException(
+                status_code=400, detail="Invalid recipient email address."
+            )
+        seen_emails.add(email)
+
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    conn = None
+    created = 0
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        for document_id in body.document_ids:
+            for email in seen_emails:
+                cursor.execute(
+                    "INSERT INTO share_links (share_id, document_id, session_id, email, expires_at, created_at) VALUES (?, ?, ?, ?, ?, ?)",
+                    (str(uuid.uuid4()), document_id, session_id, email, None, now),
+                )
+                created += 1
+        conn.commit()
+        return {"shared": True, "sharesCreated": created, "permission": body.permission}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Bulk share failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create bulk shares")
+    finally:
+        if conn:
+            conn.close()
 
