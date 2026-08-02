@@ -54,6 +54,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_custom_templates_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -162,6 +163,25 @@ def _ensure_sessions_table(cursor):
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
+    """)
+
+
+def _ensure_custom_templates_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS custom_templates (
+            template_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            name TEXT NOT NULL,
+            content TEXT NOT NULL,
+            placeholders TEXT DEFAULT '[]',
+            category TEXT DEFAULT '',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_custom_templates_session_id
+        ON custom_templates(session_id)
     """)
 
 
