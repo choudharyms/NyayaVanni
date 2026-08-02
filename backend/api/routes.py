@@ -15,7 +15,7 @@ from fastapi import (
     Response,
     UploadFile,
 )
-from fastapi.responses import StreamingResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from pydantic import BaseModel, Field
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
@@ -1072,4 +1072,41 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# File download (#857) — rate-limited document download
+# ---------------------------------------------------------------------------
+DOWNLOAD_RATE_LIMIT = os.getenv("DOWNLOAD_RATE_LIMIT", "10/minute")
+
+
+@api_router.get("/documents/{document_id}/download")
+@limiter.limit(DOWNLOAD_RATE_LIMIT)
+def download_document(request: Request, document_id: str):
+    """Download an owned document with a rate limit applied.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The unique identifier of the document to download.
+
+    Returns:
+        FileResponse: The raw file as a download attachment.
+
+    Raises:
+        HTTPException 429: If the download rate limit is exceeded.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document or file is missing.
+    """
+    session_id = require_session_id(request)
+    record = require_document_owner(document_id, session_id)
+    local_path = record.get("local_path")
+    if not local_path or not os.path.exists(local_path):
+        raise HTTPException(
+            status_code=404, detail="Document file not found on storage."
+        )
+    return FileResponse(
+        local_path,
+        filename=record.get("filename", document_id),
+        media_type="application/octet-stream",
+    )
 
