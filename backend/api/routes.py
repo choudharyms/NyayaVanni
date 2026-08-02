@@ -3,6 +3,7 @@ import io
 import json
 import logging
 import os
+import time
 import uuid
 
 import google.generativeai as genai
@@ -712,9 +713,19 @@ def chat_stream_sse(
         if cached:
             analysis = cached.get("analysis", {})
 
+    STREAM_TIMEOUT = float(os.getenv("CHAT_STREAM_TIMEOUT", "120"))
+    stream_started_at = time.monotonic()
+
     def event_generator():
         try:
-            for chunk in stream_chat_response(analysis, [], user_message, language):
+            for chunk in stream_chat_response(
+                analysis, [], user_message, language, timeout=STREAM_TIMEOUT
+            ):
+                if time.monotonic() - stream_started_at > STREAM_TIMEOUT:
+                    logger.warning("Chat stream exceeded timeout, terminating")
+                    yield f"data: {_json.dumps({'error': 'Stream timed out'})}\n\n"
+                    yield "data: [DONE]\n\n"
+                    return
                 # SSE format: data: <payload>\n\n
                 yield f"data: {_json.dumps({'text': chunk})}\n\n"
             # Signal stream end

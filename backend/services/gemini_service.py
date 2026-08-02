@@ -281,7 +281,11 @@ Example Structure:
 
 
 def stream_chat_response(
-    document_analysis: dict, chat_history: list, user_message: str, language: str = "en"
+    document_analysis: dict,
+    chat_history: list,
+    user_message: str,
+    language: str = "en",
+    timeout: Optional[float] = None,
 ):
     """
 Stream a conversational legal response using the Gemini chat model.
@@ -350,7 +354,8 @@ Example Structure:
 
         sys_inst = query_optimizer.get_system_instruction(language)
         chat_model_instance = _create_chat_model(sys_inst)
-        response = chat_model_instance.generate_content(prompt, stream=True, request_options={"timeout": GEMINI_TIMEOUT})
+        request_timeout = timeout if timeout is not None else GEMINI_TIMEOUT
+        response = chat_model_instance.generate_content(prompt, stream=True, request_options={"timeout": request_timeout})
 
         for chunk in response:
             if chunk.text:
