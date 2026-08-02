@@ -17,6 +17,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import List, Literal
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -24,6 +25,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +53,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1075,82 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document export options (#822) — validated export configuration
+# ---------------------------------------------------------------------------
+class ExportOptionsRequest(BaseModel):
+    format: Literal["txt", "pdf"] = "txt"
+    include_metadata: bool = False
+    redact_pii: bool = True
+    page_range: List[int] = Field(default_factory=list, max_length=2)
+
+
+@api_router.post("/documents/{document_id}/export")
+@limiter.limit("10/minute")
+async def export_document_with_options(
+    request: Request, document_id: str, body: ExportOptionsRequest
+):
+    """Export a document using validated export options.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The document ID to export.
+        body: Export options including format, metadata, PII redaction,
+              and an optional page range (max 2 values).
+
+    Returns:
+        dict: Export metadata and the document content preview.
+
+    Raises:
+        HTTPException 400: If the page range is invalid.
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document is not found.
+    """
+    session_id = require_session_id(request)
+    record = require_document_owner(document_id, session_id)
+
+    if len(body.page_range) > 2:
+        raise HTTPException(
+            status_code=400, detail="Page range must contain at most 2 values"
+        )
+    for page in body.page_range:
+        if page < 1 or page > 10000:
+            raise HTTPException(
+                status_code=400, detail="Page numbers must be between 1 and 10000"
+            )
+    if len(body.page_range) == 2 and body.page_range[0] > body.page_range[1]:
+        raise HTTPException(
+            status_code=400, detail="Start page must not exceed end page"
+        )
+
+    local_path = record.get("local_path")
+    if not local_path or not os.path.exists(local_path):
+        raise HTTPException(status_code=404, detail="Document file missing")
+
+    try:
+        with open(local_path, "rb") as f:
+            contents = f.read()
+    except OSError:
+        raise HTTPException(status_code=500, detail="Failed to read document")
+
+    preview = contents[:2000].decode("utf-8", errors="replace")
+
+    return {
+        "documentId": document_id,
+        "exportFormat": body.format,
+        "includeMetadata": body.include_metadata,
+        "redactPii": body.redact_pii,
+        "pageRange": body.page_range,
+        "metadata": {
+            "filename": record.get("filename"),
+            "status": record.get("status"),
+            "uploadedAt": record.get("uploaded_at"),
+        }
+        if body.include_metadata
+        else None,
+        "preview": preview[:500],
+    }
 
