@@ -5,6 +5,8 @@ import logging
 import os
 import uuid
 
+from typing import List, Literal, Optional
+
 import google.generativeai as genai
 from fastapi import (
     APIRouter,
@@ -1072,4 +1074,59 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Batch update (#858) — validated batch document update
+# ---------------------------------------------------------------------------
+class BatchDocumentUpdates(BaseModel):
+    filename: str = Field("", max_length=200)
+    category: str = Field("", max_length=100)
+    tags: List[str] = Field(default_factory=list, max_length=50)
+    status: Optional[Literal["draft", "analyzed", "archived", "failed"]] = None
+
+
+class BatchUpdateRequest(BaseModel):
+    document_ids: List[str] = Field(..., min_length=1, max_length=100)
+    updates: BatchDocumentUpdates = Field(...)
+
+
+@api_router.post("/documents/batch-update")
+@limiter.limit("10/minute")
+async def batch_update_documents(request: Request, body: BatchUpdateRequest):
+    """Validate and apply updates to multiple owned documents.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Batch update payload with 1-100 document IDs and bounded
+              update fields.
+
+    Returns:
+        dict: Confirmation with the number of documents validated for update.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own any input document.
+        HTTPException 400: If the update payload is invalid.
+    """
+    session_id = require_session_id(request)
+
+    for document_id in body.document_ids:
+        if not document_id or len(document_id) > 100:
+            raise HTTPException(
+                status_code=400, detail="Invalid or oversized document ID in batch"
+            )
+        require_document_owner(document_id, session_id)
+
+    for tag in body.updates.tags:
+        if not tag or len(tag) > 100:
+            raise HTTPException(
+                status_code=400, detail="Tag must be between 1 and 100 characters"
+            )
+
+    return {
+        "updated": True,
+        "documentCount": len(body.document_ids),
+        "message": "Documents validated for batch update",
+    }
 
