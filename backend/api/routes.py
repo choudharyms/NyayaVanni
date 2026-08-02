@@ -5,6 +5,8 @@ import logging
 import os
 import uuid
 
+from typing import Optional
+
 import google.generativeai as genai
 from fastapi import (
     APIRouter,
@@ -24,6 +26,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +54,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1024,7 +1028,14 @@ async def delete_document(document_id: str, request: Request):
 @api_router.get("/search")
 @limiter.limit(SEARCH_RATE_LIMIT)
 def search_documents_endpoint(
-    request: Request, q: str, page: int = 1, page_size: int = 10
+    request: Request,
+    q: str,
+    page: int = 1,
+    page_size: int = 10,
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
 ):
     """
     Search indexed documents using full-text search.
@@ -1060,10 +1071,51 @@ def search_documents_endpoint(
         if page_size < 1 or page_size > 100:
             page_size = 10
 
+        allowed_statuses = {"draft", "analyzed", "archived", "failed"}
+        if status is not None and status not in allowed_statuses:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status filter; allowed values: {', '.join(sorted(allowed_statuses))}",
+            )
+        if category is not None and (len(category) == 0 or len(category) > 100):
+            raise HTTPException(
+                status_code=400, detail="Category filter must be 1-100 characters"
+            )
+        if date_from is not None:
+            try:
+                datetime.datetime.fromisoformat(date_from)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="date_from must be a valid ISO-8601 date",
+                )
+        if date_to is not None:
+            try:
+                datetime.datetime.fromisoformat(date_to)
+            except ValueError:
+                raise HTTPException(
+                    status_code=400,
+                    detail="date_to must be a valid ISO-8601 date",
+                )
+        if date_from and date_to and date_from > date_to:
+            raise HTTPException(
+                status_code=400,
+                detail="date_from cannot be after date_to",
+            )
+
         result = search_documents(q, page=page, page_size=page_size, use_cache=True)
 
         if "error" in result:
             raise HTTPException(status_code=500, detail=result["error"])
+
+        results = result.get("results", [])
+        filtered = _filter_search_results(
+            results, status=status, category=category,
+            date_from=date_from, date_to=date_to,
+        )
+        result["results"] = filtered
+        result["total_count"] = len(filtered)
+        result["filtered"] = True
 
         return result
 
@@ -1072,4 +1124,75 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+def _filter_search_results(
+    results: list,
+    status: Optional[str] = None,
+    category: Optional[str] = None,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+) -> list:
+    """Post-filter search results by status, category, or upload date.
+
+    Args:
+        results: Raw search results (list of dicts with document_id).
+        status: Optional document status filter.
+        category: Optional document category filter.
+        date_from: Optional ISO-8601 lower bound for upload date.
+        date_to: Optional ISO-8601 upper bound for upload date.
+
+    Returns:
+        list: Results that match all provided filters.
+    """
+    if not (status or category or date_from or date_to) or not results:
+        return results
+
+    document_ids = [r["document_id"] for r in results]
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        has_category = any(
+            row[1] == "category"
+            for row in cursor.execute("PRAGMA table_info(documents)").fetchall()
+        )
+        select_cols = "document_id, status, uploaded_at"
+        if has_category:
+            select_cols += ", category"
+        placeholders = ",".join("?" * len(document_ids))
+        rows = cursor.execute(
+            f"SELECT {select_cols} FROM documents WHERE document_id IN ({placeholders})",
+            document_ids,
+        ).fetchall()
+        meta = {}
+        for row in rows:
+            meta[row[0]] = {
+                "status": row[1],
+                "uploaded_at": row[2],
+                "category": row[3] if has_category else None,
+            }
+    except Exception as e:
+        logger.error(f"Search filter enrichment failed: {e}")
+        return results
+    finally:
+        if conn:
+            conn.close()
+
+    filtered = []
+    for item in results:
+        record = meta.get(item["document_id"])
+        if record is None:
+            continue
+        if status and (record["status"] or "") != status:
+            continue
+        if category and (record["category"] or "") != category:
+            continue
+        uploaded_at = record["uploaded_at"] or ""
+        if date_from and uploaded_at < date_from:
+            continue
+        if date_to and uploaded_at > date_to:
+            continue
+        filtered.append(item)
+    return filtered
 
