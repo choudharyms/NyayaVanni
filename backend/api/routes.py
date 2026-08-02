@@ -24,6 +24,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +52,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1074,51 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document restore (#806) — access control enforced
+# ---------------------------------------------------------------------------
+@api_router.post("/documents/{document_id}/restore")
+@limiter.limit("10/minute")
+async def restore_document(request: Request, document_id: str):
+    """Restore an archived document. Ownership is enforced.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The document ID to restore.
+
+    Returns:
+        dict: Confirmation that the document was restored.
+
+    Raises:
+        HTTPException 401: If the session is missing or invalid.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document is not found.
+    """
+    session_id = require_session_id(request)
+    require_document_owner(document_id, session_id)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE documents SET is_archived = 0 WHERE document_id = ? AND session_id = ?",
+            (document_id, session_id),
+        )
+        conn.commit()
+        if cursor.rowcount == 0:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return {"documentId": document_id, "restored": True}
+    except HTTPException:
+        raise
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Document restore failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to restore document")
+    finally:
+        if conn:
+            conn.close()
 
