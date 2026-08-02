@@ -54,6 +54,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_webhooks_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -162,6 +163,24 @@ def _ensure_sessions_table(cursor):
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
         )
+    """)
+
+
+def _ensure_webhooks_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS webhooks (
+            webhook_id TEXT PRIMARY KEY,
+            session_id TEXT NOT NULL,
+            url TEXT NOT NULL,
+            secret TEXT DEFAULT '',
+            events TEXT DEFAULT '[]',
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_webhooks_session_id
+        ON webhooks(session_id)
     """)
 
 

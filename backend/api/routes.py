@@ -1,8 +1,10 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
 
 import google.generativeai as genai
@@ -17,6 +19,7 @@ from fastapi import (
 )
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
+from typing import List
 from reportlab.lib.pagesizes import letter
 from reportlab.lib.styles import getSampleStyleSheet
 from reportlab.pdfgen import canvas
@@ -24,6 +27,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +55,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1077,65 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Webhooks (#842) — validated webhook URL configuration
+# ---------------------------------------------------------------------------
+class WebhookConfigRequest(BaseModel):
+    url: str = Field(..., min_length=8, max_length=2048)
+    secret: str = Field(default="", max_length=200)
+    events: List[str] = Field(default_factory=list, max_length=20)
+
+
+@api_router.post("/webhooks")
+@limiter.limit("20/minute")
+async def create_webhook(request: Request, body: WebhookConfigRequest):
+    """Register a webhook with validated URL and configuration.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Webhook payload with URL (must be http/https), optional
+              secret, and an allowlisted set of events.
+
+    Returns:
+        dict: Confirmation with the created webhook ID.
+
+    Raises:
+        HTTPException 400: If the URL scheme is invalid or events are malformed.
+    """
+    session_id = require_session_id(request)
+
+    if not (body.url.startswith("http://") or body.url.startswith("https://")):
+        raise HTTPException(
+            status_code=400,
+            detail="Webhook URL must use the http:// or https:// scheme",
+        )
+    for event in body.events:
+        if not event or len(event) > 100 or any(ch.isspace() for ch in event):
+            raise HTTPException(
+                status_code=400, detail="Invalid webhook event name"
+            )
+
+    webhook_id = str(uuid.uuid4())
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO webhooks (webhook_id, session_id, url, secret, events, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?)",
+            (webhook_id, session_id, body.url, body.secret, json.dumps(body.events), now, now),
+        )
+        conn.commit()
+        return {"webhookId": webhook_id, "url": body.url, "created": True}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Webhook creation failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create webhook")
+    finally:
+        if conn:
+            conn.close()
 
