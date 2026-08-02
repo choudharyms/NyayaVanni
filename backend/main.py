@@ -10,6 +10,7 @@ from slowapi.middleware import SlowAPIMiddleware
 from starlette.middleware.base import BaseHTTPMiddleware
 
 from .middleware.rate_limit import limiter, rate_limit_handler
+from .middleware.request_id import RequestIDMiddleware
 from .middleware.security import SecurityHeadersMiddleware
 from .services.storage_service import cleanup_expired_documents
 
@@ -57,6 +58,7 @@ app.state.limiter = limiter
 app.add_exception_handler(RateLimitExceeded, rate_limit_handler)
 app.add_middleware(SlowAPIMiddleware)
 app.add_middleware(SecurityHeadersMiddleware)
+app.add_middleware(RequestIDMiddleware)
 
 from fastapi.exceptions import RequestValidationError
 from starlette.exceptions import HTTPException as StarletteHTTPException
@@ -68,6 +70,7 @@ async def http_exception_handler(request, exc):
         status_code=exc.status_code,
         content={
             "success": False,
+            "request_id": getattr(request.state, "request_id", None),
             "error": {
                 "code": exc.status_code,
                 "message": exc.detail,
@@ -82,6 +85,7 @@ async def validation_exception_handler(request, exc):
         status_code=422,
         content={
             "success": False,
+            "request_id": getattr(request.state, "request_id", None),
             "error": {
                 "code": 422,
                 "message": "Validation error",
@@ -98,6 +102,7 @@ async def unhandled_exception_handler(request, exc):
         status_code=500,
         content={
             "success": False,
+            "request_id": getattr(request.state, "request_id", None),
             "error": {
                 "code": 500,
                 "message": "An internal server error occurred",
