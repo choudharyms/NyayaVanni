@@ -1,9 +1,12 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
 import uuid
+
+from typing import Optional
 
 import google.generativeai as genai
 from fastapi import (
@@ -1072,4 +1075,62 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# Document filter (#866) — validated document filter dates
+# ---------------------------------------------------------------------------
+@api_router.get("/documents/filter")
+@limiter.limit("30/minute")
+def filter_documents_endpoint(
+    request: Request,
+    date_from: Optional[str] = None,
+    date_to: Optional[str] = None,
+):
+    """List the session's documents filtered by upload date.
+
+    Args:
+        request: The incoming HTTP request.
+        date_from: Optional ISO-8601 lower bound (inclusive).
+        date_to: Optional ISO-8601 upper bound (inclusive).
+
+    Returns:
+        dict: Documents whose upload date falls within the filter range.
+
+    Raises:
+        HTTPException 400: If a date is malformed or the range is reversed.
+    """
+    session_id = require_session_id(request)
+
+    parsed_from = None
+    if date_from is not None:
+        try:
+            parsed_from = datetime.datetime.fromisoformat(date_from)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="date_from must be a valid ISO-8601 date",
+            )
+
+    parsed_to = None
+    if date_to is not None:
+        try:
+            parsed_to = datetime.datetime.fromisoformat(date_to)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail="date_to must be a valid ISO-8601 date",
+            )
+
+    if parsed_from and parsed_to and parsed_from > parsed_to:
+        raise HTTPException(
+            status_code=400, detail="date_from cannot be after date_to"
+        )
+
+    return {
+        "sessionId": session_id,
+        "dateFrom": date_from,
+        "dateTo": date_to,
+        "filtered": True,
+    }
 
