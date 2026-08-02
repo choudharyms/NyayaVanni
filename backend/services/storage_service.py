@@ -54,6 +54,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_preferences_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -161,6 +162,18 @@ def _ensure_sessions_table(cursor):
             created_at TEXT NOT NULL,
             last_used_at TEXT NOT NULL,
             expires_at TEXT NOT NULL
+        )
+    """)
+
+
+def _ensure_preferences_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS preferences (
+            session_id TEXT PRIMARY KEY,
+            theme TEXT DEFAULT 'light',
+            language TEXT DEFAULT 'en',
+            notifications_enabled INTEGER DEFAULT 1,
+            default_page_size INTEGER DEFAULT 10
         )
     """)
 

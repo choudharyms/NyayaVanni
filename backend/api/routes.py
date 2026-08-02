@@ -1,9 +1,13 @@
 import asyncio
+import datetime
 import io
 import json
 import logging
 import os
+import sqlite3
 import uuid
+
+from typing import Literal, Optional
 
 import google.generativeai as genai
 from fastapi import (
@@ -24,6 +28,7 @@ from reportlab.platypus import Paragraph, SimpleDocTemplate, Spacer
 from slowapi.errors import RateLimitExceeded
 
 from ..middleware.rate_limit import limiter
+from ..services.database import connect_db
 
 from ..config.rate_limits import (
     CONTACT_RATE_LIMIT,
@@ -51,6 +56,7 @@ from ..services.search_service import (
     search_documents,
 )
 from ..services.storage_service import (
+    DB_PATH,
     UPLOAD_DIR,
     create_session_id,
     delete_document_and_cache,
@@ -1072,4 +1078,102 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+# ---------------------------------------------------------------------------
+# User preferences (#863) — validated user preferences
+# ---------------------------------------------------------------------------
+class PreferencesRequest(BaseModel):
+    theme: Literal["light", "dark"] = "light"
+    language: str = Field("en", max_length=10)
+    notifications_enabled: bool = True
+    default_page_size: int = Field(10, ge=10, le=100)
+
+
+@api_router.get("/preferences")
+@limiter.limit("30/minute")
+async def get_preferences(request: Request):
+    """Return the current user's preferences.
+
+    Args:
+        request: The incoming HTTP request.
+
+    Returns:
+        dict: The stored preferences for the session.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT theme, language, notifications_enabled, default_page_size FROM preferences WHERE session_id = ?",
+            (session_id,),
+        )
+        row = cursor.fetchone()
+        if row is None:
+            return {
+                "theme": "light",
+                "language": "en",
+                "notificationsEnabled": True,
+                "defaultPageSize": 10,
+            }
+        return {
+            "theme": row[0],
+            "language": row[1],
+            "notificationsEnabled": bool(row[2]),
+            "defaultPageSize": row[3],
+        }
+    except Exception as e:
+        logger.error(f"Preferences read failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to read preferences")
+    finally:
+        if conn:
+            conn.close()
+
+
+@api_router.put("/preferences")
+@limiter.limit("10/minute")
+async def update_preferences(request: Request, body: PreferencesRequest):
+    """Validate and store the current user's preferences.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Preferences payload with bounded fields.
+
+    Returns:
+        dict: Confirmation that preferences were updated.
+
+    Raises:
+        HTTPException 400: If the preferences payload is invalid.
+    """
+    session_id = require_session_id(request)
+
+    conn = None
+    try:
+        conn = connect_db(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO preferences (session_id, theme, language, notifications_enabled, default_page_size) VALUES (?, ?, ?, ?, ?) "
+            "ON CONFLICT(session_id) DO UPDATE SET theme = excluded.theme, language = excluded.language, "
+            "notifications_enabled = excluded.notifications_enabled, default_page_size = excluded.default_page_size",
+            (
+                session_id,
+                body.theme,
+                body.language,
+                int(body.notifications_enabled),
+                body.default_page_size,
+            ),
+        )
+        conn.commit()
+        return {"updated": True, "sessionId": session_id}
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Preferences update failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to update preferences")
+    finally:
+        if conn:
+            conn.close()
 
