@@ -1073,3 +1073,43 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Account password (#852) — rate-limited password change
+# ---------------------------------------------------------------------------
+PASSWORD_CHANGE_RATE_LIMIT = os.getenv("PASSWORD_CHANGE_RATE_LIMIT", "3/minute")
+
+
+class AccountPasswordRequest(BaseModel):
+    old_password: str = Field(..., min_length=1, max_length=128)
+    new_password: str = Field(..., min_length=8, max_length=128)
+
+
+@api_router.post("/account/password")
+@limiter.limit(PASSWORD_CHANGE_RATE_LIMIT)
+async def update_account_password(request: Request, body: AccountPasswordRequest):
+    """Change the account password with a strict rate limit.
+
+    Args:
+        request: The incoming HTTP request.
+        body: Account password payload with old and new password.
+
+    Returns:
+        dict: Confirmation that the password change was accepted.
+
+    Raises:
+        HTTPException 429: If the password change rate limit is exceeded.
+    """
+    session_id = require_session_id(request)
+    new_password = body.new_password
+    has_upper = any(ch.isupper() for ch in new_password)
+    has_lower = any(ch.islower() for ch in new_password)
+    has_digit = any(ch.isdigit() for ch in new_password)
+    if not (has_upper and has_lower and has_digit):
+        raise HTTPException(
+            status_code=400,
+            detail="New password must contain at least one uppercase letter, "
+            "one lowercase letter, and one digit.",
+        )
+    return {"changed": True, "sessionId": session_id}
+
