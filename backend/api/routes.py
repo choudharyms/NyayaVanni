@@ -1073,3 +1073,36 @@ def search_documents_endpoint(
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
 
+
+# ---------------------------------------------------------------------------
+# Document access (#875) — session expiry check on document access
+# ---------------------------------------------------------------------------
+@api_router.get("/documents/{document_id}")
+@limiter.limit("30/minute")
+def get_document_metadata(request: Request, document_id: str):
+    """Return metadata for an owned document without exposing storage paths.
+
+    Requires a valid, non-expired session and ownership before any
+    document metadata is returned.
+
+    Args:
+        request: The incoming HTTP request.
+        document_id: The unique identifier of the document.
+
+    Returns:
+        dict: Document metadata excluding the internal storage path.
+
+    Raises:
+        HTTPException 401: If the session is missing or expired.
+        HTTPException 403: If the session does not own the document.
+        HTTPException 404: If the document is not found.
+    """
+    session_id = require_session_id(request)
+    record = require_document_owner(document_id, session_id)
+    return {
+        "documentId": record.get("document_id"),
+        "filename": record.get("filename"),
+        "status": record.get("status"),
+        "uploadedAt": record.get("uploaded_at"),
+    }
+
