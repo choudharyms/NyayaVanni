@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import io
 import json
 import logging
@@ -74,6 +75,25 @@ graph_builder = LegalKnowledgeGraphBuilder()
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+
+# Timeout (seconds) for external API calls (RAG embeddings, etc.)
+EXTERNAL_REQUEST_TIMEOUT = float(os.getenv("EXTERNAL_REQUEST_TIMEOUT", "30"))
+
+
+def _run_with_timeout(fn, timeout: float, *args, **kwargs):
+    """Run a synchronous callable with a hard wall-clock timeout.
+
+    Raises:
+        TimeoutError: If the callable does not complete within `timeout`
+            seconds. The underlying thread is left to finish in the
+            background; the caller treats this as a 504 gateway timeout.
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(fn, *args, **kwargs)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError as exc:
+            raise TimeoutError("External API call timed out") from exc
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
@@ -431,7 +451,12 @@ def _analyze_document_sync(
         # Index document content for full-text search
         index_document(document_id, filename, text)
 
-        relevant_laws = retrieve_relevant_laws(text, k=3)
+        relevant_laws = _run_with_timeout(
+            retrieve_relevant_laws,
+            EXTERNAL_REQUEST_TIMEOUT,
+            text,
+            k=3,
+        )
         analysis_result = analyze_document_with_gemini(text, relevant_laws, language)
         confidence = ConfidenceService.generate(
             document_text=text,
@@ -594,7 +619,12 @@ def _analyze_text_sync(request: Request, text: str, language: str = "en"):
 
         relevant_laws = []
         try:
-            relevant_laws = retrieve_relevant_laws(text, k=3)
+            relevant_laws = _run_with_timeout(
+                retrieve_relevant_laws,
+                EXTERNAL_REQUEST_TIMEOUT,
+                text,
+                k=3,
+            )
         except Exception:
             logger.warning("RAG retrieval failed. Continuing.")
 
