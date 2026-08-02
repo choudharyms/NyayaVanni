@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import io
 import json
 import logging
@@ -74,6 +75,25 @@ graph_builder = LegalKnowledgeGraphBuilder()
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+
+# OCR extraction timeout (seconds) — guards against hung OCR on large files
+OCR_TIMEOUT = float(os.getenv("OCR_TIMEOUT", "60"))
+
+
+def _run_with_timeout(fn, timeout: float, *args, **kwargs):
+    """Run a synchronous callable with a hard wall-clock timeout.
+
+    Raises:
+        TimeoutError: If the callable does not complete within `timeout`
+            seconds. The underlying thread is left to finish in the
+            background; the caller treats this as a 504 gateway timeout.
+    """
+    with concurrent.futures.ThreadPoolExecutor(max_workers=1) as pool:
+        future = pool.submit(fn, *args, **kwargs)
+        try:
+            return future.result(timeout=timeout)
+        except concurrent.futures.TimeoutError as exc:
+            raise TimeoutError("OCR extraction timed out") from exc
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
@@ -417,8 +437,13 @@ def _analyze_document_sync(
             contents = file.file.read()
             filename = file.filename
 
-        text = extract_document(
-            contents, filename, force_ocr=force_ocr, language=language
+        text = _run_with_timeout(
+            extract_document,
+            OCR_TIMEOUT,
+            contents,
+            filename,
+            force_ocr=force_ocr,
+            language=language,
         )
 
         # Validate extracted text quality before analysis
@@ -456,6 +481,12 @@ def _analyze_document_sync(
         raise
     except HTTPException as http_err:
         raise http_err
+    except TimeoutError as timeout_err:
+        logger.error(f"OCR timed out: {timeout_err}")
+        raise HTTPException(
+            status_code=504,
+            detail="Document OCR request timed out. Please try again.",
+        )
     except ValueError as val_err:
         logger.error("ValueError in analysis: %s", val_err, exc_info=True)
         raise HTTPException(
