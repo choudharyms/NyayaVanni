@@ -381,6 +381,41 @@ def delete_document_history(session_id: str) -> int:
             conn.close()
 
 
+def get_document_history(
+    session_id: str, page: int = 1, page_size: int = 10
+) -> dict:
+    """Return paginated document history for a session with a total count."""
+    offset = (page - 1) * page_size
+    conn = None
+    try:
+        conn = _connect_db()
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT COUNT(*) AS total FROM documents WHERE session_id = ?",
+            (session_id,),
+        )
+        total_count = cursor.fetchone()["total"]
+        cursor.execute(
+            """
+            SELECT document_id, filename, status, uploaded_at
+            FROM documents
+            WHERE session_id = ?
+            ORDER BY uploaded_at DESC
+            LIMIT ? OFFSET ?
+            """,
+            (session_id, page_size, offset),
+        )
+        documents = [dict(row) for row in cursor.fetchall()]
+        return {"documents": documents, "total_count": total_count}
+    except Exception as e:
+        logger.error(f"Failed to fetch document history: {e}")
+        return {"documents": [], "total_count": 0}
+    finally:
+        if conn:
+            conn.close()
+
+
 def cleanup_expired_documents_once() -> int:
     """Delete expired documents in a synchronous pass owned by one worker thread."""
     logger.info("Running expired documents cleanup task...")
