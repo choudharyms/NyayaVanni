@@ -182,6 +182,17 @@ def require_document_owner(document_id: str, session_id: str) -> dict:
     return record
 
 
+def _redact_paths(text: str) -> str:
+    """Strip filesystem paths (e.g. backend/uploads/...) from a string.
+
+    Prevents internal storage paths from leaking into responses or being
+    sent to the model where they could be echoed back to the client.
+    """
+    import re as _re
+
+    return _re.sub(r"(?:backend[\\/])?uploads[\\/][\w.\-]+", "[redacted]", text)
+
+
 @api_router.post("/contact")
 @limiter.limit(CONTACT_RATE_LIMIT)
 async def contact_us(request: Request, body: ContactRequest):
@@ -845,8 +856,12 @@ async def diff_analysis(
         old_contents, old_filename = await read_validated_upload(old_document)
         new_contents, new_filename = await read_validated_upload(new_document)
 
-        old_text = extract_document(old_contents, old_filename)
-        new_text = extract_document(new_contents, new_filename)
+        # Never leak internal storage paths into the model prompt or response.
+        old_filename = _redact_paths(old_filename)
+        new_filename = _redact_paths(new_filename)
+
+        old_text = _redact_paths(extract_document(old_contents, old_filename))
+        new_text = _redact_paths(extract_document(new_contents, new_filename))
 
         old_text = old_text[:8000]
         new_text = new_text[:8000]
