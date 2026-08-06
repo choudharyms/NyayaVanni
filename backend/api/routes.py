@@ -1,4 +1,5 @@
 import asyncio
+import concurrent.futures
 import io
 import json
 import logging
@@ -35,6 +36,7 @@ from ..config.rate_limits import (
 from ..models.schemas import ChatRequest, ChatResponse, ContactRequest
 from ..services.confidence_service import ConfidenceService
 from ..services.document_classifier import classify_document
+from ..services.email_service import send_email
 from ..services.file_validation import detect_actual_mime, validate_file_magic_bytes
 from ..services.gemini_service import (
     GEMINI_TIMEOUT,
@@ -74,6 +76,28 @@ graph_builder = LegalKnowledgeGraphBuilder()
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+
+# Email delivery timeout (seconds) - guards against a hung mail server
+EMAIL_DELIVERY_TIMEOUT = float(os.getenv("EMAIL_DELIVERY_TIMEOUT", "15"))
+EMAIL_SEND_RATE_LIMIT = os.getenv("EMAIL_SEND_RATE_LIMIT", "5/minute")
+
+
+def _run_email_with_timeout(fn, timeout: float, *args, **kwargs):
+    """Run a synchronous callable with a hard wall-clock timeout.
+
+    Raises:
+        TimeoutError: If the callable does not complete within ``timeout``
+            seconds. The underlying thread is left to finish in the
+            background; the caller treats this as a 504 gateway timeout.
+    """
+    pool = concurrent.futures.ThreadPoolExecutor(max_workers=1)
+    future = pool.submit(fn, *args, **kwargs)
+    try:
+        return future.result(timeout=timeout)
+    except concurrent.futures.TimeoutError as exc:
+        raise TimeoutError("Email delivery timed out") from exc
+    finally:
+        pool.shutdown(wait=False)
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
@@ -1072,4 +1096,42 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+class EmailSendRequest(BaseModel):
+    to: str = Field(..., min_length=3, max_length=320)
+    subject: str = Field(..., min_length=1, max_length=200)
+    body: str = Field(..., min_length=1, max_length=10000)
+
+
+@api_router.post("/email/send")
+@limiter.limit(EMAIL_SEND_RATE_LIMIT)
+def send_email_endpoint(request: Request, body: EmailSendRequest):
+    """Deliver an email with a hard timeout so a hung server fails fast.
+
+    The delivery call is bounded by ``EMAIL_DELIVERY_TIMEOUT`` (default
+    15s) in addition to the per-socket SMTP timeout, so the endpoint
+    returns a 504 instead of blocking indefinitely on an unresponsive
+    mail server.
+    """
+    try:
+        _run_email_with_timeout(
+            send_email,
+            EMAIL_DELIVERY_TIMEOUT,
+            body.to,
+            body.subject,
+            body.body,
+        )
+    except TimeoutError as timeout_err:
+        logger.error(f"Email delivery timed out: {timeout_err}")
+        raise HTTPException(
+            status_code=504,
+            detail="Email delivery timed out. Please try again.",
+        )
+    except Exception as send_err:
+        logger.error(f"Email delivery failed: {send_err}")
+        raise HTTPException(
+            status_code=502, detail="Email delivery failed"
+        )
+    return {"status": "Email accepted for delivery"}
 
