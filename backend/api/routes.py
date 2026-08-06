@@ -52,6 +52,8 @@ from ..services.search_service import (
 )
 from ..services.storage_service import (
     UPLOAD_DIR,
+    PASSWORD_RESET_TTL,
+    create_password_reset,
     create_session_id,
     delete_document_and_cache,
     get_cached_analysis,
@@ -60,6 +62,7 @@ from ..services.storage_service import (
     save_document_record,
     upload_to_local,
     validate_session,
+    verify_password_reset_token,
 )
 
 logger = logging.getLogger(__name__)
@@ -74,6 +77,12 @@ graph_builder = LegalKnowledgeGraphBuilder()
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+PASSWORD_RESET_REQUEST_LIMIT = os.getenv(
+    "PASSWORD_RESET_REQUEST_LIMIT", "3/minute"
+)
+PASSWORD_RESET_VERIFY_LIMIT = os.getenv(
+    "PASSWORD_RESET_VERIFY_LIMIT", "3/minute"
+)
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
@@ -1072,4 +1081,50 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+class PasswordResetRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+
+
+class PasswordResetVerifyRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+    token: str = Field(..., min_length=6, max_length=200)
+
+
+@api_router.post("/password-reset/request")
+@limiter.limit(PASSWORD_RESET_REQUEST_LIMIT)
+async def request_password_reset(
+    request: Request, body: PasswordResetRequest
+):
+    """Create a password reset token, persisting only its hash.
+
+    The raw token is returned exactly once so the demo flow can complete
+    without an email backend; in production it would be delivered to the
+    account owner instead. The database only ever stores a SHA-256 digest,
+    never the token itself, so a data leak does not expose usable tokens.
+    """
+    reset_token = create_password_reset(body.email)
+    return {
+        "status": "Reset token issued",
+        "resetToken": reset_token,
+        "expiresInSeconds": int(PASSWORD_RESET_TTL.total_seconds()),
+    }
+
+
+@api_router.post("/password-reset/verify")
+@limiter.limit(PASSWORD_RESET_VERIFY_LIMIT)
+async def verify_password_reset(
+    request: Request, body: PasswordResetVerifyRequest
+):
+    """Verify a reset token against its stored hash and consume it.
+
+    The supplied token is hashed before being compared, so the plaintext
+    token is never looked up directly. A token is single-use and expires.
+    """
+    if not verify_password_reset_token(body.email, body.token):
+        raise HTTPException(
+            status_code=401, detail="Invalid or expired reset token"
+        )
+    return {"status": "Reset token verified", "valid": True}
 
