@@ -52,6 +52,7 @@ from ..services.search_service import (
 )
 from ..services.storage_service import (
     UPLOAD_DIR,
+    create_password_reset,
     create_session_id,
     delete_document_and_cache,
     get_cached_analysis,
@@ -74,6 +75,9 @@ graph_builder = LegalKnowledgeGraphBuilder()
 # ---------------------------------------------------------------------------
 RATE_LIMIT_ANALYZE = os.getenv("RATE_LIMIT_ANALYZE", "10/minute")
 RATE_LIMIT_CHAT = os.getenv("RATE_LIMIT_CHAT", "30/minute")
+FORGOT_PASSWORD_RATE_LIMIT = os.getenv(
+    "FORGOT_PASSWORD_RATE_LIMIT", "3/minute"
+)
 
 # Upload validation constants
 MAX_FILE_SIZE = 10 * 1024 * 1024  # 10 MB limit
@@ -1072,4 +1076,23 @@ def search_documents_endpoint(
     except Exception as e:
         logger.error(f"Search failed: {e}")
         raise HTTPException(status_code=500, detail="Search operation failed")
+
+
+class ForgotPasswordRequest(BaseModel):
+    email: str = Field(..., min_length=3, max_length=320)
+
+
+@api_router.post("/forgot-password")
+@limiter.limit(FORGOT_PASSWORD_RATE_LIMIT)
+async def forgot_password(request: Request, body: ForgotPasswordRequest):
+    """Issue a password reset token for the given email, rate-limited.
+
+    The response is deliberately generic so callers cannot enumerate which
+    accounts exist. The reset token is persisted only as a SHA-256 digest
+    and would be delivered to the account owner in production.
+    """
+    create_password_reset(body.email)
+    return {
+        "status": "If an account exists for that email, a reset link was sent."
+    }
 

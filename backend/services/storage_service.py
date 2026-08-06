@@ -1,7 +1,9 @@
 import asyncio
+import hashlib
 import json
 import logging
 import os
+import secrets
 import sqlite3
 import uuid
 from datetime import datetime, timedelta, timezone
@@ -54,6 +56,7 @@ def init_db(raise_on_error: bool = False):
 
         _ensure_analysis_cache_table(cursor)
         _ensure_sessions_table(cursor)
+        _ensure_password_resets_table(cursor)
 
         conn.commit()
     except Exception as e:
@@ -163,6 +166,87 @@ def _ensure_sessions_table(cursor):
             expires_at TEXT NOT NULL
         )
     """)
+
+
+def _ensure_password_resets_table(cursor):
+    cursor.execute("""
+        CREATE TABLE IF NOT EXISTS password_resets (
+            reset_id TEXT PRIMARY KEY,
+            email TEXT NOT NULL,
+            token_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            expires_at TEXT NOT NULL,
+            used INTEGER DEFAULT 0
+        )
+    """)
+    cursor.execute("""
+        CREATE INDEX IF NOT EXISTS idx_password_resets_email
+        ON password_resets(email)
+    """)
+
+
+PASSWORD_RESET_TTL = timedelta(hours=1)
+
+
+def _hash_reset_token(token: str) -> str:
+    """Return an unsalted SHA-256 digest of a password reset token.
+
+    Only the digest is ever persisted. The raw token is not stored in the
+    database, so a data leak does not expose usable reset tokens.
+    """
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
+
+
+def create_password_reset(
+    email: str, ttl: timedelta = PASSWORD_RESET_TTL
+) -> str:
+    """Create a password reset token and persist only its hash.
+
+    Args:
+        email: The account email requesting the reset.
+        ttl: How long the token remains valid.
+
+    Returns:
+        str: The raw reset token. This is the only point in the flow where
+        the token exists in plaintext (it is meant to be delivered to the
+        account owner).
+    """
+    token = secrets.token_urlsafe(32)
+    reset_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc)
+    expires_at = now + ttl
+    conn = None
+    try:
+        conn = _connect_db()
+        cursor = conn.cursor()
+        cursor.execute(
+            "DELETE FROM password_resets WHERE email = ?",
+            (email.lower().strip(),),
+        )
+        cursor.execute(
+            """
+            INSERT INTO password_resets
+                (reset_id, email, token_hash, created_at, expires_at, used)
+            VALUES (?, ?, ?, ?, ?, 0)
+            """,
+            (
+                reset_id,
+                email.lower().strip(),
+                _hash_reset_token(token),
+                now.isoformat(),
+                expires_at.isoformat(),
+            ),
+        )
+        conn.commit()
+        return token
+    except Exception as e:
+        if conn:
+            conn.rollback()
+        logger.error(f"Password reset creation failed: {e}")
+        raise
+    finally:
+        if conn:
+            conn.close()
 
 
 SESSION_TTL = timedelta(days=30)
