@@ -324,7 +324,9 @@ export default function Dashboard() {
 
         if (!response.ok) {
           const errData = await response.json().catch(() => ({}));
-          throw new Error(errData.detail || 'Analysis request failed');
+          const err = new Error(errData.detail || 'Analysis request failed');
+          err.status = response.status;
+          throw err;
         }
         const data = await response.json();
         setAnalysis(data.analysis);
@@ -358,6 +360,10 @@ export default function Dashboard() {
           err.message !== 'Analysis request failed'
             ? err.message
             : 'Analysis failed. Please try uploading the document again.';
+
+        if (err.status === 429) {
+          msg = 'Too many requests. Please wait a moment before trying again.';
+        }
 
         if (
           apiUrl.includes('localhost') &&
@@ -403,7 +409,11 @@ export default function Dashboard() {
         }),
       });
 
-      if (!response.ok) throw new Error('Chat failed');
+      if (!response.ok) {
+        const err = new Error('Chat failed');
+        err.status = response.status;
+        throw err;
+      }
 
       // Set up a stream reader to consume the plaintext chunks
       const reader = response.body.getReader();
@@ -434,13 +444,15 @@ export default function Dashboard() {
           });
         }
       }
-    } catch {
+    } catch (err) {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       let msg =
         'This is a fallback response. The backend might not be running correctly.';
 
-      if (
+      if (err?.status === 429) {
+        msg = 'Too many requests. Please wait a moment before trying again.';
+      } else if (
         apiUrl.includes('localhost') &&
         window.location.hostname !== 'localhost'
       ) {
