@@ -66,6 +66,31 @@ ALLOWED_MIME_TYPES = {
     "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 }
 
+# Average adult reading speed used to estimate document reading time.
+AVERAGE_READING_WPM = 200
+
+
+def _estimate_reading_time(text: str) -> dict:
+    """Estimate how long it takes to read an extracted document.
+
+    Uses the standard 200 words-per-minute average reading speed.
+
+    Args:
+        text: The extracted document text.
+
+    Returns:
+        dict: Word count and estimated reading time in minutes.
+    """
+    if not text:
+        return {"word_count": 0, "reading_time_minutes": 0}
+
+    word_count = len(text.split())
+    minutes = max(1, round(word_count / AVERAGE_READING_WPM))
+    return {
+        "word_count": word_count,
+        "reading_time_minutes": minutes,
+    }
+
 
 async def read_validated_upload(file: UploadFile) -> tuple[bytes, str]:
     filename = file.filename
@@ -371,6 +396,9 @@ def _analyze_document_sync(
                     "analysis": cached["analysis"],
                     "knowledge_graph": knowledge_graph,
                     "extracted_text": cached["extracted_text"][:500] + "...",
+                    "reading_time": _estimate_reading_time(
+                        cached.get("extracted_text", "")
+                    ),
                     "cached": True,
                 }
 
@@ -430,6 +458,7 @@ def _analyze_document_sync(
             "classification": classification,
             "knowledge_graph": knowledge_graph,
             "extracted_text": text[:500] + "...",
+            "reading_time": _estimate_reading_time(text),
             "cached": False,
         }
 
@@ -605,6 +634,7 @@ def _analyze_text_sync(request: Request, text: str, language: str = "en"):
             "classification": classification,
             "knowledge_graph": knowledge_graph,
             "extracted_text": text[:500] + "...",
+            "reading_time": _estimate_reading_time(text),
             "cached": False,
         }
 

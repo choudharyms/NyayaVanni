@@ -21,11 +21,13 @@ import {
   Printer,
   Share2,
   Download,
+  Clock,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
+import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
@@ -255,6 +257,7 @@ export default function Dashboard() {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [confidence, setConfidence] = useState(null);
+  const [readingTime, setReadingTime] = useState(null);
   const messagesEndRef = useRef(null);
   
   // Ref for Knowledge Graph search input
@@ -329,6 +332,7 @@ export default function Dashboard() {
         setKnowledgeGraph(data.knowledge_graph);
         setExtractedText(data.extracted_text);
         setConfidence(data.confidence);
+        setReadingTime(data.reading_time);
 
         saveToHistory({
           documentId,
@@ -763,6 +767,20 @@ export default function Dashboard() {
 
                 {/* OCR Extracted Text Display */}
                 <div className="lg:col-span-7 h-[400px] overflow-y-auto p-6 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800">
+                  {readingTime && readingTime.word_count > 0 && (
+                    <div className="flex flex-wrap items-center gap-2 mb-4 pb-4 border-b border-slate-200 dark:border-slate-800">
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-nyaya-500/10 border border-nyaya-500/20 text-xs font-semibold text-nyaya-700 dark:text-nyaya-300">
+                        <Clock className="w-3.5 h-3.5" />
+                        Estimated reading time:{' '}
+                        {readingTime.reading_time_minutes}{' '}
+                        {readingTime.reading_time_minutes === 1 ? 'minute' : 'minutes'}
+                      </span>
+                      <span className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-800 text-xs font-medium text-slate-600 dark:text-slate-400">
+                        <FileText className="w-3.5 h-3.5" />
+                        {readingTime.word_count.toLocaleString()} words
+                      </span>
+                    </div>
+                  )}
                   <pre className={TEXTAREA_PRE}>
                     {extractedText || 'No text extracted.'}
                   </pre>
