@@ -42,6 +42,17 @@ export const ThemeProvider = ({ children }) => {
       root.classList.remove('dark');
     }
 
+    let meta = window.document.querySelector('meta[name="theme-color"]');
+    if (!meta) {
+      meta = window.document.createElement('meta');
+      meta.setAttribute('name', 'theme-color');
+      window.document.head.appendChild(meta);
+    }
+    meta.setAttribute(
+      'content',
+      theme === 'dark' ? '#0a3330' : '#f0fdfa'
+    );
+
     if (hasManualPreference) {
       localStorage.setItem('nyaya_theme', theme);
     }
