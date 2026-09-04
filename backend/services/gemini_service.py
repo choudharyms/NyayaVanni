@@ -135,7 +135,10 @@ def _parse_structured_response(resp) -> dict:
 
 
 def analyze_document_with_gemini(
-    document_text: str, retrieved_laws: list, language: str = "en"
+    document_text: str,
+    retrieved_laws: list,
+    language: str = "en",
+    timeout: Optional[float] = None,
 ) -> dict:
     """
     Analyze a legal document using the Gemini generative model.
@@ -212,7 +215,10 @@ Extract and structure the output strictly in JSON format matching this schema:
     try:
         sys_inst = query_optimizer.get_system_instruction(language)
         analysis_model = _create_model(sys_inst + lang_suffix)
-        response = analysis_model.generate_content(prompt, request_options={"timeout": GEMINI_TIMEOUT})
+        request_timeout = timeout if timeout is not None else GEMINI_TIMEOUT
+        response = analysis_model.generate_content(
+            prompt, request_options={"timeout": request_timeout}
+        )
         parsed = _parse_structured_response(response)
         return parsed
     except Exception as e:
@@ -225,7 +231,11 @@ Extract and structure the output strictly in JSON format matching this schema:
 
 
 def generate_chat_response(
-    document_analysis: dict, chat_history: list, user_message: str, language: str = "en"
+    document_analysis: dict,
+    chat_history: list,
+    user_message: str,
+    language: str = "en",
+    timeout: Optional[float] = None,
 ) -> str:
     """
     Generate a conversational response using the Gemini chat model.
@@ -275,7 +285,10 @@ Example Structure:
 
         sys_inst = query_optimizer.get_system_instruction(language)
         chat_model_instance = _create_chat_model(sys_inst)
-        response = chat_model_instance.generate_content(prompt, request_options={"timeout": GEMINI_TIMEOUT})
+        request_timeout = timeout if timeout is not None else GEMINI_TIMEOUT
+        response = chat_model_instance.generate_content(
+            prompt, request_options={"timeout": request_timeout}
+        )
         return response.text
 
     except DeadlineExceeded as e:
@@ -289,7 +302,11 @@ Example Structure:
 
 
 def stream_chat_response(
-    document_analysis: dict, chat_history: list, user_message: str, language: str = "en"
+    document_analysis: dict,
+    chat_history: list,
+    user_message: str,
+    language: str = "en",
+    timeout: Optional[float] = None,
 ):
     """
 Stream a conversational legal response using the Gemini chat model.
@@ -360,7 +377,12 @@ Example Structure:
 
         sys_inst = query_optimizer.get_system_instruction(language)
         chat_model_instance = _create_chat_model(sys_inst)
-        response = chat_model_instance.generate_content(prompt, stream=True, request_options={"timeout": GEMINI_TIMEOUT})
+        request_timeout = timeout if timeout is not None else GEMINI_TIMEOUT
+        response = chat_model_instance.generate_content(
+            prompt,
+            stream=True,
+            request_options={"timeout": request_timeout},
+        )
 
         for chunk in response:
             if chunk.text:
