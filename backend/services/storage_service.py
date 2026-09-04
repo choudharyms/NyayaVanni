@@ -9,6 +9,7 @@ from typing import Optional
 
 from .database import connect_db
 from .search_service import clear_expired_cache
+from .encryption_service import get_encryption_service
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,9 @@ def init_db(raise_on_error: bool = False):
                 filename TEXT,
                 local_path TEXT,
                 status TEXT,
-                uploaded_at TEXT
+                uploaded_at TEXT,
+                is_encrypted BOOLEAN DEFAULT 1,
+                encryption_algorithm TEXT DEFAULT 'AES-256-GCM'
             )
         """)
         cursor.execute("PRAGMA table_info(documents)")
@@ -47,6 +50,10 @@ def init_db(raise_on_error: bool = False):
             cursor.execute("ALTER TABLE documents ADD COLUMN session_id TEXT")
         if "user_id" not in existing_columns:
             cursor.execute("ALTER TABLE documents ADD COLUMN user_id TEXT")
+        if "is_encrypted" not in existing_columns:
+            cursor.execute("ALTER TABLE documents ADD COLUMN is_encrypted BOOLEAN DEFAULT 1")
+        if "encryption_algorithm" not in existing_columns:
+            cursor.execute("ALTER TABLE documents ADD COLUMN encryption_algorithm TEXT DEFAULT 'AES-256-GCM'")
         cursor.execute("""
             CREATE INDEX IF NOT EXISTS idx_documents_session_id
             ON documents(session_id)
@@ -250,17 +257,27 @@ init_db()
 
 
 def upload_to_local(file_bytes: bytes, filename: str) -> tuple[str, str]:
-    """Save a file locally and return the document ID and local path"""
+    """Save a file locally with AES-256-GCM encryption and return the document ID and local path"""
     ext = filename.split(".")[-1]
     doc_id = str(uuid.uuid4())
-    local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}")
+    local_path = os.path.join(UPLOAD_DIR, f"{doc_id}.{ext}.encrypted")
 
     try:
-        with open(local_path, "wb") as f:
-            f.write(file_bytes)
+        encryption_service = get_encryption_service()
+        encrypted_data = encryption_service.encrypt_data(file_bytes)
+
+        with open(local_path, "w") as f:
+            f.write(encrypted_data)
+
+        logger.info(f"Document {doc_id} encrypted and stored with AES-256-GCM")
         return doc_id, local_path
     except Exception as e:
         logger.error(f"Local storage save failed: {e}")
+        if os.path.exists(local_path):
+            try:
+                os.remove(local_path)
+            except OSError:
+                pass
         raise e
 
 
@@ -303,6 +320,41 @@ def get_document_record(doc_id: str) -> Optional[dict]:
     finally:
         if conn:
             conn.close()
+
+
+def read_document_file(doc_id: str) -> Optional[bytes]:
+    """
+    Safely read and decrypt a document file.
+    Returns the decrypted file content as bytes, or None if not found/failed.
+    """
+    record = get_document_record(doc_id)
+    if not record:
+        logger.warning(f"Document record not found: {doc_id}")
+        return None
+
+    local_path = record.get("local_path")
+    if not local_path or not os.path.exists(local_path):
+        logger.warning(f"Document file not found: {local_path}")
+        return None
+
+    try:
+        is_encrypted = record.get("is_encrypted", True)
+
+        with open(local_path, "r" if is_encrypted else "rb") as f:
+            file_content = f.read()
+
+        if is_encrypted:
+            encryption_service = get_encryption_service()
+            decrypted_content = encryption_service.decrypt_data(file_content)
+            logger.info(f"Document {doc_id} successfully decrypted")
+            return decrypted_content
+        else:
+            if isinstance(file_content, str):
+                return file_content.encode()
+            return file_content
+    except Exception as e:
+        logger.error(f"Failed to read/decrypt document {doc_id}: {e}")
+        return None
 
 
 def delete_document_and_cache(doc_id: str) -> bool:
