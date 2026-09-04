@@ -30,6 +30,7 @@ from ..services.gemini_service import (GEMINI_TIMEOUT,
                                        generate_chat_response,
                                        stream_chat_response)
 from ..services.knowledge_graph_service import LegalKnowledgeGraphBuilder
+from ..services.ocr_quality_analyzer import analyze_ocr_quality
 from ..services.ocr_service import extract_document
 from ..services.rag_service import retrieve_relevant_laws
 from ..services.search_service import (index_document,
@@ -443,6 +444,19 @@ def _analyze_document_sync(
                 detail="Unable to extract sufficient readable text from the document. Please upload a clearer scan or image.",
             )
 
+        # Assess OCR / extraction quality before passing text to the AI pipeline.
+        quality_image_bytes = (
+            contents
+            if str(filename).lower().endswith(("jpg", "jpeg", "png"))
+            else None
+        )
+        ocr_quality = analyze_ocr_quality(text, image_bytes=quality_image_bytes)
+        if ocr_quality["blocked"]:
+            raise HTTPException(
+                status_code=422,
+                detail="Document quality is too poor for reliable legal analysis. Please upload a clearer scan.",
+            )
+
         # Index document content for full-text search
         index_document(document_id, filename, text)
 
@@ -462,6 +476,7 @@ def _analyze_document_sync(
             "confidence": confidence,
             "classification": classification,
             "knowledge_graph": knowledge_graph,
+            "ocr_quality": ocr_quality,
             "extracted_text": text[:500] + "...",
             "reading_time": _estimate_reading_time(text),
             "cached": False,
