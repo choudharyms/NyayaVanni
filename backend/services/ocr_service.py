@@ -78,64 +78,63 @@ def extract_text_from_pdf(
     Extract text from PDF using PyMuPDF with OCR fallback.
     """
 
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+        # Forced OCR mode
+        if force_ocr:
+            try:
+                return extract_text_with_ocr_from_pdf(pdf_bytes, language=language)
 
-    # Forced OCR mode
-    if force_ocr:
-        try:
-            return extract_text_with_ocr_from_pdf(pdf_bytes, language=language)
+            except Exception as e:
+                logger.error(f"Forced OCR extraction failed: {e}")
 
-        except Exception as e:
-            logger.error(f"Forced OCR extraction failed: {e}")
+                if (
+                    getattr(e, "__class__", None)
+                    and "TesseractNotFoundError" in e.__class__.__name__
+                ):
+                    return "[Error: OCR software is not installed. System cannot perform forced OCR.]"
 
-            if (
-                getattr(e, "__class__", None)
-                and "TesseractNotFoundError" in e.__class__.__name__
-            ):
-                return "[Error: OCR software is not installed. System cannot perform forced OCR.]"
+                raise
 
-            raise
+        # Direct text extraction
+        text = ""
 
-    # Direct text extraction
-    text = ""
+        for page in doc:
+            text += page.get_text()
 
-    for page in doc:
-        text += page.get_text()
+        # Detect scanned PDF
+        page_count = len(doc)
 
-    # Detect scanned PDF
-    page_count = len(doc)
+        if page_count > 0:
+            char_density = len(text.strip()) / page_count
+            is_scanned = char_density < 150
+        else:
+            is_scanned = True
 
-    if page_count > 0:
-        char_density = len(text.strip()) / page_count
-        is_scanned = char_density < 150
-    else:
-        is_scanned = True
+        # OCR fallback for scanned PDFs
+        if is_scanned:
+            try:
+                ocr_text = extract_text_with_ocr_from_pdf(pdf_bytes, language=language)
 
-    # OCR fallback for scanned PDFs
-    if is_scanned:
-        try:
-            ocr_text = extract_text_with_ocr_from_pdf(pdf_bytes, language=language)
+                # Use OCR result only if valid
+                if not is_invalid_extracted_text(ocr_text):
+                    return ocr_text
 
-            # Use OCR result only if valid
-            if not is_invalid_extracted_text(ocr_text):
-                return ocr_text
+                logger.warning("OCR extracted unreadable text from scanned PDF.")
 
-            logger.warning("OCR extracted unreadable text from scanned PDF.")
-
-            return ""
-
-        except Exception as e:
-            logger.error(f"OCR fallback failed: {e}")
-
-            if (
-                getattr(e, "__class__", None)
-                and "TesseractNotFoundError" in e.__class__.__name__
-            ):
                 return ""
 
-            return ""
+            except Exception as e:
+                logger.error(f"OCR fallback failed: {e}")
 
-    return text.strip()
+                if (
+                    getattr(e, "__class__", None)
+                    and "TesseractNotFoundError" in e.__class__.__name__
+                ):
+                    return ""
+
+                return ""
+
+        return text.strip()
 
 
 # Tesseract language map for Indian scripts
@@ -168,27 +167,26 @@ def extract_text_with_ocr_from_pdf(pdf_bytes: bytes, language: str = "en") -> st
     Extract text from scanned PDFs using OCR.
     """
 
-    doc = fitz.open(stream=pdf_bytes, filetype="pdf")
+    with fitz.open(stream=pdf_bytes, filetype="pdf") as doc:
+        text = ""
 
-    text = ""
+        tesseract_lang = _resolve_tesseract_lang(language)
 
-    tesseract_lang = _resolve_tesseract_lang(language)
+        for page in doc:
+            pix = page.get_pixmap()
 
-    for page in doc:
-        pix = page.get_pixmap()
+            img_bytes = pix.tobytes("png")
 
-        img_bytes = pix.tobytes("png")
+            img = Image.open(io.BytesIO(img_bytes))
 
-        img = Image.open(io.BytesIO(img_bytes))
+            # Improve OCR quality
+            img = preprocess_image_for_ocr(img)
 
-        # Improve OCR quality
-        img = preprocess_image_for_ocr(img)
+            page_text = pytesseract.image_to_string(img, lang=tesseract_lang)
 
-        page_text = pytesseract.image_to_string(img, lang=tesseract_lang)
+            text += page_text + "\n"
 
-        text += page_text + "\n"
-
-    return text.strip()
+        return text.strip()
 
 
 def extract_text_from_image(image_bytes: bytes, language: str = "en") -> str:
