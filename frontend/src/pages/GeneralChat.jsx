@@ -168,7 +168,11 @@ export default function GeneralChat() {
         }),
       });
 
-      if (!response.ok) throw new Error('Chat failed');
+      if (!response.ok) {
+        const err = new Error('Chat failed');
+        err.status = response.status;
+        throw err;
+      }
 
       const data = await response.json();
       const assistantMsg = data?.response || '';
@@ -177,13 +181,16 @@ export default function GeneralChat() {
         ...newHistory,
         { role: 'assistant', message: assistantMsg },
       ]);
-    } catch {
+    } catch (err) {
       //console.error(err);
       const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:8000';
       let errorMessage =
         "I'm having trouble connecting to the server. Please try again later.";
 
-      if (
+      if (err?.status === 429) {
+        errorMessage =
+          'Too many requests. Please wait a moment before trying again.';
+      } else if (
         apiUrl.includes('localhost') &&
         window.location.hostname !== 'localhost'
       ) {
