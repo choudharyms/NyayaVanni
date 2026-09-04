@@ -84,7 +84,7 @@ def test_analyze_text_no_session(test_client):
         },
     )
     assert response.status_code == 401
-    assert "Missing session_id" in response.json()["detail"]
+    assert "Missing session_id" in response.json()["error"]["message"]
 
 
 def test_analyze_text_empty_input(test_client):
