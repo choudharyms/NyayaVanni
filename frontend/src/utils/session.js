@@ -1,5 +1,11 @@
 let sessionInitialized = false;
 
+/**
+ * Ensures a session cookie is initialized by calling the session API.
+ * @param {string} apiUrl - The base URL of the API server.
+ * @returns {Promise<void>}
+ */
+
 export async function ensureSessionId(apiUrl) {
   if (sessionInitialized) return;
 
