@@ -9,7 +9,7 @@ procedural requirements.
 import logging
 import sqlite3
 from datetime import datetime, timezone
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 logger = logging.getLogger(__name__)
 
@@ -114,20 +114,26 @@ def record_status_change(
 
 
 def get_case_status_history(
-    db_path: str, case_id: str
-) -> List[Dict]:
-    """Retrieve the complete status change history for a case.
+    db_path: str, case_id: str, page: int = 1, page_size: int = 50
+) -> Tuple[List[Dict], int]:
+    """Retrieve paginated status change history for a case.
 
-    Returns a reverse-chronological list of all status changes, showing
-    when and why the case transitioned between statuses.
+    Returns a reverse-chronological list of status changes with pagination,
+    showing when and why the case transitioned between statuses.
 
     Args:
         db_path: Path to SQLite database
         case_id: Unique case identifier
+        page: Page number (1-indexed, default 1)
+        page_size: Results per page (default 50, max 200)
 
     Returns:
-        List of status change records (reverse chronological order)
+        Tuple of (list of status change records, total count)
     """
+    page = max(1, page)
+    page_size = min(max(1, page_size), 200)
+    offset = (page - 1) * page_size
+
     conn = None
     try:
         conn = sqlite3.connect(db_path)
@@ -136,19 +142,29 @@ def get_case_status_history(
 
         cursor.execute(
             f"""
+            SELECT COUNT(*) FROM {CASE_STATUS_HISTORY_TABLE}
+            WHERE case_id = ?
+            """,
+            (case_id,),
+        )
+        total_count = cursor.fetchone()[0]
+
+        cursor.execute(
+            f"""
             SELECT id, previous_status, new_status, changed_by, changed_at, reason
             FROM {CASE_STATUS_HISTORY_TABLE}
             WHERE case_id = ?
             ORDER BY changed_at DESC
+            LIMIT ? OFFSET ?
             """,
-            (case_id,),
+            (case_id, page_size, offset),
         )
 
         rows = cursor.fetchall()
-        return [dict(row) for row in rows]
+        return [dict(row) for row in rows], total_count
     except Exception as e:
         logger.error(f"Failed to retrieve case history: {e}")
-        return []
+        return [], 0
     finally:
         if conn:
             conn.close()
@@ -198,9 +214,9 @@ def get_time_in_status(
 
 
 def get_cases_by_update_range(
-    db_path: str, start_date: str, end_date: str
-) -> List[str]:
-    """Get all case IDs that were modified within a date range.
+    db_path: str, start_date: str, end_date: str, page: int = 1, page_size: int = 50
+) -> Tuple[List[str], int]:
+    """Get paginated case IDs that were modified within a date range.
 
     Useful for audit reports and compliance checks.
 
@@ -208,10 +224,16 @@ def get_cases_by_update_range(
         db_path: Path to SQLite database
         start_date: ISO 8601 datetime string
         end_date: ISO 8601 datetime string
+        page: Page number (1-indexed, default 1)
+        page_size: Results per page (default 50, max 200)
 
     Returns:
-        List of unique case IDs modified in the range
+        Tuple of (list of unique case IDs, total count)
     """
+    page = max(1, page)
+    page_size = min(max(1, page_size), 200)
+    offset = (page - 1) * page_size
+
     conn = None
     try:
         conn = sqlite3.connect(db_path)
@@ -219,18 +241,29 @@ def get_cases_by_update_range(
 
         cursor.execute(
             f"""
+            SELECT COUNT(DISTINCT case_id)
+            FROM {CASE_STATUS_HISTORY_TABLE}
+            WHERE changed_at >= ? AND changed_at <= ?
+            """,
+            (start_date, end_date),
+        )
+        total_count = cursor.fetchone()[0]
+
+        cursor.execute(
+            f"""
             SELECT DISTINCT case_id
             FROM {CASE_STATUS_HISTORY_TABLE}
             WHERE changed_at >= ? AND changed_at <= ?
             ORDER BY case_id
+            LIMIT ? OFFSET ?
             """,
-            (start_date, end_date),
+            (start_date, end_date, page_size, offset),
         )
 
-        return [row[0] for row in cursor.fetchall()]
+        return [row[0] for row in cursor.fetchall()], total_count
     except Exception as e:
         logger.error(f"Failed to query cases by date range: {e}")
-        return []
+        return [], 0
     finally:
         if conn:
             conn.close()
