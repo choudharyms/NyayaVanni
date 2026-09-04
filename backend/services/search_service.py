@@ -39,10 +39,25 @@ DB_PATH = None  # Set by init_search_service()
 # Search result cache expires after 1 hour
 CACHE_EXPIRY_SECONDS = 3600
 
+# Maximum accepted search query length (guards against regex/query DoS)
+MAX_SEARCH_QUERY_LENGTH = 200
+
+# Characters stripped from queries before building the FTS match expression.
+# All FTS5/regular-expression operators are neutralized so a crafted query
+# cannot cause catastrophic backtracking or expensive syntax evaluation.
+FTS_UNSAFE_CHARACTERS = re.compile(r'["*(){}^:+\-\\[\]<>|]')
+
 
 def _sanitize_fts_query(query: str) -> str:
-    """Strip FTS5 special characters to prevent syntax errors."""
-    sanitized = re.sub(r'["*(){}^:+\-]', " ", query)
+    """Strip FTS5 special characters to prevent syntax errors and DoS.
+
+    The query is truncated to MAX_SEARCH_QUERY_LENGTH and every FTS5
+    operator / regex metacharacter is removed, leaving only safe word
+    characters. This prevents crafted queries (e.g. `((((((a*` or deeply
+    nested brackets) from causing slow regex evaluation.
+    """
+    query = query[:MAX_SEARCH_QUERY_LENGTH]
+    sanitized = FTS_UNSAFE_CHARACTERS.sub(" ", query)
     sanitized = re.sub(r"\s+", " ", sanitized).strip()
     return sanitized
 
@@ -186,6 +201,13 @@ def search_documents(
     # Validate input
     if not query or not query.strip():
         return {"results": [], "total_count": 0, "error": "Query cannot be empty"}
+
+    if len(query) > MAX_SEARCH_QUERY_LENGTH:
+        return {
+            "results": [],
+            "total_count": 0,
+            "error": f"Query exceeds maximum length of {MAX_SEARCH_QUERY_LENGTH} characters",
+        }
 
     if page < 1:
         page = 1
