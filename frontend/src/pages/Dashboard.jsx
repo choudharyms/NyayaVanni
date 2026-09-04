@@ -743,7 +743,7 @@ export default function Dashboard() {
                             Evidence
                           </div>
                           <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-                            {confidence.evidence_score}%
+                            {confidence.evidence_score ?? 'N/A'}%
                           </div>
                         </div>
 
@@ -752,8 +752,8 @@ export default function Dashboard() {
                             Supported Chunks
                           </div>
                           <div className="mt-1 text-lg font-bold text-slate-900 dark:text-white">
-                            {confidence.matched_chunks}/
-                            {confidence.total_chunks}
+                            {confidence.matched_chunks ?? '?'}/
+                            {confidence.total_chunks ?? '?'}
                           </div>
                         </div>
                       </div>
