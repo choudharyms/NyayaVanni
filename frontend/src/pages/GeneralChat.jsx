@@ -8,12 +8,15 @@ import {
   Scale,
   Download,
   Copy,
+  Mic,
+  Square,
   Trash2,
 } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import rehypeSanitize from 'rehype-sanitize';
 import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
+import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
 import Footer from '../components/Footer';
 import HistorySidebar from '../components/HistorySidebar';
@@ -34,8 +37,12 @@ export default function GeneralChat() {
   const [chatLoading, setChatLoading] = useState(false);
   const [currentConversationId, setCurrentConversationId] = useState(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isListening, setIsListening] = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+  const [voiceError, setVoiceError] = useState('');
   const messagesEndRef = React.useRef(null);
   const textareaRef = React.useRef(null);
+  const recognitionRef = React.useRef(null);
 
   const [chatHistory, setChatHistory] = useState([
     {
@@ -211,6 +218,67 @@ export default function GeneralChat() {
     const textarea = e.target;
     textarea.style.height = 'auto';
     textarea.style.height = `${Math.min(textarea.scrollHeight, 160)}px`;
+  };
+
+  /**
+   * Detect Web Speech API support on mount.
+   */
+  React.useEffect(() => {
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    setVoiceSupported(Boolean(SpeechRecognition));
+  }, []);
+
+  /**
+   * Start or stop voice input using the Web Speech API.
+   * Recognized transcript is appended to the chat input.
+   */
+  const handleVoiceInput = () => {
+    if (isListening) {
+      recognitionRef.current?.stop();
+      setIsListening(false);
+      return;
+    }
+
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SpeechRecognition) {
+      setVoiceError('Voice input is not supported in this browser.');
+      return;
+    }
+
+    setVoiceError('');
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.lang = language === 'hi' ? 'hi-IN' : 'en-IN';
+    recognition.continuous = false;
+    recognition.interimResults = true;
+    recognition.maxAlternatives = 1;
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onend = () => setIsListening(false);
+
+    recognition.onerror = (event) => {
+      setIsListening(false);
+      if (event.error === 'not-allowed' || event.error === 'service-not-allowed') {
+        setVoiceError('Microphone access was denied. Please allow microphone permission and try again.');
+      } else if (event.error === 'no-speech') {
+        setVoiceError('No speech detected. Please try again.');
+      }
+    };
+
+    recognition.onresult = (event) => {
+      let transcript = '';
+      for (let i = 0; i < event.results.length; i += 1) {
+        transcript += event.results[i][0].transcript;
+      }
+      setChatInput((prev) =>
+        prev.trim() ? `${prev.trim()} ${transcript.trim()}` : transcript.trim()
+      );
+    };
+
+    recognition.start();
   };
 
   const handleKeyDown = (e) => {
@@ -444,6 +512,30 @@ export default function GeneralChat() {
                   "
                 />
                 <button
+                  type="button"
+                  onClick={handleVoiceInput}
+                  disabled={!voiceSupported || chatLoading}
+                  title={
+                    voiceSupported
+                      ? isListening
+                        ? 'Stop voice input'
+                        : 'Start voice input'
+                      : 'Voice input not supported'
+                  }
+                  aria-label="Toggle voice input"
+                  className={`w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center transition-all shrink-0 cursor-pointer disabled:opacity-40 disabled:hover:shadow-none ${
+                    isListening
+                      ? 'bg-red-600 text-white hover:bg-red-500 shadow-lg animate-pulse'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-nyaya-50 dark:hover:bg-nyaya-900/30 hover:text-nyaya-600 dark:hover:text-nyaya-400'
+                  }`}
+                >
+                  {isListening ? (
+                    <Square className="text-center w-5 h-5 sm:w-6 sm:h-6" />
+                  ) : (
+                    <Mic className="text-center w-5 h-5 sm:w-6 sm:h-6" />
+                  )}
+                </button>
+                <button
                   type="submit"
                   disabled={chatLoading || !chatInput.trim()}
                   className="bg-nyaya-600 text-white w-12 h-12 sm:w-14 sm:h-14 rounded-xl flex items-center justify-center hover:bg-nyaya-500 hover:shadow-lg transition-all disabled:opacity-40 disabled:hover:shadow-none shrink-0 cursor-pointer"
@@ -451,6 +543,11 @@ export default function GeneralChat() {
                   <Send className="text-center w-5 h-5 sm:w-6 sm:h-6" />
                 </button>
               </form>
+              {voiceError && (
+                <div className="px-3 pb-2 sm:px-4 -mt-1 text-xs text-red-600 dark:text-red-400">
+                  {voiceError}
+                </div>
+              )}
             </div>
           </div>
 
