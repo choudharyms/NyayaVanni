@@ -89,7 +89,9 @@ export default function LandingPage() {
           try {
             const errText = await response.text();
             if (errText) errMessage = errText;
-          } catch {}
+          } catch {
+            // Ignore text-read failures; keep the parsed error message.
+          }
         }
         throw new Error(errMessage);
       }
