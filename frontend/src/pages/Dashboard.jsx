@@ -29,6 +29,7 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { ensureSessionId } from '../utils/session';
 import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
@@ -596,6 +597,7 @@ export default function Dashboard() {
             >
               <Share2 className="w-4 h-4" />
             </button>
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>

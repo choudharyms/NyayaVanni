@@ -18,8 +18,10 @@ import { useLanguage } from '../contexts/LanguageContext';
 import { useConversationHistory } from '../contexts/ConversationHistoryContext';
 import { ARIA_LABELS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 import Footer from '../components/Footer';
 import HistorySidebar from '../components/HistorySidebar';
+import { ARIA_LABELS } from '../constants';
 
 const SUGGESTED_QUESTIONS = [
   'What is the difference between a lease and a license agreement?',
@@ -418,6 +420,7 @@ export default function GeneralChat() {
                 Saving...
               </span>
             )}
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>

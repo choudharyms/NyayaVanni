@@ -28,6 +28,7 @@ import {
 import { useLanguage } from '../contexts/LanguageContext';
 import { ARIA_LABELS, PLACEHOLDERS } from '../constants';
 import ThemeToggle from '../components/ThemeToggle';
+import LanguageToggle from '../components/LanguageToggle';
 import Breadcrumb from '../components/Breadcrumb';
 import Footer from '../components/Footer';
 import useKeyboardShortcut from '../hooks/useKeyboardShortcut';
@@ -571,6 +572,7 @@ export default function HireLawyer() {
             <div className="hidden sm:flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 dark:bg-white/5 border border-slate-200 dark:border-white/10 text-slate-700 dark:text-slate-200 text-sm">
               {t('nav.directory')}
             </div>
+            <LanguageToggle />
             <ThemeToggle />
           </div>
         </div>
