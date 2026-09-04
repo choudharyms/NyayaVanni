@@ -32,6 +32,7 @@ import { useDocumentHistory } from '../hooks/useDocumentHistory';
 import useKeyboardShortcut from "../hooks/useKeyboardShortcut";
 import SearchShortcutHint from "../components/SearchShortcutHint";
 import { calculateLayout } from '../utils/graphLayout';
+import { ARIA_LABELS } from '../constants';
 
 const LOADING_CONTAINER = `min-h-screen bg-slate-50 dark:bg-slate-950 
   flex flex-col items-center justify-center transition-colors duration-300`;
