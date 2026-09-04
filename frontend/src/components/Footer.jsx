@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useLanguage } from '../contexts/LanguageContext';
 import { EN, HI } from '../constants';
+import LanguageSwitcher from './LanguageSwitcher';
 
 export default function Footer() {
   const navigate = useNavigate();
@@ -46,6 +47,7 @@ export default function Footer() {
                 </span>
               </span>
             </div>
+
             <p className="mt-3 text-slate-600 dark:text-slate-400 leading-relaxed text-sm">
               {language === 'en'
                 ? EN.FOOTER_DESC
@@ -59,6 +61,7 @@ export default function Footer() {
               <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
                 {L.PRODUCT}
               </p>
+
               <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
                 <button
                   onClick={() => navigate('/chat')}
@@ -66,12 +69,14 @@ export default function Footer() {
                 >
                   {t('landing.chat.title')}
                 </button>
+
                 <button
                   onClick={handleUploadClick}
                   className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer"
                 >
                   {t('landing.upload.title')}
                 </button>
+
                 <button
                   onClick={() => navigate('/lawyers')}
                   className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer"
@@ -85,6 +90,7 @@ export default function Footer() {
               <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
                 {L.RESOURCES}
               </p>
+
               <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
                 <button
                   onClick={() => navigate('/faq')}
@@ -92,12 +98,14 @@ export default function Footer() {
                 >
                   {language === 'en' ? 'FAQ' : 'प्रश्नोत्तरी (FAQ)'}
                 </button>
+
                 <button
                   onClick={() => navigate('/privacy-policy')}
                   className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer"
                 >
                   {L.PRIVACY_POLICY}
                 </button>
+
                 <button
                   onClick={() => navigate('/terms')}
                   className="text-left hover:text-nyaya-600 dark:hover:text-white transition duration-250 cursor-pointer"
@@ -111,6 +119,7 @@ export default function Footer() {
               <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
                 {L.CONTACT}
               </p>
+
               <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
                 <a
                   href="mailto:support@nyayavanni.com"
@@ -120,6 +129,7 @@ export default function Footer() {
                   <Mail className="w-4 h-4 shrink-0" />
                   support@nyayavanni.com
                 </a>
+
                 <span className="text-xs text-slate-600 dark:text-slate-500">
                   {L.FOOTER_HOURS}
                 </span>
@@ -130,6 +140,7 @@ export default function Footer() {
               <p className="mb-3 text-sm font-semibold text-slate-800 dark:text-white uppercase tracking-wider">
                 {language === 'en' ? 'Developers' : 'डेवलपर्स'}
               </p>
+
               <div className="flex flex-col gap-2 text-slate-700 dark:text-slate-400 text-sm">
                 <a
                   href={apiDocsUrl}
@@ -145,10 +156,15 @@ export default function Footer() {
         </div>
 
         {/* Footer Bottom */}
-        <div className="flex flex-col items-center sm:items-start justify-between gap-4 pt-6 mt-8 border-t border-slate-200 dark:border-slate-700 sm:flex-row">
-          <p className="text-xs text-slate-600 dark:text-slate-500 text-center sm:text-left mt-1">
-            © {new Date().getFullYear()} NyayaVanni. All rights reserved.
-          </p>
+        <div className="flex flex-col items-center justify-between gap-4 pt-6 mt-8 border-t border-slate-200 dark:border-slate-700 sm:flex-row">
+          {/* Copyright + Language Switcher */}
+          <div className="flex flex-col items-center gap-3 sm:flex-row">
+            <p className="text-xs text-slate-600 dark:text-slate-500 text-center sm:text-left mt-1">
+              © {new Date().getFullYear()} NyayaVanni. All rights reserved.
+            </p>
+
+            <LanguageSwitcher />
+          </div>
 
           {/* Social Links */}
           <div className="flex items-center gap-5">
@@ -162,6 +178,7 @@ export default function Footer() {
             >
               <Twitter className="w-5 h-5" />
             </a>
+
             <a
               href="https://github.com/choudharyms/NyayaVanni"
               target="_blank"
@@ -172,6 +189,7 @@ export default function Footer() {
             >
               <Github className="w-5 h-5" />
             </a>
+
             <a
               href="https://linkedin.com/company/nyayavanni"
               target="_blank"
@@ -182,6 +200,7 @@ export default function Footer() {
             >
               <Linkedin className="w-5 h-5" />
             </a>
+
             <a
               href="https://instagram.com/nyayavanni"
               target="_blank"
@@ -194,6 +213,7 @@ export default function Footer() {
             </a>
           </div>
 
+          {/* Disclaimer */}
           <p className="text-xs text-slate-600 dark:text-slate-500 italic text-center sm:text-right mt-1">
             {language === 'en'
               ? EN.FOOTER_DISCLAIMER

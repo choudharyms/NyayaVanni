@@ -15,7 +15,6 @@ import { LanguageProvider } from './contexts/LanguageContext';
 import { ThemeProvider } from './contexts/ThemeContext';
 import { ConversationHistoryProvider } from './contexts/ConversationHistoryContext';
 import NotFound from './pages/NotFound';
-import LanguageSwitcher from './components/LanguageSwitcher';
 import BackToTop from './components/Backtotop';
 import ScrollToTop from './components/Scrolltotop';
 import SkipLink from './components/SkipLink';
@@ -52,11 +51,6 @@ function App() {
               </Routes>
 
               <BackToTop />
-
-              {/* Pinned Language Switcher */}
-              <div className="fixed bottom-6 right-6 z-50 shadow-xl">
-                <LanguageSwitcher />
-              </div>
             </div>
           </Router>
         </ConversationHistoryProvider>
